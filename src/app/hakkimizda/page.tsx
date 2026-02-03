@@ -1,0 +1,192 @@
+import type { Metadata } from 'next'
+import Link from 'next/link'
+import { ChevronRight, Shield, Users, Award, Target, CheckCircle, MessageCircle } from 'lucide-react'
+
+export const metadata: Metadata = {
+  title: 'Hakkimizda - ParcaBizden',
+  description: 'ParcaBizden hakkinda bilgi edinin. Yedek parca ve cikma parca sektorunde guvenilir cozum ortaginiz.',
+  keywords: 'hakkimizda, parcabizden, yedek parca firmasi, cikma parca',
+}
+
+const values = [
+  {
+    icon: Shield,
+    title: 'Guvenilirlik',
+    description: 'Tum parcalarimiz titizlikle kontrol edilir. Musteri memnuniyeti bizim icin her seyden onemlidir.'
+  },
+  {
+    icon: Users,
+    title: 'Musteri Odaklilik',
+    description: 'Her musterimizin ihtiyacini anlayarak en uygun cozumu sunmak icin calisiyoruz.'
+  },
+  {
+    icon: Award,
+    title: 'Kalite',
+    description: 'Kaliteden odun vermeden, her butceye uygun parca secenekleri sunuyoruz.'
+  },
+  {
+    icon: Target,
+    title: 'Hiz',
+    description: 'WhatsApp uzerinden aninda iletisim, hizli fiyat teklifi ve hizli teslimat.'
+  }
+]
+
+const highlights = [
+  '5000+ mutlu musteri',
+  '10.000+ parca cesidi',
+  '50+ marka desteği',
+  'Turkiye genelinde kargo',
+  '7/24 WhatsApp destek',
+  'Tecrubeli teknik ekip'
+]
+
+export default function HakkimizdaPage() {
+  return (
+    <div className="min-h-screen py-8 md:py-12">
+      <div className="container mx-auto px-4">
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
+          <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-white">Hakkimizda</span>
+        </nav>
+
+        {/* Hero Section */}
+        <div className="text-center mb-16">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+            Yedek Parca Sektorunde
+            <span className="text-primary-500"> Guvenilir Cozum Ortaginiz</span>
+          </h1>
+          <p className="text-gray-400 max-w-3xl mx-auto text-lg leading-relaxed">
+            ParcaBizden olarak, arac sahipleri ve kasko eksperleri icin yedek parca ve cikma parca
+            tedariğinde guvenilir bir kopru olmak amacimizdir. Kaliteli parcalari uygun kosullarda
+            size ulastirmak icin calisiyoruz.
+          </p>
+        </div>
+
+        {/* Values Section */}
+        <div className="mb-16">
+          <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-10">
+            Degerlerimiz
+          </h2>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {values.map((value, index) => (
+              <div
+                key={index}
+                className="bg-dark-800 border border-dark-700 rounded-xl p-6 text-center hover:border-primary-500/30 transition-all"
+              >
+                <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
+                  <value.icon className="w-8 h-8 text-primary-500" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">{value.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed">{value.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* About Content */}
+        <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+          <div>
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
+              Biz Kimiz?
+            </h2>
+            <div className="space-y-4 text-gray-400 leading-relaxed">
+              <p>
+                ParcaBizden, otomotiv sektorunde yilların tecrubesiyle yedek parca ve cikma parca
+                tedariginde uzmanlasmis bir platformdur. Amacimiz, arac sahiplerinin ve kasko
+                eksperlerinin dogru parcaya hizli ve guvenilir sekilde ulasmalarini saglamaktir.
+              </p>
+              <p>
+                Genis parca agimiz ve tecrubeli ekibimiz sayesinde, tum marka ve modellere uygun
+                parcalari bulmanizda size yardimci oluyoruz. Sase numaraniz ile arama yaparak
+                aracınıza tam uyumlu parcalari kolayca tespit edebilirsiniz.
+              </p>
+              <p>
+                WhatsApp Business hattimiz uzerinden 7/24 mesaj birakabilir, is saatlerinde aninda
+                cevap alabilirsiniz. Fotograf paylasimi ile ihtiyaciniz olan parcayi net sekilde
+                belirtebilir, hizli fiyat teklifi alabilirsiniz.
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8">
+            <h3 className="text-xl font-bold text-white mb-6">Neden Biz?</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {highlights.map((highlight, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-gray-300 text-sm">{highlight}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Target Audience */}
+        <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 md:p-12 mb-16">
+          <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-10">
+            Kimler Icin Hizmet Veriyoruz?
+          </h2>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Arac Sahipleri</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Aracınız icin ihtiyaciniz olan yedek veya cikma parcayi uygun fiyatlarla
+                bulmaniza yardimci oluyoruz. Sase numaraniz ile arama yaparak dogru
+                parcaya ulasin.
+              </p>
+            </div>
+            <div className="text-center">
+              <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
+                <svg className="w-10 h-10 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-3">Kasko Eksperleri</h3>
+              <p className="text-gray-400 text-sm leading-relaxed">
+                Hasar tespitlerinde ihtiyaciniz olan parcalarin tedariginde size
+                yardimci oluyoruz. Toplu talepleriniz icin ozel iletisim kanaliniz.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="text-center">
+          <div className="bg-gradient-to-r from-secondary-700 to-secondary-900 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
+              Hemen Iletisime Gecin
+            </h2>
+            <p className="text-gray-300 mb-8 max-w-xl mx-auto">
+              Yedek parca ihtiyaclariniz icin WhatsApp uzerinden bize ulasin.
+              Tecrubeli ekibimiz size en kisa surede donecektir.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <a
+                href="https://wa.me/905001234567?text=Merhaba,%20yedek%20parca%20hakkinda%20bilgi%20almak%20istiyorum."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all"
+              >
+                <MessageCircle className="w-5 h-5" />
+                WhatsApp ile Ulasin
+              </a>
+              <Link
+                href="/iletisim"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all border border-white/20"
+              >
+                Iletisim Bilgileri
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
