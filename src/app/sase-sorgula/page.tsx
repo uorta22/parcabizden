@@ -45,7 +45,7 @@ export default function SaseSorgulaPage() {
             Sase Numarasi ile <span className="text-primary-500">Parca Ara</span>
           </h1>
           <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-            17 haneli sase (VIN) numaranizi girin, aracınıza uygun parcalari hizlica bulun ve WhatsApp uzerinden talep olusturun.
+            17 haneli sase (VIN) numaranizi girin, gercek arac bilgilerinizi gorun ve aracınıza uyumlu tum parcalari listeleyin.
           </p>
         </div>
 

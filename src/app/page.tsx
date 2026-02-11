@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Search, Shield, Truck, Clock, Phone, MessageCircle, ChevronRight, Car, Settings, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench } from 'lucide-react'
 import CarDiagram from '@/components/CarDiagram'
 import ChassisSearch from '@/components/ChassisSearch'
+import BrandLogosSection from '@/components/BrandLogos'
 
 const categories = [
   { id: 'motor', name: 'Motor Parcalari', icon: Settings, count: '500+', color: 'from-red-500 to-orange-500' },
@@ -232,8 +233,23 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Brands Section */}
+      <section className="py-16 md:py-20 bg-dark-800">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+              Desteklenen <span className="text-primary-500">Markalar</span>
+            </h2>
+            <p className="text-gray-400 max-w-2xl mx-auto">
+              Tum populer otomobil markalarina uygun yedek parca ve cikma parca tedariği sagliyoruz.
+            </p>
+          </div>
+          <BrandLogosSection />
+        </div>
+      </section>
+
       {/* Trust Badges */}
-      <section className="py-12 bg-dark-800 border-t border-dark-700">
+      <section className="py-12 bg-dark-900 border-t border-dark-700">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 text-gray-500">
             <div className="text-center">

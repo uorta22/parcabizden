@@ -202,3 +202,99 @@ export const searchParts = (query: string): Part[] => {
     part.categoryName.toLowerCase().includes(lowerQuery)
   )
 }
+
+// --- VIN bazlı parça filtreleme ---
+
+interface ExclusionRule {
+  excludeWhenElectric?: boolean
+  excludeWhenAutomatic?: boolean
+}
+
+const categoryExclusions: Record<string, ExclusionRule> = {
+  'egzoz': { excludeWhenElectric: true },
+}
+
+const partExclusions: Record<string, ExclusionRule> = {
+  'motor-blogu': { excludeWhenElectric: true },
+  'silindir-kapagi': { excludeWhenElectric: true },
+  'krank-mili': { excludeWhenElectric: true },
+  'piston': { excludeWhenElectric: true },
+  'supap': { excludeWhenElectric: true },
+  'eksantrik-mili': { excludeWhenElectric: true },
+  'yagli-karter': { excludeWhenElectric: true },
+  'yag-pompasi': { excludeWhenElectric: true },
+  'triger-seti': { excludeWhenElectric: true },
+  'kavrama-seti': { excludeWhenAutomatic: true },
+}
+
+function normalizeMake(nhtsaMake: string): string {
+  const makeMap: Record<string, string> = {
+    'VOLKSWAGEN': 'Volkswagen',
+    'BMW': 'BMW',
+    'MERCEDES-BENZ': 'Mercedes',
+    'MERCEDES BENZ': 'Mercedes',
+    'AUDI': 'Audi',
+    'FORD': 'Ford',
+    'FORD MOTOR COMPANY': 'Ford',
+    'RENAULT': 'Renault',
+    'FIAT': 'Fiat',
+    'TOYOTA': 'Toyota',
+    'TOYOTA MOTOR CORPORATION': 'Toyota',
+    'HYUNDAI': 'Hyundai',
+    'KIA': 'Kia',
+    'OPEL': 'Opel',
+    'PEUGEOT': 'Peugeot',
+    'CITROEN': 'Citroen',
+    'SKODA': 'Skoda',
+    'HONDA': 'Honda',
+    'NISSAN': 'Nissan',
+    'MAZDA': 'Mazda',
+    'CHEVROLET': 'Chevrolet',
+    'TOFAS': 'Tofas/Fiat',
+  }
+
+  const upper = nhtsaMake.toUpperCase().trim()
+  if (makeMap[upper]) return makeMap[upper]
+  for (const [key, value] of Object.entries(makeMap)) {
+    if (upper.includes(key) || key.includes(upper)) return value
+  }
+  return nhtsaMake.charAt(0).toUpperCase() + nhtsaMake.slice(1).toLowerCase()
+}
+
+function shouldExclude(rule: ExclusionRule, isElectric: boolean, isAutomatic: boolean): boolean {
+  if (rule.excludeWhenElectric && isElectric) return true
+  if (rule.excludeWhenAutomatic && isAutomatic) return true
+  return false
+}
+
+export const getCompatibleParts = (make: string, fuelType: string, transmissionType: string): Part[] => {
+  const isElectric = fuelType.toLowerCase().includes('electric')
+  const isAutomatic = transmissionType.toLowerCase().includes('automatic') ||
+                      transmissionType.toLowerCase().includes('cvt')
+  const normalizedMake = normalizeMake(make)
+
+  return parts.filter(part => {
+    const brandMatch = part.brands.includes('Tum Markalar') ||
+      part.brands.some(b => b.toLowerCase() === normalizedMake.toLowerCase())
+
+    if (!brandMatch) return false
+
+    const catRule = categoryExclusions[part.category]
+    if (catRule && shouldExclude(catRule, isElectric, isAutomatic)) return false
+
+    const partRule = partExclusions[part.id]
+    if (partRule && shouldExclude(partRule, isElectric, isAutomatic)) return false
+
+    return true
+  })
+}
+
+export const groupPartsByCategory = (compatibleParts: Part[]): Record<string, Part[]> => {
+  return compatibleParts.reduce((acc, part) => {
+    if (!acc[part.category]) {
+      acc[part.category] = []
+    }
+    acc[part.category].push(part)
+    return acc
+  }, {} as Record<string, Part[]>)
+}

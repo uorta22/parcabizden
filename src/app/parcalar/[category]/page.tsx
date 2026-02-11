@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight, MessageCircle, Filter, Search } from 'lucide-react'
 import { categories, getPartsByCategory, getCategoryById } from '@/data/parts'
+import { BrandLogo } from '@/components/BrandLogos'
 import { notFound } from 'next/navigation'
 
 interface PageProps {
@@ -105,12 +106,13 @@ export default function CategoryPage({ params }: PageProps) {
 
               <div className="mb-4">
                 <p className="text-gray-500 text-xs mb-2">Uygun Markalar:</p>
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {part.brands.slice(0, 5).map((brand, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-dark-700 text-gray-400 rounded text-xs"
+                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-dark-700 text-gray-400 rounded text-xs"
                     >
+                      {brand !== 'Tum Markalar' && <BrandLogo brand={brand} size={14} />}
                       {brand}
                     </span>
                   ))}

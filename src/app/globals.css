@@ -35,22 +35,6 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Car SVG hover effects */
-.car-part {
-  transition: all 0.3s ease;
-  cursor: pointer;
-}
-
-.car-part:hover {
-  fill: #f9ac1b;
-  filter: drop-shadow(0 0 8px rgba(249, 172, 27, 0.6));
-}
-
-.car-part.selected {
-  fill: #f9ac1b;
-  filter: drop-shadow(0 0 12px rgba(249, 172, 27, 0.8));
-}
-
 /* Animations */
 @keyframes fadeIn {
   from {
