@@ -1,25 +1,15 @@
-import type { Metadata } from 'next'
+'use client'
+
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
-import { Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square, ChevronRight, Search } from 'lucide-react'
+import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
+import { Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square, ChevronRight, Search, MessageCircle } from 'lucide-react'
 import { categories } from '@/data/parts'
+import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 
-export const metadata: Metadata = {
-  title: 'Tum Parcalar - Yedek Parca & Cikma Parca | ParcaBizden',
-  description: 'Motor parcalari, sanziman, suspansiyon, fren sistemi, kaporta ve daha fazlasi. Tum marka ve modellere uygun yedek parca ve cikma parca.',
-  keywords: 'yedek parca, cikma parca, motor parcasi, sanziman, suspansiyon, fren, kaporta, far, elektrik aksam',
-}
-
-const iconMap: { [key: string]: any } = {
-  Settings,
-  Car,
-  Disc,
-  Lightbulb,
-  Battery,
-  Thermometer,
-  Wind,
-  Wrench,
-  Layout,
-  Square,
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square,
 }
 
 const colorMap: { [key: string]: string } = {
@@ -37,7 +27,51 @@ const colorMap: { [key: string]: string } = {
   'cam': 'from-teal-500 to-cyan-500',
 }
 
-export default function ParcalarPage() {
+interface VehicleModel {
+  key: string
+  name: string
+  slug: string
+  image: string
+}
+
+interface BrandData {
+  id: number
+  body_types: Record<string, VehicleModel[]>
+}
+
+type VehicleTree = Record<string, BrandData>
+
+function ParcalarContent() {
+  const searchParams = useSearchParams()
+  const marka = searchParams.get('marka')
+  const modelSlug = searchParams.get('model_slug')
+  const modelKey = searchParams.get('model_key')
+
+  const [selectedModel, setSelectedModel] = useState<{ brand: string; model: VehicleModel; image: string } | null>(null)
+
+  useEffect(() => {
+    if (!marka || !modelSlug) return
+
+    fetch('/data/vehicle-tree.json')
+      .then(res => res.json())
+      .then((tree: VehicleTree) => {
+        const brand = tree[marka]
+        if (!brand) return
+        for (const models of Object.values(brand.body_types)) {
+          const found = models.find(m => m.slug === modelSlug || m.key === modelKey)
+          if (found) {
+            setSelectedModel({ brand: marka, model: found, image: found.image })
+            return
+          }
+        }
+      })
+      .catch(() => {})
+  }, [marka, modelSlug, modelKey])
+
+  const whatsappText = selectedModel
+    ? `Merhaba, ${selectedModel.brand} ${selectedModel.model.name} aracım için parça arıyorum. Yardımcı olur musunuz?`
+    : 'Merhaba, bir parça arıyorum. Yardımcı olur musunuz?'
+
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="container mx-auto px-4">
@@ -45,35 +79,73 @@ export default function ParcalarPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
           <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Tum Parcalar</span>
+          <span className="text-white">Tüm Parçalar</span>
         </nav>
 
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            Parca <span className="text-primary-500">Kategorileri</span>
-          </h1>
-          <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-            Ihtiyaciniz olan parcayi kategoriye gore bulun. Tum marka ve modellere uygun yedek parca ve cikma parca secenekleri.
-          </p>
-        </div>
+        {/* Selected Vehicle Banner */}
+        {selectedModel && (
+          <div className="mb-8 bg-dark-800 border border-primary-500/30 rounded-2xl p-4 md:p-6 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6">
+              <div className="w-32 h-20 md:w-40 md:h-24 bg-dark-900 rounded-xl overflow-hidden flex-shrink-0">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={selectedModel.image}
+                  alt={selectedModel.model.name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 text-center sm:text-left">
+                <p className="text-xs text-primary-500 font-medium mb-1">Seçili Araç</p>
+                <h2 className="text-lg md:text-xl font-bold text-white">
+                  {selectedModel.brand} {selectedModel.model.name}
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">
+                  Aşağıdan parça kategorisi seçin veya WhatsApp ile bize ulaşın.
+                </p>
+              </div>
+              <a
+                href={getWhatsAppUrl(whatsappText)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all flex-shrink-0"
+              >
+                <MessageCircle className="w-5 h-5" />
+                Parça Talep Et
+              </a>
+            </div>
+          </div>
+        )}
 
-        {/* Search Prompt */}
-        <div className="max-w-2xl mx-auto mb-12">
-          <Link
-            href="/sase-sorgula"
-            className="flex items-center gap-4 p-6 bg-dark-800 border border-dark-700 rounded-2xl hover:border-primary-500/50 transition-all group"
-          >
-            <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
-              <Search className="w-7 h-7 text-primary-500" />
+        {/* Header */}
+        {!selectedModel && (
+          <>
+            <div className="text-center mb-12">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+                Parça <span className="text-primary-500">Kategorileri</span>
+              </h1>
+              <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                İhtiyacınız olan parçayı kategoriye göre bulun. Tüm marka ve modellere uygun yedek parça ve çıkma parça seçenekleri.
+              </p>
             </div>
-            <div className="flex-1">
-              <h3 className="text-white font-semibold text-lg mb-1">Sase Numarasi ile Ara</h3>
-              <p className="text-gray-400 text-sm">Aracınıza uygun parcalari bulmak icin sase numaranizi girin</p>
+
+            {/* Search Prompt */}
+            <div className="max-w-2xl mx-auto mb-12">
+              <Link
+                href="/sase-sorgula"
+                className="flex items-center gap-4 p-6 bg-dark-800 border border-dark-700 rounded-2xl hover:border-primary-500/50 transition-all group"
+              >
+                <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
+                  <Search className="w-7 h-7 text-primary-500" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-white font-semibold text-lg mb-1">Şase Numarası ile Ara</h3>
+                  <p className="text-gray-400 text-sm">Aracınıza uygun parçaları bulmak için şase numaranızı girin</p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-gray-500 group-hover:text-primary-500 transition-colors" />
+              </Link>
             </div>
-            <ChevronRight className="w-6 h-6 text-gray-500 group-hover:text-primary-500 transition-colors" />
-          </Link>
-        </div>
+          </>
+        )}
 
         {/* Categories Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -100,7 +172,7 @@ export default function ParcalarPage() {
                     </p>
                     <div className="flex items-center justify-between">
                       <span className="text-primary-500 text-sm font-medium">
-                        {category.partCount}+ Parca
+                        {category.partCount}+ Parça
                       </span>
                       <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
                     </div>
@@ -115,14 +187,14 @@ export default function ParcalarPage() {
         <div className="mt-16 text-center">
           <div className="bg-gradient-to-r from-secondary-700 to-secondary-900 rounded-2xl p-8 md:p-12">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Aradiginiz Parcayi Bulamadınız mi?
+              Aradığınız Parçayı Bulamadınız mı?
             </h2>
             <p className="text-gray-300 mb-6 max-w-xl mx-auto">
-              WhatsApp uzerinden bize ulasin, sase numaranizi ve ihtiyaciniz olan parcayi belirtin.
-              En kisa surede size donelim.
+              WhatsApp üzerinden bize ulaşın, şase numaranızı ve ihtiyacınız olan parçayı belirtin.
+              En kısa sürede size dönelim.
             </p>
             <a
-              href="https://wa.me/905001234567?text=Merhaba,%20bir%20parca%20ariyorum.%20Yardimci%20olur%20musunuz?"
+              href={getWhatsAppUrl(whatsappText)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all"
@@ -133,5 +205,17 @@ export default function ParcalarPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function ParcalarPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ParcalarContent />
+    </Suspense>
   )
 }

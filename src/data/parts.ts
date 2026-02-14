@@ -19,171 +19,171 @@ export interface Category {
 export const categories: Category[] = [
   {
     id: 'motor',
-    name: 'Motor Parcalari',
-    description: 'Motor blogu, silindir kapagi, piston, supap, krank mili ve tum motor ic parcalari',
+    name: 'Motor Parçaları',
+    description: 'Motor bloğu, silindir kapağı, piston, supap, krank mili ve tüm motor iç parçaları',
     icon: 'Settings',
     partCount: 45
   },
   {
     id: 'sanziman',
-    name: 'Sanziman Parcalari',
-    description: 'Manuel ve otomatik sanziman, diferansiyel, sanziman ic parcalari, kavrama seti',
+    name: 'Şanzıman Parçaları',
+    description: 'Manuel ve otomatik şanzıman, diferansiyel, şanzıman iç parçaları, kavrama seti',
     icon: 'Settings',
     partCount: 32
   },
   {
     id: 'suspansiyon',
-    name: 'Suspansiyon Parcalari',
-    description: 'Amortisor, rotil, rot kolu, salincak, bilyali yastak, viraj demiri',
+    name: 'Süspansiyon Parçaları',
+    description: 'Amortisör, rotil, rot kolu, salıncak, bilyalı yatak, viraj demiri',
     icon: 'Car',
     partCount: 38
   },
   {
     id: 'fren',
     name: 'Fren Sistemi',
-    description: 'Fren diski, fren balatasi, fren kaliperi, ABS sensoru, fren hortumu',
+    description: 'Fren diski, fren balatası, fren kaliperi, ABS sensörü, fren hortumu',
     icon: 'Disc',
     partCount: 28
   },
   {
     id: 'kaporta',
-    name: 'Kaporta Parcalari',
-    description: 'Kaput, bagaj, camurluk, kapi, tampon, panjur, ayna',
+    name: 'Kaporta Parçaları',
+    description: 'Kaput, bagaj, çamurluk, kapı, tampon, panjur, ayna',
     icon: 'Car',
     partCount: 52
   },
   {
     id: 'aydinlatma',
-    name: 'Aydinlatma',
-    description: 'Far, stop lambasi, sinyal, sis fari, xenon, LED aydinlatma',
+    name: 'Aydınlatma',
+    description: 'Far, stop lambası, sinyal, sis farı, xenon, LED aydınlatma',
     icon: 'Lightbulb',
     partCount: 35
   },
   {
     id: 'elektrik',
-    name: 'Elektrik Aksam',
-    description: 'Alternator, mars motoru, aku, sigorta kutusu, kablo tesisati',
+    name: 'Elektrik Aksamı',
+    description: 'Alternatör, marş motoru, akü, sigorta kutusu, kablo tesisatı',
     icon: 'Battery',
     partCount: 25
   },
   {
     id: 'sogutma',
-    name: 'Sogutma Sistemi',
-    description: 'Radyator, su pompasi, termostat, radyator hortumu, fan motoru',
+    name: 'Soğutma Sistemi',
+    description: 'Radyatör, su pompası, termostat, radyatör hortumu, fan motoru',
     icon: 'Thermometer',
     partCount: 18
   },
   {
     id: 'egzoz',
     name: 'Egzoz Sistemi',
-    description: 'Egzoz manifoldu, katalitik konvertor, egzoz borusu, susturucu',
+    description: 'Egzoz manifoldu, katalitik konvertör, egzoz borusu, susturucu',
     icon: 'Wind',
     partCount: 15
   },
   {
     id: 'direksiyon',
     name: 'Direksiyon Sistemi',
-    description: 'Direksiyon kutusu, direksiyon pompasi, rot, rotil, kremayer',
+    description: 'Direksiyon kutusu, direksiyon pompası, rot, rotil, kremayer',
     icon: 'Wrench',
     partCount: 22
   },
   {
     id: 'ic-aksesuar',
-    name: 'Ic Aksesuar',
-    description: 'Gosterge paneli, koltuk, konsol, kalorifer, klima unitesi',
+    name: 'İç Aksesuar',
+    description: 'Gösterge paneli, koltuk, konsol, kalorifer, klima ünitesi',
     icon: 'Layout',
     partCount: 30
   },
   {
     id: 'cam',
     name: 'Cam ve Ayna',
-    description: 'On cam, arka cam, yan cam, dikiz aynasi, yan ayna',
+    description: 'Ön cam, arka cam, yan cam, dikiz aynası, yan ayna',
     icon: 'Square',
     partCount: 20
   }
 ]
 
 export const parts: Part[] = [
-  // Motor Parcalari
-  { id: 'motor-blogu', name: 'Motor Blogu', category: 'motor', categoryName: 'Motor Parcalari', description: 'Komple motor blogu, silindir blogu', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Renault', 'Fiat', 'Toyota', 'Hyundai', 'Kia'] },
-  { id: 'silindir-kapagi', name: 'Silindir Kapagi', category: 'motor', categoryName: 'Motor Parcalari', description: 'Silindir kapagi, supap kapagi', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Opel', 'Peugeot'] },
-  { id: 'krank-mili', name: 'Krank Mili', category: 'motor', categoryName: 'Motor Parcalari', description: 'Krank saft, krank mili', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen'] },
-  { id: 'piston', name: 'Piston', category: 'motor', categoryName: 'Motor Parcalari', description: 'Piston ve segman seti', brands: ['Tum Markalar'] },
-  { id: 'supap', name: 'Supap', category: 'motor', categoryName: 'Motor Parcalari', description: 'Emme ve egzoz supabi', brands: ['Tum Markalar'] },
-  { id: 'eksantrik-mili', name: 'Eksantrik Mili', category: 'motor', categoryName: 'Motor Parcalari', description: 'Kam mili, eksantrik saft', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Toyota'] },
-  { id: 'yagli-karter', name: 'Yagli Karter', category: 'motor', categoryName: 'Motor Parcalari', description: 'Motor karti, yag karteri', brands: ['Tum Markalar'] },
-  { id: 'motor-kulagi', name: 'Motor Kulagi', category: 'motor', categoryName: 'Motor Parcalari', description: 'Motor baglanti kulagi, motor takozu', brands: ['Tum Markalar'] },
-  { id: 'yag-pompasi', name: 'Yag Pompasi', category: 'motor', categoryName: 'Motor Parcalari', description: 'Motor yag pompasi', brands: ['Tum Markalar'] },
-  { id: 'triger-seti', name: 'Triger Seti', category: 'motor', categoryName: 'Motor Parcalari', description: 'Triger kayisi, triger kasnak, gergi rulman', brands: ['Tum Markalar'] },
+  // Motor Parçaları
+  { id: 'motor-blogu', name: 'Motor Bloğu', category: 'motor', categoryName: 'Motor Parçaları', description: 'Komple motor bloğu, silindir bloğu', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Renault', 'Fiat', 'Toyota', 'Hyundai', 'Kia'] },
+  { id: 'silindir-kapagi', name: 'Silindir Kapağı', category: 'motor', categoryName: 'Motor Parçaları', description: 'Silindir kapağı, supap kapağı', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Opel', 'Peugeot'] },
+  { id: 'krank-mili', name: 'Krank Mili', category: 'motor', categoryName: 'Motor Parçaları', description: 'Krank şaft, krank mili', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen'] },
+  { id: 'piston', name: 'Piston', category: 'motor', categoryName: 'Motor Parçaları', description: 'Piston ve segman seti', brands: ['Tüm Markalar'] },
+  { id: 'supap', name: 'Supap', category: 'motor', categoryName: 'Motor Parçaları', description: 'Emme ve egzoz supabı', brands: ['Tüm Markalar'] },
+  { id: 'eksantrik-mili', name: 'Eksantrik Mili', category: 'motor', categoryName: 'Motor Parçaları', description: 'Kam mili, eksantrik şaft', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Toyota'] },
+  { id: 'yagli-karter', name: 'Yağlı Karter', category: 'motor', categoryName: 'Motor Parçaları', description: 'Motor kartı, yağ karteri', brands: ['Tüm Markalar'] },
+  { id: 'motor-kulagi', name: 'Motor Kulağı', category: 'motor', categoryName: 'Motor Parçaları', description: 'Motor bağlantı kulağı, motor takozu', brands: ['Tüm Markalar'] },
+  { id: 'yag-pompasi', name: 'Yağ Pompası', category: 'motor', categoryName: 'Motor Parçaları', description: 'Motor yağ pompası', brands: ['Tüm Markalar'] },
+  { id: 'triger-seti', name: 'Triger Seti', category: 'motor', categoryName: 'Motor Parçaları', description: 'Triger kayışı, triger kasnak, gergi rulman', brands: ['Tüm Markalar'] },
 
-  // Sanziman Parcalari
-  { id: 'sanziman-komple', name: 'Sanziman Komple', category: 'sanziman', categoryName: 'Sanziman Parcalari', description: 'Manuel veya otomatik sanziman', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford'] },
-  { id: 'kavrama-seti', name: 'Kavrama Seti', category: 'sanziman', categoryName: 'Sanziman Parcalari', description: 'Debriyaj baski, balata, rulman', brands: ['Tum Markalar'] },
-  { id: 'sanziman-dislisi', name: 'Sanziman Dislisi', category: 'sanziman', categoryName: 'Sanziman Parcalari', description: 'Vites dislileri, senkromec', brands: ['Volkswagen', 'BMW', 'Mercedes'] },
-  { id: 'diferansiyel', name: 'Diferansiyel', category: 'sanziman', categoryName: 'Sanziman Parcalari', description: 'On ve arka diferansiyel', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen'] },
-  { id: 'aks', name: 'Aks', category: 'sanziman', categoryName: 'Sanziman Parcalari', description: 'On ve arka aks, aks kafasi', brands: ['Tum Markalar'] },
+  // Şanzıman Parçaları
+  { id: 'sanziman-komple', name: 'Şanzıman Komple', category: 'sanziman', categoryName: 'Şanzıman Parçaları', description: 'Manuel veya otomatik şanzıman', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford'] },
+  { id: 'kavrama-seti', name: 'Kavrama Seti', category: 'sanziman', categoryName: 'Şanzıman Parçaları', description: 'Debriyaj baskı, balata, rulman', brands: ['Tüm Markalar'] },
+  { id: 'sanziman-dislisi', name: 'Şanzıman Dişlisi', category: 'sanziman', categoryName: 'Şanzıman Parçaları', description: 'Vites dişlileri, senkromec', brands: ['Volkswagen', 'BMW', 'Mercedes'] },
+  { id: 'diferansiyel', name: 'Diferansiyel', category: 'sanziman', categoryName: 'Şanzıman Parçaları', description: 'Ön ve arka diferansiyel', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen'] },
+  { id: 'aks', name: 'Aks', category: 'sanziman', categoryName: 'Şanzıman Parçaları', description: 'Ön ve arka aks, aks kafası', brands: ['Tüm Markalar'] },
 
-  // Suspansiyon Parcalari
-  { id: 'on-amortisor', name: 'On Amortisor', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'On amortisor, amortisör', brands: ['Tum Markalar'] },
-  { id: 'arka-amortisor', name: 'Arka Amortisor', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'Arka amortisor', brands: ['Tum Markalar'] },
-  { id: 'rotil', name: 'Rotil', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'Rot basi, rotil', brands: ['Tum Markalar'] },
-  { id: 'rot-kolu', name: 'Rot Kolu', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'Rot kolu, rot', brands: ['Tum Markalar'] },
-  { id: 'salincak', name: 'Salincak', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'On ve arka salincak', brands: ['Tum Markalar'] },
-  { id: 'viraj-demiri', name: 'Viraj Demiri', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'Viraj cubugu, stabilizer', brands: ['Tum Markalar'] },
-  { id: 'teker-poryasi', name: 'Teker Poryasi', category: 'suspansiyon', categoryName: 'Suspansiyon Parcalari', description: 'Porya, teker yatagi', brands: ['Tum Markalar'] },
+  // Süspansiyon Parçaları
+  { id: 'on-amortisor', name: 'Ön Amortisör', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Ön amortisör', brands: ['Tüm Markalar'] },
+  { id: 'arka-amortisor', name: 'Arka Amortisör', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Arka amortisör', brands: ['Tüm Markalar'] },
+  { id: 'rotil', name: 'Rotil', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Rot başı, rotil', brands: ['Tüm Markalar'] },
+  { id: 'rot-kolu', name: 'Rot Kolu', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Rot kolu, rot', brands: ['Tüm Markalar'] },
+  { id: 'salincak', name: 'Salıncak', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Ön ve arka salıncak', brands: ['Tüm Markalar'] },
+  { id: 'viraj-demiri', name: 'Viraj Demiri', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Viraj çubuğu, stabilizer', brands: ['Tüm Markalar'] },
+  { id: 'teker-poryasi', name: 'Teker Poryası', category: 'suspansiyon', categoryName: 'Süspansiyon Parçaları', description: 'Porya, teker yatağı', brands: ['Tüm Markalar'] },
 
   // Fren Sistemi
-  { id: 'on-fren-diski', name: 'On Fren Diski', category: 'fren', categoryName: 'Fren Sistemi', description: 'On fren diski', brands: ['Tum Markalar'] },
-  { id: 'arka-fren-diski', name: 'Arka Fren Diski', category: 'fren', categoryName: 'Fren Sistemi', description: 'Arka fren diski', brands: ['Tum Markalar'] },
-  { id: 'fren-balatasi', name: 'Fren Balatasi', category: 'fren', categoryName: 'Fren Sistemi', description: 'On ve arka fren balatasi', brands: ['Tum Markalar'] },
-  { id: 'fren-kaliperi', name: 'Fren Kaliperi', category: 'fren', categoryName: 'Fren Sistemi', description: 'Fren kaliperi, etrier', brands: ['Tum Markalar'] },
-  { id: 'abs-beyni', name: 'ABS Beyni', category: 'fren', categoryName: 'Fren Sistemi', description: 'ABS kontrol unitesi', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi'] },
-  { id: 'abs-sensoru', name: 'ABS Sensoru', category: 'fren', categoryName: 'Fren Sistemi', description: 'ABS hiz sensoru', brands: ['Tum Markalar'] },
+  { id: 'on-fren-diski', name: 'Ön Fren Diski', category: 'fren', categoryName: 'Fren Sistemi', description: 'Ön fren diski', brands: ['Tüm Markalar'] },
+  { id: 'arka-fren-diski', name: 'Arka Fren Diski', category: 'fren', categoryName: 'Fren Sistemi', description: 'Arka fren diski', brands: ['Tüm Markalar'] },
+  { id: 'fren-balatasi', name: 'Fren Balatası', category: 'fren', categoryName: 'Fren Sistemi', description: 'Ön ve arka fren balatası', brands: ['Tüm Markalar'] },
+  { id: 'fren-kaliperi', name: 'Fren Kaliperi', category: 'fren', categoryName: 'Fren Sistemi', description: 'Fren kaliperi, etrier', brands: ['Tüm Markalar'] },
+  { id: 'abs-beyni', name: 'ABS Beyni', category: 'fren', categoryName: 'Fren Sistemi', description: 'ABS kontrol ünitesi', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi'] },
+  { id: 'abs-sensoru', name: 'ABS Sensörü', category: 'fren', categoryName: 'Fren Sistemi', description: 'ABS hız sensörü', brands: ['Tüm Markalar'] },
 
-  // Kaporta Parcalari
-  { id: 'on-kaput', name: 'On Kaput', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Motor kaputu', brands: ['Tum Markalar'] },
-  { id: 'bagaj-kapagi', name: 'Bagaj Kapagi', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Bagaj kapagi', brands: ['Tum Markalar'] },
-  { id: 'on-camurluk', name: 'On Camurluk', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Sag ve sol on camurluk', brands: ['Tum Markalar'] },
-  { id: 'arka-camurluk', name: 'Arka Camurluk', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Sag ve sol arka camurluk', brands: ['Tum Markalar'] },
-  { id: 'on-kapi', name: 'On Kapi', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Sag ve sol on kapi', brands: ['Tum Markalar'] },
-  { id: 'arka-kapi', name: 'Arka Kapi', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Sag ve sol arka kapi', brands: ['Tum Markalar'] },
-  { id: 'on-tampon', name: 'On Tampon', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'On tampon', brands: ['Tum Markalar'] },
-  { id: 'arka-tampon', name: 'Arka Tampon', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Arka tampon', brands: ['Tum Markalar'] },
-  { id: 'panjur', name: 'Panjur', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'On panjur, izgara', brands: ['Tum Markalar'] },
-  { id: 'dis-ayna', name: 'Dis Ayna', category: 'kaporta', categoryName: 'Kaporta Parcalari', description: 'Sag ve sol yan ayna', brands: ['Tum Markalar'] },
+  // Kaporta Parçaları
+  { id: 'on-kaput', name: 'Ön Kaput', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Motor kaputu', brands: ['Tüm Markalar'] },
+  { id: 'bagaj-kapagi', name: 'Bagaj Kapağı', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Bagaj kapağı', brands: ['Tüm Markalar'] },
+  { id: 'on-camurluk', name: 'Ön Çamurluk', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Sağ ve sol ön çamurluk', brands: ['Tüm Markalar'] },
+  { id: 'arka-camurluk', name: 'Arka Çamurluk', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Sağ ve sol arka çamurluk', brands: ['Tüm Markalar'] },
+  { id: 'on-kapi', name: 'Ön Kapı', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Sağ ve sol ön kapı', brands: ['Tüm Markalar'] },
+  { id: 'arka-kapi', name: 'Arka Kapı', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Sağ ve sol arka kapı', brands: ['Tüm Markalar'] },
+  { id: 'on-tampon', name: 'Ön Tampon', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Ön tampon', brands: ['Tüm Markalar'] },
+  { id: 'arka-tampon', name: 'Arka Tampon', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Arka tampon', brands: ['Tüm Markalar'] },
+  { id: 'panjur', name: 'Panjur', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Ön panjur, ızgara', brands: ['Tüm Markalar'] },
+  { id: 'dis-ayna', name: 'Dış Ayna', category: 'kaporta', categoryName: 'Kaporta Parçaları', description: 'Sağ ve sol yan ayna', brands: ['Tüm Markalar'] },
 
-  // Aydinlatma
-  { id: 'on-far', name: 'On Far', category: 'aydinlatma', categoryName: 'Aydinlatma', description: 'Sag ve sol on far takimi', brands: ['Tum Markalar'] },
-  { id: 'arka-stop', name: 'Arka Stop', category: 'aydinlatma', categoryName: 'Aydinlatma', description: 'Sag ve sol arka stop lambasi', brands: ['Tum Markalar'] },
-  { id: 'sis-fari', name: 'Sis Fari', category: 'aydinlatma', categoryName: 'Aydinlatma', description: 'On sis fari', brands: ['Tum Markalar'] },
-  { id: 'sinyal-lambasi', name: 'Sinyal Lambasi', category: 'aydinlatma', categoryName: 'Aydinlatma', description: 'Sinyal lambasi, flas', brands: ['Tum Markalar'] },
-  { id: 'xenon-beyni', name: 'Xenon Beyni', category: 'aydinlatma', categoryName: 'Aydinlatma', description: 'Xenon balast, xenon beyni', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen'] },
+  // Aydınlatma
+  { id: 'on-far', name: 'Ön Far', category: 'aydinlatma', categoryName: 'Aydınlatma', description: 'Sağ ve sol ön far takımı', brands: ['Tüm Markalar'] },
+  { id: 'arka-stop', name: 'Arka Stop', category: 'aydinlatma', categoryName: 'Aydınlatma', description: 'Sağ ve sol arka stop lambası', brands: ['Tüm Markalar'] },
+  { id: 'sis-fari', name: 'Sis Farı', category: 'aydinlatma', categoryName: 'Aydınlatma', description: 'Ön sis farı', brands: ['Tüm Markalar'] },
+  { id: 'sinyal-lambasi', name: 'Sinyal Lambası', category: 'aydinlatma', categoryName: 'Aydınlatma', description: 'Sinyal lambası, flaş', brands: ['Tüm Markalar'] },
+  { id: 'xenon-beyni', name: 'Xenon Beyni', category: 'aydinlatma', categoryName: 'Aydınlatma', description: 'Xenon balast, xenon beyni', brands: ['BMW', 'Mercedes', 'Audi', 'Volkswagen'] },
 
-  // Elektrik Aksam
-  { id: 'alternator', name: 'Alternator', category: 'elektrik', categoryName: 'Elektrik Aksam', description: 'Sarj dinamosu', brands: ['Tum Markalar'] },
-  { id: 'mars-motoru', name: 'Mars Motoru', category: 'elektrik', categoryName: 'Elektrik Aksam', description: 'Marş motoru, starter', brands: ['Tum Markalar'] },
-  { id: 'beyin', name: 'Motor Beyni', category: 'elektrik', categoryName: 'Elektrik Aksam', description: 'ECU, motor kontrol unitesi', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford'] },
-  { id: 'sigorta-kutusu', name: 'Sigorta Kutusu', category: 'elektrik', categoryName: 'Elektrik Aksam', description: 'Sigorta kutusu, rele kutusu', brands: ['Tum Markalar'] },
-  { id: 'kablo-tesisati', name: 'Kablo Tesisati', category: 'elektrik', categoryName: 'Elektrik Aksam', description: 'Motor kablosu, govde kablosu', brands: ['Tum Markalar'] },
+  // Elektrik Aksamı
+  { id: 'alternator', name: 'Alternatör', category: 'elektrik', categoryName: 'Elektrik Aksamı', description: 'Şarj dinamosu', brands: ['Tüm Markalar'] },
+  { id: 'mars-motoru', name: 'Marş Motoru', category: 'elektrik', categoryName: 'Elektrik Aksamı', description: 'Marş motoru, starter', brands: ['Tüm Markalar'] },
+  { id: 'beyin', name: 'Motor Beyni', category: 'elektrik', categoryName: 'Elektrik Aksamı', description: 'ECU, motor kontrol ünitesi', brands: ['Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford'] },
+  { id: 'sigorta-kutusu', name: 'Sigorta Kutusu', category: 'elektrik', categoryName: 'Elektrik Aksamı', description: 'Sigorta kutusu, röle kutusu', brands: ['Tüm Markalar'] },
+  { id: 'kablo-tesisati', name: 'Kablo Tesisatı', category: 'elektrik', categoryName: 'Elektrik Aksamı', description: 'Motor kablosu, gövde kablosu', brands: ['Tüm Markalar'] },
 
-  // Sogutma Sistemi
-  { id: 'radyator', name: 'Radyator', category: 'sogutma', categoryName: 'Sogutma Sistemi', description: 'Su radyatoru', brands: ['Tum Markalar'] },
-  { id: 'su-pompasi', name: 'Su Pompasi', category: 'sogutma', categoryName: 'Sogutma Sistemi', description: 'Devirdaim pompasi', brands: ['Tum Markalar'] },
-  { id: 'termostat', name: 'Termostat', category: 'sogutma', categoryName: 'Sogutma Sistemi', description: 'Termostat, termostat yuvasi', brands: ['Tum Markalar'] },
-  { id: 'fan-motoru', name: 'Fan Motoru', category: 'sogutma', categoryName: 'Sogutma Sistemi', description: 'Radyator fan motoru', brands: ['Tum Markalar'] },
-  { id: 'klima-radyatoru', name: 'Klima Radyatoru', category: 'sogutma', categoryName: 'Sogutma Sistemi', description: 'Kondenser, klima radyatoru', brands: ['Tum Markalar'] },
+  // Soğutma Sistemi
+  { id: 'radyator', name: 'Radyatör', category: 'sogutma', categoryName: 'Soğutma Sistemi', description: 'Su radyatörü', brands: ['Tüm Markalar'] },
+  { id: 'su-pompasi', name: 'Su Pompası', category: 'sogutma', categoryName: 'Soğutma Sistemi', description: 'Devirdaim pompası', brands: ['Tüm Markalar'] },
+  { id: 'termostat', name: 'Termostat', category: 'sogutma', categoryName: 'Soğutma Sistemi', description: 'Termostat, termostat yuvası', brands: ['Tüm Markalar'] },
+  { id: 'fan-motoru', name: 'Fan Motoru', category: 'sogutma', categoryName: 'Soğutma Sistemi', description: 'Radyatör fan motoru', brands: ['Tüm Markalar'] },
+  { id: 'klima-radyatoru', name: 'Klima Radyatörü', category: 'sogutma', categoryName: 'Soğutma Sistemi', description: 'Kondenser, klima radyatörü', brands: ['Tüm Markalar'] },
 
   // Egzoz Sistemi
-  { id: 'egzoz-manifoldu', name: 'Egzoz Manifoldu', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Eksoz manifoltu', brands: ['Tum Markalar'] },
-  { id: 'katalitik-konvertor', name: 'Katalitik Konvertor', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Katalizor', brands: ['Tum Markalar'] },
-  { id: 'susturucu', name: 'Susturucu', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Orta ve arka susturucu', brands: ['Tum Markalar'] },
-  { id: 'egzoz-borusu', name: 'Egzoz Borusu', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Egzoz ara boru', brands: ['Tum Markalar'] },
+  { id: 'egzoz-manifoldu', name: 'Egzoz Manifoldu', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Egzoz manifoldu', brands: ['Tüm Markalar'] },
+  { id: 'katalitik-konvertor', name: 'Katalitik Konvertör', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Katalizör', brands: ['Tüm Markalar'] },
+  { id: 'susturucu', name: 'Susturucu', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Orta ve arka susturucu', brands: ['Tüm Markalar'] },
+  { id: 'egzoz-borusu', name: 'Egzoz Borusu', category: 'egzoz', categoryName: 'Egzoz Sistemi', description: 'Egzoz ara boru', brands: ['Tüm Markalar'] },
 
   // Direksiyon Sistemi
-  { id: 'direksiyon-kutusu', name: 'Direksiyon Kutusu', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Kremayer, direksiyon kutusu', brands: ['Tum Markalar'] },
-  { id: 'direksiyon-pompasi', name: 'Direksiyon Pompasi', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Hidrolik direksiyon pompasi', brands: ['Tum Markalar'] },
-  { id: 'direksiyon-simidi', name: 'Direksiyon Simidi', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Direksiyon simidi, airbag', brands: ['Tum Markalar'] },
-  { id: 'direksiyon-kolonu', name: 'Direksiyon Kolonu', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Direksiyon mili', brands: ['Tum Markalar'] },
+  { id: 'direksiyon-kutusu', name: 'Direksiyon Kutusu', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Kremayer, direksiyon kutusu', brands: ['Tüm Markalar'] },
+  { id: 'direksiyon-pompasi', name: 'Direksiyon Pompası', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Hidrolik direksiyon pompası', brands: ['Tüm Markalar'] },
+  { id: 'direksiyon-simidi', name: 'Direksiyon Simidi', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Direksiyon simidi, airbag', brands: ['Tüm Markalar'] },
+  { id: 'direksiyon-kolonu', name: 'Direksiyon Kolonu', category: 'direksiyon', categoryName: 'Direksiyon Sistemi', description: 'Direksiyon mili', brands: ['Tüm Markalar'] },
 ]
 
 export const getPartsByCategory = (categoryId: string): Part[] => {
@@ -274,7 +274,7 @@ export const getCompatibleParts = (make: string, fuelType: string, transmissionT
   const normalizedMake = normalizeMake(make)
 
   return parts.filter(part => {
-    const brandMatch = part.brands.includes('Tum Markalar') ||
+    const brandMatch = part.brands.includes('Tüm Markalar') ||
       part.brands.some(b => b.toLowerCase() === normalizedMake.toLowerCase())
 
     if (!brandMatch) return false

@@ -2,17 +2,20 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Menu, X, Car, Phone, MessageCircle } from 'lucide-react'
+import { Menu, X, Car, Phone, MessageCircle, LogIn, User, LogOut, Warehouse } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { getWhatsAppUrl } from '@/lib/config'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { user, logout } = useAuth()
 
   const navLinks = [
     { href: '/', label: 'Ana Sayfa' },
-    { href: '/parcalar', label: 'Parcalar' },
-    { href: '/sase-sorgula', label: 'Sase Sorgula' },
-    { href: '/hakkimizda', label: 'Hakkimizda' },
-    { href: '/iletisim', label: 'Iletisim' },
+    { href: '/parcalar', label: 'Parçalar' },
+    { href: '/sase-sorgula', label: 'Şase Sorgula' },
+    { href: '/hakkimizda', label: 'Hakkımızda' },
+    { href: '/iletisim', label: 'İletişim' },
   ]
 
   return (
@@ -26,9 +29,9 @@ export default function Header() {
             </div>
             <div>
               <span className="text-xl md:text-2xl font-bold text-white">
-                Parca<span className="text-primary-500">Bizden</span>
+                Parça<span className="text-primary-500">Bizden</span>
               </span>
-              <p className="text-[10px] md:text-xs text-gray-400 -mt-1">Yedek & Cikma Parca</p>
+              <p className="text-[10px] md:text-xs text-gray-400 -mt-1">Yedek & Çıkma Parça</p>
             </div>
           </Link>
 
@@ -45,30 +48,55 @@ export default function Header() {
             ))}
           </nav>
 
-          {/* Contact Buttons */}
+          {/* Right Side Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <a
-              href="tel:+905001234567"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-secondary-500 text-secondary-300 hover:bg-secondary-500/10 transition-all"
-            >
-              <Phone className="w-4 h-4" />
-              <span className="text-sm font-medium">0500 123 45 67</span>
-            </a>
-            <a
-              href="https://wa.me/905001234567?text=Merhaba,%20yedek%20parca%20hakkinda%20bilgi%20almak%20istiyorum."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span className="text-sm font-medium">WhatsApp</span>
-            </a>
+            {user ? (
+              <>
+                <Link
+                  href="/garaj"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-500 text-primary-500 hover:bg-primary-500/10 transition-all"
+                >
+                  <Warehouse className="w-4 h-4" />
+                  <span className="text-sm font-medium">Garajım</span>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-300 text-sm">{user.name}</span>
+                  <button
+                    onClick={logout}
+                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    title="Çıkış Yap"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/giris"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-secondary-500 text-secondary-300 hover:bg-secondary-500/10 transition-all"
+                >
+                  <LogIn className="w-4 h-4" />
+                  <span className="text-sm font-medium">Giriş Yap</span>
+                </Link>
+                <a
+                  href={getWhatsAppUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span className="text-sm font-medium">WhatsApp</span>
+                </a>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="lg:hidden p-2 text-gray-300 hover:text-white"
+            aria-label={isMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -88,24 +116,44 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
-              <div className="flex flex-col gap-2 mt-4 px-4">
-                <a
-                  href="tel:+905001234567"
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-secondary-500 text-secondary-300"
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>0500 123 45 67</span>
-                </a>
-                <a
-                  href="https://wa.me/905001234567?text=Merhaba,%20yedek%20parca%20hakkinda%20bilgi%20almak%20istiyorum."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>WhatsApp ile Ulasin</span>
-                </a>
-              </div>
+
+              {user ? (
+                <>
+                  <Link
+                    href="/garaj"
+                    className="px-4 py-3 text-primary-500 hover:bg-dark-800 rounded-lg transition-all font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Garajım
+                  </Link>
+                  <button
+                    onClick={() => { logout(); setIsMenuOpen(false) }}
+                    className="px-4 py-3 text-left text-red-400 hover:bg-dark-800 rounded-lg transition-all"
+                  >
+                    Çıkış Yap
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2 mt-4 px-4">
+                  <Link
+                    href="/giris"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-secondary-500 text-secondary-300"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    <LogIn className="w-4 h-4" />
+                    <span>Giriş Yap</span>
+                  </Link>
+                  <a
+                    href={getWhatsAppUrl()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    <span>WhatsApp ile Ulaşın</span>
+                  </a>
+                </div>
+              )}
             </nav>
           </div>
         )}

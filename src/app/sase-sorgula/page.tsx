@@ -2,29 +2,31 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight, HelpCircle, FileText, Car } from 'lucide-react'
 import ChassisSearch from '@/components/ChassisSearch'
+import { getWhatsAppUrl } from '@/lib/config'
 
 export const metadata: Metadata = {
-  title: 'Sase Numarasi ile Parca Sorgula | ParcaBizden',
-  description: 'Sase numarasi (VIN) ile aracınıza uygun yedek parca ve cikma parca arama. 17 haneli sase numaranizi girin, arac bilgilerini gorun.',
-  keywords: 'sase numarasi, VIN sorgu, sase ile parca arama, arac sase, yedek parca sorgulama',
+  title: 'Şase Numarası ile Parça Sorgula',
+  description: 'Şase numarası (VIN) ile aracınıza uygun yedek parça ve çıkma parça arama. 17 haneli şase numaranızı girin, araç bilgilerini görün.',
+  keywords: 'şase numarası, VIN sorgu, şase ile parça arama, araç şase, yedek parça sorgulama',
+  alternates: { canonical: '/sase-sorgula' },
 }
 
 const faqs = [
   {
-    question: 'Sase numarasi nedir?',
-    answer: 'Sase numarasi (VIN - Vehicle Identification Number), her araca ozel 17 karakterli bir koddur. Bu numara aracinizin kimlik numarasi gibidir ve marka, model, yil, uretim yeri gibi bilgileri icerir.'
+    question: 'Şase numarası nedir?',
+    answer: 'Şase numarası (VIN - Vehicle Identification Number), her araca özel 17 karakterli bir koddur. Bu numara aracınızın kimlik numarası gibidir ve marka, model, yıl, üretim yeri gibi bilgileri içerir.'
   },
   {
-    question: 'Sase numarasini nerede bulabilirim?',
-    answer: 'Sase numarasini arac ruhsatinizda, on camin sol alt kosesinde, surucu kapisi cercevesinde veya motor bolumunde bulabilirsiniz.'
+    question: 'Şase numarasını nerede bulabilirim?',
+    answer: 'Şase numarasını araç ruhsatınızda, ön camın sol alt köşesinde, sürücü kapısı çerçevesinde veya motor bölümünde bulabilirsiniz.'
   },
   {
-    question: 'Neden sase numarasi gerekli?',
-    answer: 'Sase numarasi sayesinde aracınıza tam uyumlu parcalari belirleyebiliriz. Ayni model araclarda bile farkli donanim seviyeleri ve uretim tarihleri nedeniyle parca farkliliklari olabilir.'
+    question: 'Neden şase numarası gerekli?',
+    answer: 'Şase numarası sayesinde aracınıza tam uyumlu parçaları belirleyebiliriz. Aynı model araçlarda bile farklı donanım seviyeleri ve üretim tarihleri nedeniyle parça farklılıkları olabilir.'
   },
   {
-    question: 'Sase numaram 17 karakterden az, ne yapmaliyim?',
-    answer: 'Bazi eski model araclarda sase numarasi 17 karakterden az olabilir. Bu durumda WhatsApp uzerinden bizimle iletisime gecin, size yardimci olalim.'
+    question: 'Şase numaram 17 karakterden az, ne yapmalıyım?',
+    answer: 'Bazı eski model araçlarda şase numarası 17 karakterden az olabilir. Bu durumda WhatsApp üzerinden bizimle iletişime geçin, size yardımcı olalım.'
   }
 ]
 
@@ -36,16 +38,16 @@ export default function SaseSorgulaPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
           <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Sase Sorgula</span>
+          <span className="text-white">Şase Sorgula</span>
         </nav>
 
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            Sase Numarasi ile <span className="text-primary-500">Parca Ara</span>
+            Şase Numarası ile <span className="text-primary-500">Parça Ara</span>
           </h1>
           <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-            17 haneli sase (VIN) numaranizi girin, gercek arac bilgilerinizi gorun ve aracınıza uyumlu tum parcalari listeleyin.
+            17 haneli şase (VIN) numaranızı girin, gerçek araç bilgilerinizi görün ve aracınıza uyumlu tüm parçaları listeleyin.
           </p>
         </div>
 
@@ -57,25 +59,25 @@ export default function SaseSorgulaPage() {
         {/* How to Find VIN */}
         <div className="max-w-4xl mx-auto mb-16">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">
-            Sase Numarasi Nerede Bulunur?
+            Şase Numarası Nerede Bulunur?
           </h2>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 text-center">
               <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-primary-500" />
               </div>
-              <h3 className="text-white font-semibold mb-2">Arac Ruhsati</h3>
+              <h3 className="text-white font-semibold mb-2">Araç Ruhsatı</h3>
               <p className="text-gray-400 text-sm">
-                Ruhsatinizin on yuzunde "Sasi No" veya "VIN" yazan bolumde bulabilirsiniz.
+                Ruhsatınızın ön yüzünde &quot;Şasi No&quot; veya &quot;VIN&quot; yazan bölümde bulabilirsiniz.
               </p>
             </div>
             <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 text-center">
               <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
                 <Car className="w-8 h-8 text-primary-500" />
               </div>
-              <h3 className="text-white font-semibold mb-2">On Cam</h3>
+              <h3 className="text-white font-semibold mb-2">Ön Cam</h3>
               <p className="text-gray-400 text-sm">
-                On camin sol alt kosesinde, disaridan gorunur sekilde metal bir plakada yazilidir.
+                Ön camın sol alt köşesinde, dışarıdan görünür şekilde metal bir plakada yazılıdır.
               </p>
             </div>
             <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 text-center">
@@ -84,9 +86,9 @@ export default function SaseSorgulaPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
-              <h3 className="text-white font-semibold mb-2">Kapi Cercevesi</h3>
+              <h3 className="text-white font-semibold mb-2">Kapı Çerçevesi</h3>
               <p className="text-gray-400 text-sm">
-                Surucu kapisi acildiginda, kapi cercevesi uzerinde etikette yazilidir.
+                Sürücü kapısı açıldığında, kapı çerçevesi üzerinde etikette yazılıdır.
               </p>
             </div>
           </div>
@@ -95,7 +97,7 @@ export default function SaseSorgulaPage() {
         {/* FAQ Section */}
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl font-bold text-white mb-6 text-center">
-            Sikca Sorulan Sorular
+            Sıkça Sorulan Sorular
           </h2>
           <div className="space-y-4">
             {faqs.map((faq, index) => (
@@ -119,18 +121,18 @@ export default function SaseSorgulaPage() {
         <div className="mt-16 text-center">
           <div className="bg-gradient-to-r from-green-900/50 to-green-800/50 border border-green-700/50 rounded-2xl p-8 max-w-2xl mx-auto">
             <h2 className="text-2xl font-bold text-white mb-3">
-              Yardima mi Ihtiyaciniz Var?
+              Yardıma mı İhtiyacınız Var?
             </h2>
             <p className="text-gray-300 mb-6">
-              Sase numaranizi bulamiyor veya sorgulama konusunda yardima ihtiyac duyuyorsaniz WhatsApp uzerinden bize ulasin.
+              Şase numaranızı bulamıyor veya sorgulama konusunda yardıma ihtiyaç duyuyorsanız WhatsApp üzerinden bize ulaşın.
             </p>
             <a
-              href="https://wa.me/905001234567?text=Merhaba,%20sase%20numarasi%20sorgulama%20konusunda%20yardima%20ihtiyacim%20var."
+              href={getWhatsAppUrl('Merhaba, şase numarası sorgulama konusunda yardıma ihtiyacım var.')}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all"
             >
-              WhatsApp ile Yardim Alin
+              WhatsApp ile Yardım Alın
             </a>
           </div>
         </div>

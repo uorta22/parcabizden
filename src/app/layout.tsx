@@ -4,24 +4,50 @@ import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import WhatsAppButton from '@/components/WhatsAppButton'
+import SchemaOrg from '@/components/SchemaOrg'
+import { AuthProvider } from '@/contexts/AuthContext'
+import { siteConfig } from '@/lib/config'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin', 'latin-ext'] })
 
 export const metadata: Metadata = {
-  title: 'ParcaBizden - Yedek Parca & Cikma Parca Talep Platformu',
-  description: 'Arac yedek parcasi ve cikma parca ihtiyaclariniz icin dogru adres. Sase numarasi ile arama yapin, tum markalara uygun parcalari bulun. Hizli WhatsApp destek.',
-  keywords: 'yedek parca, cikma parca, oto yedek parca, arac parcasi, motor parcasi, sanziman, suspansiyon, fren sistemi, sase numarasi ile parca arama',
-  authors: [{ name: 'ParcaBizden' }],
+  title: {
+    default: `${siteConfig.name} - Yedek Parça & Çıkma Parça Talep Platformu`,
+    template: `%s | ${siteConfig.name}`,
+  },
+  description: siteConfig.description,
+  keywords: 'yedek parça, çıkma parça, oto yedek parça, araç parçası, motor parçası, şanzıman, süspansiyon, fren sistemi, şase numarası ile parça arama, çıkma parça istanbul',
+  authors: [{ name: siteConfig.name }],
+  metadataBase: new URL(siteConfig.url),
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
-    title: 'ParcaBizden - Yedek Parca & Cikma Parca Talep Platformu',
-    description: 'Arac yedek parcasi ve cikma parca ihtiyaclariniz icin dogru adres.',
+    title: `${siteConfig.name} - Yedek Parça & Çıkma Parça Talep Platformu`,
+    description: siteConfig.description,
     type: 'website',
     locale: 'tr_TR',
-    siteName: 'ParcaBizden',
+    siteName: siteConfig.name,
+    url: siteConfig.url,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${siteConfig.name} - Yedek Parça & Çıkma Parça`,
+    description: siteConfig.description,
   },
   robots: {
     index: true,
     follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // google: 'your-google-verification-code',
   },
 }
 
@@ -36,14 +62,17 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="theme-color" content="#1a2652" />
+        <SchemaOrg />
       </head>
       <body className={`${inter.className} bg-dark-900 text-white`}>
-        <Header />
-        <main className="min-h-screen">
-          {children}
-        </main>
-        <Footer />
-        <WhatsAppButton />
+        <AuthProvider>
+          <Header />
+          <main className="min-h-screen">
+            {children}
+          </main>
+          <Footer />
+          <WhatsAppButton />
+        </AuthProvider>
       </body>
     </html>
   )

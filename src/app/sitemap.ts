@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next'
 import { categories } from '@/data/parts'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://parcabizden.com'
+  const baseUrl = 'https://parcabizden.com.tr'
 
   // Static pages
   const staticPages = [
@@ -35,6 +35,30 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified: new Date(),
       changeFrequency: 'monthly' as const,
       priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/giris`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/kayit`,
+      lastModified: new Date(),
+      changeFrequency: 'monthly' as const,
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/gizlilik`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly' as const,
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/kullanim-sartlari`,
+      lastModified: new Date(),
+      changeFrequency: 'yearly' as const,
+      priority: 0.3,
     },
   ]
 

@@ -1,43 +1,44 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight, Shield, Users, Award, Target, CheckCircle, MessageCircle } from 'lucide-react'
+import { getWhatsAppUrl } from '@/lib/config'
 
 export const metadata: Metadata = {
-  title: 'Hakkimizda - ParcaBizden',
-  description: 'ParcaBizden hakkinda bilgi edinin. Yedek parca ve cikma parca sektorunde guvenilir cozum ortaginiz.',
-  keywords: 'hakkimizda, parcabizden, yedek parca firmasi, cikma parca',
+  title: 'Hakkımızda - ParcaBizden',
+  description: 'ParcaBizden hakkında bilgi edinin. Yedek parça ve çıkma parça sektöründe güvenilir çözüm ortağınız.',
+  keywords: 'hakkımızda, parcabizden, yedek parça firması, çıkma parça',
 }
 
 const values = [
   {
     icon: Shield,
-    title: 'Guvenilirlik',
-    description: 'Tum parcalarimiz titizlikle kontrol edilir. Musteri memnuniyeti bizim icin her seyden onemlidir.'
+    title: 'Güvenilirlik',
+    description: 'Tüm parçalarımız titizlikle kontrol edilir. Müşteri memnuniyeti bizim için her şeyden önemlidir.'
   },
   {
     icon: Users,
-    title: 'Musteri Odaklilik',
-    description: 'Her musterimizin ihtiyacini anlayarak en uygun cozumu sunmak icin calisiyoruz.'
+    title: 'Müşteri Odaklılık',
+    description: 'Her müşterimizin ihtiyacını anlayarak en uygun çözümü sunmak için çalışıyoruz.'
   },
   {
     icon: Award,
     title: 'Kalite',
-    description: 'Kaliteden odun vermeden, her butceye uygun parca secenekleri sunuyoruz.'
+    description: 'Kaliteden ödün vermeden, her bütçeye uygun parça seçenekleri sunuyoruz.'
   },
   {
     icon: Target,
-    title: 'Hiz',
-    description: 'WhatsApp uzerinden aninda iletisim, hizli fiyat teklifi ve hizli teslimat.'
+    title: 'Hız',
+    description: 'WhatsApp üzerinden anında iletişim, hızlı fiyat teklifi ve hızlı teslimat.'
   }
 ]
 
 const highlights = [
-  '5000+ mutlu musteri',
-  '10.000+ parca cesidi',
+  '5000+ mutlu müşteri',
+  '10.000+ parça çeşidi',
   '50+ marka desteği',
-  'Turkiye genelinde kargo',
+  'Türkiye genelinde kargo',
   '7/24 WhatsApp destek',
-  'Tecrubeli teknik ekip'
+  'Tecrübeli teknik ekip'
 ]
 
 export default function HakkimizdaPage() {
@@ -48,26 +49,26 @@ export default function HakkimizdaPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
           <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Hakkimizda</span>
+          <span className="text-white">Hakkımızda</span>
         </nav>
 
         {/* Hero Section */}
         <div className="text-center mb-16">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
-            Yedek Parca Sektorunde
-            <span className="text-primary-500"> Guvenilir Cozum Ortaginiz</span>
+            Yedek Parça Sektöründe
+            <span className="text-primary-500"> Güvenilir Çözüm Ortağınız</span>
           </h1>
           <p className="text-gray-400 max-w-3xl mx-auto text-lg leading-relaxed">
-            ParcaBizden olarak, arac sahipleri ve kasko eksperleri icin yedek parca ve cikma parca
-            tedariğinde guvenilir bir kopru olmak amacimizdir. Kaliteli parcalari uygun kosullarda
-            size ulastirmak icin calisiyoruz.
+            ParcaBizden olarak, araç sahipleri ve kasko eksperleri için yedek parça ve çıkma parça
+            tedarikinde güvenilir bir köprü olmak amacımızdır. Kaliteli parçaları uygun koşullarda
+            size ulaştırmak için çalışıyoruz.
           </p>
         </div>
 
         {/* Values Section */}
         <div className="mb-16">
           <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-10">
-            Degerlerimiz
+            Değerlerimiz
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((value, index) => (
@@ -93,19 +94,19 @@ export default function HakkimizdaPage() {
             </h2>
             <div className="space-y-4 text-gray-400 leading-relaxed">
               <p>
-                ParcaBizden, otomotiv sektorunde yilların tecrubesiyle yedek parca ve cikma parca
-                tedariginde uzmanlasmis bir platformdur. Amacimiz, arac sahiplerinin ve kasko
-                eksperlerinin dogru parcaya hizli ve guvenilir sekilde ulasmalarini saglamaktir.
+                ParcaBizden, otomotiv sektöründe yılların tecrübesiyle yedek parça ve çıkma parça
+                tedarikinde uzmanlaşmış bir platformdur. Amacımız, araç sahiplerinin ve kasko
+                eksperlerinin doğru parçaya hızlı ve güvenilir şekilde ulaşmalarını sağlamaktır.
               </p>
               <p>
-                Genis parca agimiz ve tecrubeli ekibimiz sayesinde, tum marka ve modellere uygun
-                parcalari bulmanizda size yardimci oluyoruz. Sase numaraniz ile arama yaparak
-                aracınıza tam uyumlu parcalari kolayca tespit edebilirsiniz.
+                Geniş parça ağımız ve tecrübeli ekibimiz sayesinde, tüm marka ve modellere uygun
+                parçaları bulmanızda size yardımcı oluyoruz. Şase numaranız ile arama yaparak
+                aracınıza tam uyumlu parçaları kolayca tespit edebilirsiniz.
               </p>
               <p>
-                WhatsApp Business hattimiz uzerinden 7/24 mesaj birakabilir, is saatlerinde aninda
-                cevap alabilirsiniz. Fotograf paylasimi ile ihtiyaciniz olan parcayi net sekilde
-                belirtebilir, hizli fiyat teklifi alabilirsiniz.
+                WhatsApp Business hattımız üzerinden 7/24 mesaj bırakabilir, iş saatlerinde anında
+                cevap alabilirsiniz. Fotoğraf paylaşımı ile ihtiyacınız olan parçayı net şekilde
+                belirtebilir, hızlı fiyat teklifi alabilirsiniz.
               </p>
             </div>
           </div>
@@ -126,7 +127,7 @@ export default function HakkimizdaPage() {
         {/* Target Audience */}
         <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 md:p-12 mb-16">
           <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-10">
-            Kimler Icin Hizmet Veriyoruz?
+            Kimler İçin Hizmet Veriyoruz?
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
             <div className="text-center">
@@ -135,11 +136,11 @@ export default function HakkimizdaPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Arac Sahipleri</h3>
+              <h3 className="text-xl font-semibold text-white mb-3">Araç Sahipleri</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Aracınız icin ihtiyaciniz olan yedek veya cikma parcayi uygun fiyatlarla
-                bulmaniza yardimci oluyoruz. Sase numaraniz ile arama yaparak dogru
-                parcaya ulasin.
+                Aracınız için ihtiyacınız olan yedek veya çıkma parçayı uygun fiyatlarla
+                bulmanıza yardımcı oluyoruz. Şase numaranız ile arama yaparak doğru
+                parçaya ulaşın.
               </p>
             </div>
             <div className="text-center">
@@ -150,8 +151,8 @@ export default function HakkimizdaPage() {
               </div>
               <h3 className="text-xl font-semibold text-white mb-3">Kasko Eksperleri</h3>
               <p className="text-gray-400 text-sm leading-relaxed">
-                Hasar tespitlerinde ihtiyaciniz olan parcalarin tedariginde size
-                yardimci oluyoruz. Toplu talepleriniz icin ozel iletisim kanaliniz.
+                Hasar tespitlerinde ihtiyacınız olan parçaların tedarikinde size
+                yardımcı oluyoruz. Toplu talepleriniz için özel iletişim kanalınız.
               </p>
             </div>
           </div>
@@ -161,27 +162,27 @@ export default function HakkimizdaPage() {
         <div className="text-center">
           <div className="bg-gradient-to-r from-secondary-700 to-secondary-900 rounded-2xl p-8 md:p-12 max-w-3xl mx-auto">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">
-              Hemen Iletisime Gecin
+              Hemen İletişime Geçin
             </h2>
             <p className="text-gray-300 mb-8 max-w-xl mx-auto">
-              Yedek parca ihtiyaclariniz icin WhatsApp uzerinden bize ulasin.
-              Tecrubeli ekibimiz size en kisa surede donecektir.
+              Yedek parça ihtiyaçlarınız için WhatsApp üzerinden bize ulaşın.
+              Tecrübeli ekibimiz size en kısa sürede dönecektir.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a
-                href="https://wa.me/905001234567?text=Merhaba,%20yedek%20parca%20hakkinda%20bilgi%20almak%20istiyorum."
+                href={getWhatsAppUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all"
               >
                 <MessageCircle className="w-5 h-5" />
-                WhatsApp ile Ulasin
+                WhatsApp ile Ulaşın
               </a>
               <Link
                 href="/iletisim"
                 className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl transition-all border border-white/20"
               >
-                Iletisim Bilgileri
+                İletişim Bilgileri
               </Link>
             </div>
           </div>

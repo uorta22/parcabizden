@@ -1,11 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight, Phone, Mail, MapPin, Clock, MessageCircle, Send } from 'lucide-react'
+import { siteConfig, getWhatsAppUrl, getPhoneUrl, getEmailUrl } from '@/lib/config'
 
 export const metadata: Metadata = {
-  title: 'Iletisim - Bize Ulasin | ParcaBizden',
-  description: 'ParcaBizden ile iletisime gecin. WhatsApp, telefon veya e-posta ile yedek parca taleplerinizi iletebilirsiniz.',
-  keywords: 'iletisim, yedek parca iletisim, whatsapp destek, telefon',
+  title: 'İletişim - Bize Ulaşın',
+  description: `${siteConfig.name} ile iletişime geçin. WhatsApp, telefon veya e-posta ile yedek parça taleplerinizi iletebilirsiniz.`,
+  keywords: 'iletişim, yedek parça iletişim, whatsapp destek, telefon',
+  alternates: { canonical: '/iletisim' },
 }
 
 export default function IletisimPage() {
@@ -16,29 +18,29 @@ export default function IletisimPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
           <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Iletisim</span>
+          <span className="text-white">İletişim</span>
         </nav>
 
         {/* Header */}
         <div className="text-center mb-12">
           <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
-            Bize <span className="text-primary-500">Ulasin</span>
+            Bize <span className="text-primary-500">Ulaşın</span>
           </h1>
           <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-            Yedek parca ihtiyaclariniz veya sorulariniz icin bizimle iletisime gecin.
-            WhatsApp uzerinden aninda destek alin.
+            Yedek parça ihtiyaçlarınız veya sorularınız için bizimle iletişime geçin.
+            WhatsApp üzerinden anında destek alın.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-2 gap-12 max-w-6xl mx-auto">
           {/* Contact Info */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-6">Iletisim Bilgileri</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">İletişim Bilgileri</h2>
 
             <div className="space-y-6">
               {/* WhatsApp - Primary */}
               <a
-                href="https://wa.me/905001234567?text=Merhaba,%20yedek%20parca%20hakkinda%20bilgi%20almak%20istiyorum."
+                href={getWhatsAppUrl()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-start gap-4 p-6 bg-green-600/20 border border-green-600/50 rounded-xl hover:bg-green-600/30 transition-colors group"
@@ -48,29 +50,29 @@ export default function IletisimPage() {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-lg mb-1">WhatsApp Business</h3>
-                  <p className="text-green-400 font-medium">0500 123 45 67</p>
-                  <p className="text-gray-400 text-sm mt-1">En hizli iletisim yolu. Aninda cevap alin.</p>
+                  <p className="text-green-400 font-medium">{siteConfig.phone.display}</p>
+                  <p className="text-gray-400 text-sm mt-1">En hızlı iletişim yolu. Anında cevap alın.</p>
                 </div>
               </a>
 
               {/* Phone */}
               <a
-                href="tel:+905001234567"
+                href={getPhoneUrl()}
                 className="flex items-start gap-4 p-6 bg-dark-800 border border-dark-700 rounded-xl hover:border-primary-500/50 transition-colors group"
               >
                 <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0">
                   <Phone className="w-7 h-7 text-primary-500" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-lg mb-1">Sirket Hatti</h3>
-                  <p className="text-primary-500 font-medium">0500 123 45 67</p>
-                  <p className="text-gray-400 text-sm mt-1">Telefonla bilgi almak icin arayin.</p>
+                  <h3 className="text-white font-semibold text-lg mb-1">Şirket Hattı</h3>
+                  <p className="text-primary-500 font-medium">{siteConfig.phone.display}</p>
+                  <p className="text-gray-400 text-sm mt-1">Telefonla bilgi almak için arayın.</p>
                 </div>
               </a>
 
               {/* Email */}
               <a
-                href="mailto:info@parcabizden.com"
+                href={getEmailUrl()}
                 className="flex items-start gap-4 p-6 bg-dark-800 border border-dark-700 rounded-xl hover:border-primary-500/50 transition-colors group"
               >
                 <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0">
@@ -78,8 +80,8 @@ export default function IletisimPage() {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-lg mb-1">E-posta</h3>
-                  <p className="text-primary-500 font-medium">info@parcabizden.com</p>
-                  <p className="text-gray-400 text-sm mt-1">Detayli talepler icin e-posta gonderin.</p>
+                  <p className="text-primary-500 font-medium">{siteConfig.email}</p>
+                  <p className="text-gray-400 text-sm mt-1">Detaylı talepler için e-posta gönderin.</p>
                 </div>
               </a>
 
@@ -90,8 +92,8 @@ export default function IletisimPage() {
                 </div>
                 <div>
                   <h3 className="text-white font-semibold text-lg mb-1">Adres</h3>
-                  <p className="text-gray-300">Istanbul, Turkiye</p>
-                  <p className="text-gray-400 text-sm mt-1">Detayli adres bilgisi icin iletisime gecin.</p>
+                  <p className="text-gray-300">{siteConfig.address.full}</p>
+                  <p className="text-gray-400 text-sm mt-1">Detaylı adres bilgisi için iletişime geçin.</p>
                 </div>
               </div>
 
@@ -101,12 +103,12 @@ export default function IletisimPage() {
                   <Clock className="w-7 h-7 text-primary-500" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold text-lg mb-1">Calisma Saatleri</h3>
+                  <h3 className="text-white font-semibold text-lg mb-1">Çalışma Saatleri</h3>
                   <div className="text-gray-300">
-                    <p>Pazartesi - Cumartesi: 09:00 - 19:00</p>
-                    <p>Pazar: Kapali</p>
+                    <p>{siteConfig.workingHours.weekdays}</p>
+                    <p>{siteConfig.workingHours.weekend}</p>
                   </div>
-                  <p className="text-gray-400 text-sm mt-1">WhatsApp uzerinden 7/24 mesaj birakabilirsiniz.</p>
+                  <p className="text-gray-400 text-sm mt-1">{siteConfig.workingHours.whatsappNote}</p>
                 </div>
               </div>
             </div>
@@ -114,31 +116,33 @@ export default function IletisimPage() {
 
           {/* Contact Form / Quick Request */}
           <div>
-            <h2 className="text-2xl font-bold text-white mb-6">Hizli Talep Formu</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">Hızlı Talep Formu</h2>
 
             <div className="bg-dark-800 border border-dark-700 rounded-2xl p-6 md:p-8">
               <p className="text-gray-400 mb-6">
-                Asagidaki formu doldurun, talebinizi WhatsApp uzerinden bize gonderin.
-                En kisa surede size donelim.
+                Aşağıdaki formu doldurun, talebinizi WhatsApp üzerinden bize gönderin.
+                En kısa sürede size dönelim.
               </p>
 
-              <form className="space-y-5" action="https://wa.me/905001234567" method="get" target="_blank">
+              <form className="space-y-5" action={getWhatsAppUrl(siteConfig.whatsapp.partRequestMessage)} method="get" target="_blank">
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Adiniz Soyadiniz
+                  <label htmlFor="contact-name" className="block text-gray-300 text-sm font-medium mb-2">
+                    Adınız Soyadınız
                   </label>
                   <input
+                    id="contact-name"
                     type="text"
-                    placeholder="Ornek: Ahmet Yilmaz"
+                    placeholder="Örnek: Ahmet Yılmaz"
                     className="w-full px-4 py-3 bg-dark-900 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Telefon Numaraniz
+                  <label htmlFor="contact-phone" className="block text-gray-300 text-sm font-medium mb-2">
+                    Telefon Numaranız
                   </label>
                   <input
+                    id="contact-phone"
                     type="tel"
                     placeholder="0500 000 00 00"
                     className="w-full px-4 py-3 bg-dark-900 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
@@ -146,40 +150,42 @@ export default function IletisimPage() {
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Arac Bilgisi / Sase No
+                  <label htmlFor="contact-vehicle" className="block text-gray-300 text-sm font-medium mb-2">
+                    Araç Bilgisi / Şase No
                   </label>
                   <input
+                    id="contact-vehicle"
                     type="text"
-                    placeholder="Marka, model veya sase numarasi"
+                    placeholder="Marka, model veya şase numarası"
                     className="w-full px-4 py-3 bg-dark-900 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-gray-300 text-sm font-medium mb-2">
-                    Ihtiyaciniz Olan Parca
+                  <label htmlFor="contact-part" className="block text-gray-300 text-sm font-medium mb-2">
+                    İhtiyacınız Olan Parça
                   </label>
                   <textarea
+                    id="contact-part"
                     rows={4}
-                    placeholder="Aradiginiz parcayi detayli sekilde yazin..."
+                    placeholder="Aradığınız parçayı detaylı şekilde yazın..."
                     className="w-full px-4 py-3 bg-dark-900 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors resize-none"
                   />
                 </div>
 
                 <a
-                  href="https://wa.me/905001234567?text=Merhaba,%20yedek%20parca%20talebi%20gonderiyorum."
+                  href={getWhatsAppUrl('Merhaba, yedek parça talebi göndermek istiyorum.')}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-center gap-2 w-full px-6 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-colors"
                 >
                   <Send className="w-5 h-5" />
-                  WhatsApp ile Gonder
+                  WhatsApp ile Gönder
                 </a>
               </form>
 
               <p className="text-center text-gray-500 text-sm mt-4">
-                Form gonderildiginde WhatsApp acilacaktir.
+                Form gönderildiğinde WhatsApp açılacaktır.
               </p>
             </div>
           </div>
@@ -192,16 +198,16 @@ export default function IletisimPage() {
               Neden WhatsApp?
             </h2>
             <p className="text-gray-400 mb-6">
-              WhatsApp Business hattimiz sayesinde aradiginiz parcalarin fotograflarini paylasabilir,
-              aninda fiyat teklifi alabilir ve siparsinizi hizlica verebilirsiniz.
-              Tum gorsel ve yazili iletisiminiz kayit altinda kalir.
+              WhatsApp Business hattımız sayesinde aradığınız parçaların fotoğraflarını paylaşabilir,
+              anında fiyat teklifi alabilir ve siparişinizi hızlıca verebilirsiniz.
+              Tüm görsel ve yazılı iletişiminiz kayıt altında kalır.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
               <div className="px-4 py-2 bg-dark-700 rounded-lg text-gray-300 text-sm">
-                Aninda Cevap
+                Anında Cevap
               </div>
               <div className="px-4 py-2 bg-dark-700 rounded-lg text-gray-300 text-sm">
-                Fotograf Paylasimi
+                Fotoğraf Paylaşımı
               </div>
               <div className="px-4 py-2 bg-dark-700 rounded-lg text-gray-300 text-sm">
                 Kolay Takip

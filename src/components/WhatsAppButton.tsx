@@ -1,12 +1,10 @@
 'use client'
 
 import { MessageCircle } from 'lucide-react'
+import { getWhatsAppUrl } from '@/lib/config'
 
 export default function WhatsAppButton() {
-  const phoneNumber = '905001234567'
-  const message = 'Merhaba, yedek parca hakkinda bilgi almak istiyorum.'
-
-  const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+  const whatsappUrl = getWhatsAppUrl()
 
   return (
     <a
@@ -14,7 +12,7 @@ export default function WhatsAppButton() {
       target="_blank"
       rel="noopener noreferrer"
       className="fixed bottom-6 right-6 z-50 group"
-      aria-label="WhatsApp ile iletisime gecin"
+      aria-label="WhatsApp ile iletişime geçin"
     >
       <div className="relative">
         {/* Pulse animation ring */}
@@ -27,7 +25,7 @@ export default function WhatsAppButton() {
 
         {/* Tooltip */}
         <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-dark-800 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg">
-          WhatsApp ile yazin
+          WhatsApp ile yazın
           <div className="absolute left-full top-1/2 -translate-y-1/2 border-8 border-transparent border-l-dark-800"></div>
         </div>
       </div>

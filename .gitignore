@@ -26,9 +26,22 @@ yarn-error.log*
 .env*.local
 .env
 
+# API logs
+/api/logs/
+
 # Vercel
 .vercel
 
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Build artifacts
+out.zip
+
+# Claude Code
+.claude/
+
+# API temp files
+/api/tmp/rate_limits/
+/api/tmp/

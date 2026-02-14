@@ -1,0 +1,37 @@
+# Security Headers
+<IfModule mod_headers.c>
+  # Clickjacking koruması
+  Header always set X-Frame-Options "SAMEORIGIN"
+
+  # MIME type sniffing koruması
+  Header always set X-Content-Type-Options "nosniff"
+
+  # XSS koruması
+  Header always set X-XSS-Protection "1; mode=block"
+
+  # HTTPS zorunluluğu (1 yıl)
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+
+  # Referrer politikası
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+  # Permissions Policy
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
+
+  # Content Security Policy
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://vpic.nhtsa.dot.gov https://*.parcabizden.com.tr; frame-ancestors 'self';"
+</IfModule>
+
+# Hassas dosyalara erişimi engelle
+<FilesMatch "\.(env|log|ini|bak|sql|git)$">
+  Require all denied
+</FilesMatch>
+
+# Directory listing engelle
+Options -Indexes
+
+# ETags devre dışı (bilgi sızıntısı)
+<IfModule mod_headers.c>
+  Header unset ETag
+</IfModule>
+FileETag None

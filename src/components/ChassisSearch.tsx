@@ -2,96 +2,12 @@
 
 import { useState } from 'react'
 import { Search, AlertCircle, CheckCircle, MessageCircle, Info, ChevronDown, ChevronRight, Wrench } from 'lucide-react'
-import type { VehicleInfo, NHTSAResponse } from '@/types/vehicle'
+import type { VehicleInfo } from '@/types/vehicle'
 import type { Part } from '@/data/parts'
 import { getCompatibleParts, groupPartsByCategory, getCategoryById } from '@/data/parts'
 import { BrandLogo } from '@/components/BrandLogos'
-
-function translateFuelType(fuel: string): string {
-  const map: Record<string, string> = {
-    'gasoline': 'Benzin',
-    'diesel': 'Dizel',
-    'electric': 'Elektrik',
-    'hybrid': 'Hibrit',
-    'plug-in hybrid': 'Plug-in Hibrit',
-    'compressed natural gas (cng)': 'Dogalgaz (CNG)',
-    'liquefied petroleum gas (lpg)': 'LPG',
-  }
-  return map[fuel.toLowerCase()] || fuel
-}
-
-function translateTransmission(trans: string): string {
-  if (!trans) return ''
-  if (trans.toLowerCase().includes('automatic')) return 'Otomatik'
-  if (trans.toLowerCase().includes('manual')) return 'Manuel'
-  if (trans.toLowerCase().includes('cvt')) return 'CVT'
-  return trans
-}
-
-function formatEngine(info: VehicleInfo): string {
-  const parts: string[] = []
-  if (info.displacementL) parts.push(`${info.displacementL}L`)
-  if (info.engineCylinders) parts.push(`${info.engineCylinders} Silindir`)
-  return parts.join(' ')
-}
-
-function formatMake(make: string): string {
-  const upper = make.toUpperCase().trim()
-  const knownBrands: Record<string, string> = {
-    'BMW': 'BMW', 'MG': 'MG', 'BYD': 'BYD', 'DS': 'DS',
-    'MERCEDES-BENZ': 'Mercedes-Benz', 'LAND ROVER': 'Land Rover',
-  }
-  if (knownBrands[upper]) return knownBrands[upper]
-  return make.charAt(0).toUpperCase() + make.slice(1).toLowerCase()
-}
-
-function clean(val: string | undefined): string {
-  if (!val || val === 'Not Applicable' || val === 'null') return ''
-  return val.trim()
-}
-
-async function decodeVIN(vin: string): Promise<{ data?: VehicleInfo; error?: string }> {
-  const response = await fetch(
-    `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${vin}?format=json`
-  )
-
-  if (!response.ok) {
-    return { error: 'NHTSA API ile baglanti kurulamadi. Lutfen tekrar deneyin.' }
-  }
-
-  const nhtsaData: NHTSAResponse = await response.json()
-
-  if (!nhtsaData.Results || nhtsaData.Results.length === 0) {
-    return { error: 'NHTSA API sonuc dondurmedi.' }
-  }
-
-  const result = nhtsaData.Results[0]
-  const errorCodes = (result.ErrorCode || '').split(',').map(c => c.trim())
-  const isFatalError = errorCodes.includes('5')
-
-  if (isFatalError || !result.Make) {
-    return { error: 'Bu VIN numarasi icin arac bilgisi bulunamadi. Lutfen VIN numarasini kontrol edin.' }
-  }
-
-  const vehicleInfo: VehicleInfo = {
-    make: formatMake(clean(result.Make)),
-    model: clean(result.Model),
-    year: clean(result.ModelYear),
-    series: clean(result.Series),
-    bodyType: clean(result.BodyClass),
-    engineCylinders: clean(result.EngineCylinders),
-    engineHP: clean(result.EngineHP),
-    displacementL: clean(result.DisplacementL),
-    fuelType: clean(result.FuelTypePrimary),
-    transmissionType: clean(result.TransmissionStyle),
-    driveType: clean(result.DriveType),
-    plantCountry: clean(result.PlantCountry),
-    doors: clean(result.Doors),
-    vin: vin.toUpperCase(),
-  }
-
-  return { data: vehicleInfo }
-}
+import { siteConfig } from '@/lib/config'
+import { validateVIN, decodeVIN, translateFuelType, translateTransmission, formatEngine } from '@/lib/vehicle'
 
 export default function ChassisSearch() {
   const [chassisNumber, setChassisNumber] = useState('')
@@ -101,13 +17,6 @@ export default function ChassisSearch() {
   const [error, setError] = useState('')
   const [openCategories, setOpenCategories] = useState<Set<string>>(new Set())
 
-  const validateChassis = (vin: string): boolean => {
-    if (vin.length !== 17) return false
-    if (/[IOQ]/i.test(vin)) return false
-    if (!/^[A-HJ-NPR-Z0-9]+$/i.test(vin)) return false
-    return true
-  }
-
   const handleSearch = async () => {
     setError('')
     setVehicleInfo(null)
@@ -115,12 +24,12 @@ export default function ChassisSearch() {
     setOpenCategories(new Set())
 
     if (!chassisNumber.trim()) {
-      setError('Lutfen sase numarasi girin')
+      setError('Lütfen şase numarası girin')
       return
     }
 
-    if (!validateChassis(chassisNumber.trim())) {
-      setError('Gecersiz sase numarasi. Sase numarasi 17 karakter olmali ve I, O, Q harfleri icermemelidir.')
+    if (!validateVIN(chassisNumber.trim())) {
+      setError('Geçersiz şase numarası. Şase numarası 17 karakter olmalı ve I, O, Q harfleri içermemelidir.')
       return
     }
 
@@ -130,7 +39,7 @@ export default function ChassisSearch() {
       const result = await decodeVIN(chassisNumber.trim())
 
       if (result.error || !result.data) {
-        setError(result.error || 'Arac bilgisi bulunamadi.')
+        setError(result.error || 'Araç bilgisi bulunamadı.')
         return
       }
 
@@ -149,7 +58,7 @@ export default function ChassisSearch() {
         setOpenCategories(new Set([firstCategory]))
       }
     } catch {
-      setError('Bir hata olustu. Lutfen tekrar deneyin.')
+      setError('Bir hata oluştu. Lütfen tekrar deneyin.')
     } finally {
       setIsSearching(false)
     }
@@ -168,13 +77,13 @@ export default function ChassisSearch() {
   }
 
   const handleWhatsAppRequest = () => {
-    const message = `Merhaba, sase numarasi ile parca sorgulama yapmak istiyorum.\n\nSase No: ${chassisNumber}\n${vehicleInfo ? `Marka: ${vehicleInfo.make}\nModel: ${vehicleInfo.model}\nYil: ${vehicleInfo.year}` : ''}\n\nAradigim parca: `
-    window.open(`https://wa.me/905001234567?text=${encodeURIComponent(message)}`, '_blank')
+    const message = `Merhaba, şase numarası ile parça sorgulamak istiyorum.\n\nŞase No: ${chassisNumber}\n${vehicleInfo ? `Marka: ${vehicleInfo.make}\nModel: ${vehicleInfo.model}\nYıl: ${vehicleInfo.year}` : ''}\n\nAradığım parça: `
+    window.open(`https://wa.me/${siteConfig.phone.whatsapp}?text=${encodeURIComponent(message)}`, '_blank')
   }
 
   const handlePartWhatsApp = (part: Part) => {
-    const message = `Merhaba, asagidaki parca icin fiyat bilgisi almak istiyorum.\n\nParca: ${part.name}\nKategori: ${part.categoryName}\n${vehicleInfo ? `Arac: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}\nSase No: ${chassisNumber}` : ''}`
-    window.open(`https://wa.me/905001234567?text=${encodeURIComponent(message)}`, '_blank')
+    const message = `Merhaba, aşağıdaki parça için fiyat bilgisi almak istiyorum.\n\nParça: ${part.name}\nKategori: ${part.categoryName}\n${vehicleInfo ? `Araç: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}\nŞase No: ${chassisNumber}` : ''}`
+    window.open(`https://wa.me/${siteConfig.phone.whatsapp}?text=${encodeURIComponent(message)}`, '_blank')
   }
 
   const totalParts = Object.values(compatibleParts).reduce((sum, parts) => sum + parts.length, 0)
@@ -182,15 +91,15 @@ export default function ChassisSearch() {
   const vehicleFields = vehicleInfo ? [
     { label: 'Marka', value: vehicleInfo.make },
     { label: 'Model', value: vehicleInfo.model },
-    { label: 'Model Yili', value: vehicleInfo.year },
+    { label: 'Model Yılı', value: vehicleInfo.year },
     { label: 'Kasa Tipi', value: vehicleInfo.bodyType },
     { label: 'Motor', value: formatEngine(vehicleInfo) },
-    { label: 'Yakit Tipi', value: translateFuelType(vehicleInfo.fuelType) },
-    { label: 'Beygir Gucu', value: vehicleInfo.engineHP ? `${vehicleInfo.engineHP} HP` : '' },
-    { label: 'Sanziman', value: translateTransmission(vehicleInfo.transmissionType) },
-    { label: 'Cekis', value: vehicleInfo.driveType },
-    { label: 'Kapi Sayisi', value: vehicleInfo.doors },
-    { label: 'Uretim Ulkesi', value: vehicleInfo.plantCountry },
+    { label: 'Yakıt Tipi', value: translateFuelType(vehicleInfo.fuelType) },
+    { label: 'Beygir Gücü', value: vehicleInfo.engineHP ? `${vehicleInfo.engineHP} HP` : '' },
+    { label: 'Şanzıman', value: translateTransmission(vehicleInfo.transmissionType) },
+    { label: 'Çekiş', value: vehicleInfo.driveType },
+    { label: 'Kapı Sayısı', value: vehicleInfo.doors },
+    { label: 'Üretim Ülkesi', value: vehicleInfo.plantCountry },
   ].filter(f => f.value) : []
 
   return (
@@ -199,12 +108,14 @@ export default function ChassisSearch() {
         {/* Search Input */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1 relative">
+            <label htmlFor="vin-input" className="sr-only">Şase Numarası (VIN)</label>
             <input
+              id="vin-input"
               type="text"
               value={chassisNumber}
               onChange={(e) => setChassisNumber(e.target.value.toUpperCase())}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="Sase numarasini girin (17 karakter)"
+              placeholder="Şase numarasını girin (17 karakter)"
               maxLength={17}
               className="w-full px-4 py-4 bg-dark-800 border border-dark-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors font-mono text-lg tracking-wider"
             />
@@ -235,8 +146,8 @@ export default function ChassisSearch() {
         <div className="flex items-start gap-3 p-4 bg-secondary-900/50 rounded-lg mb-6">
           <Info className="w-5 h-5 text-secondary-400 flex-shrink-0 mt-0.5" />
           <p className="text-sm text-gray-400">
-            Sase numarasi (VIN) arac ruhsatinizda, on camin sol alt kosesinde veya surucu kapisi cercevesinde bulunur.
-            17 karakterden olusur ve I, O, Q harflerini icermez.
+            Şase numarası (VIN) araç ruhsatınızda, ön camın sol alt köşesinde veya sürücü kapısı çerçevesinde bulunur.
+            17 karakterden oluşur ve I, O, Q harflerini içermez.
           </p>
         </div>
 
@@ -253,7 +164,7 @@ export default function ChassisSearch() {
           <div className="animate-fadeIn">
             <div className="flex items-center gap-2 mb-4">
               <CheckCircle className="w-5 h-5 text-green-500" />
-              <span className="text-green-500 font-medium">Arac bilgileri bulundu</span>
+              <span className="text-green-500 font-medium">Araç bilgileri bulundu</span>
             </div>
 
             {/* Vehicle Info Card */}
@@ -280,7 +191,7 @@ export default function ChassisSearch() {
                   </div>
                 ))}
                 <div className="col-span-2 md:col-span-3">
-                  <p className="text-gray-500 text-xs mb-1">Sase Numarasi</p>
+                  <p className="text-gray-500 text-xs mb-1">Şase Numarası</p>
                   <p className="text-white font-mono tracking-wider text-sm">{chassisNumber}</p>
                 </div>
               </div>
@@ -292,10 +203,10 @@ export default function ChassisSearch() {
                 <div className="flex items-center gap-3 mb-4">
                   <Wrench className="w-5 h-5 text-primary-500" />
                   <h3 className="text-lg font-bold text-white">
-                    Uyumlu Parcalar
+                    Uyumlu Parçalar
                   </h3>
                   <span className="px-3 py-1 bg-primary-500/20 text-primary-500 rounded-full text-sm font-medium">
-                    {totalParts} parca
+                    {totalParts} parça
                   </span>
                 </div>
 
@@ -361,26 +272,26 @@ export default function ChassisSearch() {
             ) : (
               <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 mb-6 text-center">
                 <p className="text-gray-400 mb-2">
-                  Bu arac icin veri tabanımızda spesifik parca bulunamadi.
+                  Bu araç için veri tabanımızda spesifik parça bulunamadı.
                 </p>
                 <p className="text-gray-500 text-sm">
-                  Ancak tum parcalarimizi WhatsApp uzerinden talep edebilirsiniz.
+                  Ancak tüm parçalarımızı WhatsApp üzerinden talep edebilirsiniz.
                 </p>
               </div>
             )}
 
             {/* WhatsApp CTA */}
             <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-6">
-              <h4 className="text-white font-semibold mb-2">Tum Parcalar Icin Talep Olusturun</h4>
+              <h4 className="text-white font-semibold mb-2">Tüm Parçalar İçin Talep Oluşturun</h4>
               <p className="text-gray-400 text-sm mb-4">
-                Aradiginiz parca listede yok mu? WhatsApp uzerinden sase numaranizla birlikte talep gonderin, size en uygun parcayi bulalim.
+                Aradığınız parça listede yok mu? WhatsApp üzerinden şase numaranızla birlikte talep gönderin, size en uygun parçayı bulalım.
               </p>
               <button
                 onClick={handleWhatsAppRequest}
                 className="w-full md:w-auto px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
               >
                 <MessageCircle className="w-5 h-5" />
-                WhatsApp ile Parca Talep Et
+                WhatsApp ile Parça Talep Et
               </button>
             </div>
           </div>
