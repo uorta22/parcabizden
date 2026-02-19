@@ -37,10 +37,10 @@ export default function Header() {
               <Car className="w-6 h-6 md:w-7 md:h-7 text-dark-900" />
             </div>
             <div>
-              <span className="text-xl md:text-2xl font-bold text-white">
+              <span className="text-xl md:text-2xl font-bold text-gray-900">
                 Parça<span className="text-primary-500">Bizden</span>
               </span>
-              <p className="text-[10px] md:text-xs text-gray-400 -mt-1">Yedek & Çıkma Parça</p>
+              <p className="text-[10px] md:text-xs text-gray-500 -mt-1">Yedek & Çıkma Parça</p>
             </div>
           </Link>
 
@@ -51,7 +51,7 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => handleNavClick(link.href)}
-                className="text-gray-300 hover:text-primary-500 transition-colors font-medium"
+                className="text-gray-600 hover:text-primary-500 transition-colors font-medium"
               >
                 {link.label}
               </Link>
@@ -70,7 +70,7 @@ export default function Header() {
                   <span className="text-sm font-medium">Garajım</span>
                 </Link>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-300 text-sm">{user.name}</span>
+                  <span className="text-gray-700 text-sm">{user.name}</span>
                   <button
                     onClick={logout}
                     className="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
@@ -84,7 +84,7 @@ export default function Header() {
               <>
                 <Link
                   href="/giris"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-secondary-500 text-secondary-300 hover:bg-secondary-500/10 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-all"
                 >
                   <LogIn className="w-4 h-4" />
                   <span className="text-sm font-medium">Giriş Yap</span>
@@ -105,7 +105,7 @@ export default function Header() {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="lg:hidden p-2 text-gray-300 hover:text-white"
+            className="lg:hidden p-2 text-gray-600 hover:text-gray-900"
             aria-label={isMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
           >
             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -114,13 +114,13 @@ export default function Header() {
 
         {/* Mobile Menu */}
         {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-dark-700 animate-fadeIn">
+          <div className="lg:hidden py-4 border-t border-gray-200 animate-fadeIn">
             <nav className="flex flex-col gap-2">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-3 text-gray-300 hover:text-primary-500 hover:bg-dark-800 rounded-lg transition-all"
+                  className="px-4 py-3 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-lg transition-all"
                   onClick={() => { handleNavClick(link.href); setIsMenuOpen(false) }}
                 >
                   {link.label}
@@ -131,14 +131,14 @@ export default function Header() {
                 <>
                   <Link
                     href="/garaj"
-                    className="px-4 py-3 text-primary-500 hover:bg-dark-800 rounded-lg transition-all font-medium"
+                    className="px-4 py-3 text-primary-500 hover:bg-primary-50 rounded-lg transition-all font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Garajım
                   </Link>
                   <button
                     onClick={() => { logout(); setIsMenuOpen(false) }}
-                    className="px-4 py-3 text-left text-red-400 hover:bg-dark-800 rounded-lg transition-all"
+                    className="px-4 py-3 text-left text-red-500 hover:bg-red-50 rounded-lg transition-all"
                   >
                     Çıkış Yap
                   </button>
@@ -147,7 +147,7 @@ export default function Header() {
                 <div className="flex flex-col gap-2 mt-4 px-4">
                   <Link
                     href="/giris"
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-secondary-500 text-secondary-300"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-300 text-gray-700"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <LogIn className="w-4 h-4" />

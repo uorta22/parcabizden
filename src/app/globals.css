@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 255, 255, 255;
-  --background-rgb: 19, 23, 33;
+  --foreground-rgb: 17, 24, 39;
+  --background-rgb: 255, 255, 255;
 }
 
 body {
@@ -18,16 +18,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #1f2431;
+  background: #f3f4f6;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3c4f82;
+  background: #d1d5db;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #596995;
+  background: #9ca3af;
 }
 
 /* Smooth scroll */
@@ -65,15 +65,6 @@ html {
   }
 }
 
-@keyframes marquee {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
 .animate-fadeIn {
   animation: fadeIn 0.6s ease-out;
 }
@@ -91,22 +82,6 @@ html {
   animation: pulse 2s ease-in-out infinite;
 }
 
-/* Marquee */
-.marquee-container {
-  overflow: hidden;
-  width: 100%;
-}
-
-.marquee-track {
-  display: flex;
-  width: max-content;
-  animation: marquee 40s linear infinite;
-}
-
-.marquee-track:hover {
-  animation-play-state: paused;
-}
-
 /* Hide scrollbar for tabs */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -118,7 +93,7 @@ html {
 
 /* Gradient backgrounds */
 .gradient-primary {
-  background: linear-gradient(135deg, #1a2652 0%, #313949 100%);
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
 }
 
 .gradient-accent {
@@ -127,9 +102,9 @@ html {
 
 /* Glass effect */
 .glass {
-  background: rgba(49, 57, 73, 0.6);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* Card hover effect */
@@ -139,7 +114,7 @@ html {
 
 .card-hover:hover {
   transform: translateY(-5px);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
 }
 
 /* Model card reveal animation */

@@ -12,10 +12,10 @@ export default function GizlilikPage() {
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
+          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Gizlilik Politikası</span>
+          <span className="text-gray-900">Gizlilik Politikası</span>
         </nav>
 
         <div className="max-w-4xl mx-auto">
@@ -24,15 +24,15 @@ export default function GizlilikPage() {
               <Shield className="w-6 h-6 text-primary-500" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">Gizlilik Politikası</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Gizlilik Politikası</h1>
               <p className="text-gray-500 text-sm mt-1">Son güncelleme: Şubat 2026</p>
             </div>
           </div>
 
-          <div className="prose prose-invert max-w-none space-y-8">
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">1. Genel Bilgi</h2>
-              <p className="text-gray-400 leading-relaxed">
+          <div className="prose prose max-w-none space-y-8">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Genel Bilgi</h2>
+              <p className="text-gray-500 leading-relaxed">
                 {siteConfig.name} ({siteConfig.url}) olarak kişisel verilerinizin güvenliği bizim için önemlidir.
                 Bu gizlilik politikası, web sitemizi ziyaret ettiğinizde ve hizmetlerimizi kullandığınızda
                 hangi bilgilerin toplandığını, nasıl kullanıldığını ve korunduğunu açıklamaktadır.
@@ -40,37 +40,37 @@ export default function GizlilikPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">2. Toplanan Bilgiler</h2>
-              <p className="text-gray-400 leading-relaxed mb-4">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Toplanan Bilgiler</h2>
+              <p className="text-gray-500 leading-relaxed mb-4">
                 Hizmetlerimizi sunabilmek için aşağıdaki bilgileri toplayabiliriz:
               </p>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
-                  <span><strong className="text-gray-300">Kimlik Bilgileri:</strong> Ad, soyad, e-posta adresi, telefon numarası (kayıt sırasında)</span>
+                  <span><strong className="text-gray-700">Kimlik Bilgileri:</strong> Ad, soyad, e-posta adresi, telefon numarası (kayıt sırasında)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
-                  <span><strong className="text-gray-300">Araç Bilgileri:</strong> Şase numarası, marka, model, yıl (parça arama ve garaj özelliği için)</span>
+                  <span><strong className="text-gray-700">Araç Bilgileri:</strong> Şase numarası, marka, model, yıl (parça arama ve garaj özelliği için)</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
-                  <span><strong className="text-gray-300">Kullanım Verileri:</strong> IP adresi, tarayıcı bilgisi, ziyaret edilen sayfalar, kullanım istatistikleri</span>
+                  <span><strong className="text-gray-700">Kullanım Verileri:</strong> IP adresi, tarayıcı bilgisi, ziyaret edilen sayfalar, kullanım istatistikleri</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
-                  <span><strong className="text-gray-300">İletişim Verileri:</strong> WhatsApp ve form üzerinden iletilen mesajlar</span>
+                  <span><strong className="text-gray-700">İletişim Verileri:</strong> WhatsApp ve form üzerinden iletilen mesajlar</span>
                 </li>
               </ul>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">3. Bilgilerin Kullanımı</h2>
-              <p className="text-gray-400 leading-relaxed mb-4">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Bilgilerin Kullanımı</h2>
+              <p className="text-gray-500 leading-relaxed mb-4">
                 Toplanan kişisel verileriniz aşağıdaki amaçlarla kullanılmaktadır:
               </p>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
                   <span>Parça arama ve sorgulama hizmetlerinin sunulması</span>
@@ -94,9 +94,9 @@ export default function GizlilikPage() {
               </ul>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">4. Verilerin Korunması</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Verilerin Korunması</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Kişisel verilerinizi korumak için endüstri standardı güvenlik önlemleri uyguluyoruz.
                 Şifreleriniz bcrypt algoritması ile hashlenerek saklanır. Tüm veri iletişimleri SSL/TLS
                 şifreleme ile korunmaktadır. Veritabanı erişimleri yetkilendirme mekanizmaları ile
@@ -104,9 +104,9 @@ export default function GizlilikPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">5. Çerezler (Cookies)</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Çerezler (Cookies)</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Web sitemizde oturum yönetimi ve kullanıcı deneyimini iyileştirmek amacıyla çerezler
                 kullanılmaktadır. Tarayıcı ayarlarınızdan çerezleri devre dışı bırakabilirsiniz, ancak
                 bu durumda bazı özellikler düzgün çalışmayabilir. Kullandığımız çerezler yalnızca
@@ -114,12 +114,12 @@ export default function GizlilikPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">6. KVKK Kapsamındaki Haklarınız</h2>
-              <p className="text-gray-400 leading-relaxed mb-4">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">6. KVKK Kapsamındaki Haklarınız</h2>
+              <p className="text-gray-500 leading-relaxed mb-4">
                 6698 sayılı KVKK kapsamında aşağıdaki haklara sahipsiniz:
               </p>
-              <ul className="space-y-2 text-gray-400">
+              <ul className="space-y-2 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
                   <span>Kişisel verilerinizin işlenip işlenmediğini öğrenme</span>
@@ -147,9 +147,9 @@ export default function GizlilikPage() {
               </ul>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">7. Üçüncü Taraf Hizmetler</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Üçüncü Taraf Hizmetler</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Şase numarası sorgulama işlemi için NHTSA (National Highway Traffic Safety Administration)
                 API hizmeti kullanılmaktadır. Bu hizmet üzerinden yalnızca araç teknik bilgileri sorgulanır,
                 kişisel veri paylaşımı yapılmaz. WhatsApp üzerinden yapılan iletişimler Meta Platforms Inc.
@@ -157,13 +157,13 @@ export default function GizlilikPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">8. İletişim</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">8. İletişim</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Gizlilik politikamız ile ilgili sorularınız veya KVKK kapsamındaki talepleriniz için
                 bize aşağıdaki kanallardan ulaşabilirsiniz:
               </p>
-              <div className="mt-4 space-y-2 text-gray-400">
+              <div className="mt-4 space-y-2 text-gray-500">
                 <p>E-posta: <a href={`mailto:${siteConfig.email}`} className="text-primary-500 hover:underline">{siteConfig.email}</a></p>
                 <p>Telefon: <a href={`tel:${siteConfig.phone.raw}`} className="text-primary-500 hover:underline">{siteConfig.phone.display}</a></p>
               </div>

@@ -51,24 +51,24 @@ export default function GarajPage() {
       <div className="min-h-screen py-8 md:py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto text-center py-20">
-            <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-6">
+            <div className="w-20 h-20 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-6">
               <Car className="w-10 h-10 text-primary-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-3">Garajıma Erişin</h1>
-            <p className="text-gray-400 mb-8">
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">Garajıma Erişin</h1>
+            <p className="text-gray-500 mb-8">
               Araçlarınızı kaydedin, hızlıca parça arayın. Garajınıza erişmek için giriş yapın.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href="/giris"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-lg transition-all"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all"
               >
                 <LogIn className="w-5 h-5" />
                 Giriş Yap
               </Link>
               <Link
                 href="/kayit"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-dark-800 hover:bg-dark-700 text-white font-semibold rounded-lg transition-all border border-dark-600"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-gray-100 text-gray-900 font-semibold rounded-lg transition-all border border-gray-200"
               >
                 Kayıt Ol
               </Link>
@@ -82,20 +82,20 @@ export default function GarajPage() {
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
+          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Garajım</span>
+          <span className="text-gray-900">Garajım</span>
         </nav>
 
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-1">Garajım</h1>
-            <p className="text-gray-400">Kayıtlı araçlarınızı yönetin</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-1">Garajım</h1>
+            <p className="text-gray-500">Kayıtlı araçlarınızı yönetin</p>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-lg transition-all"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all"
           >
             <Plus className="w-5 h-5" />
             Araç Ekle
@@ -108,16 +108,16 @@ export default function GarajPage() {
           </div>
         ) : vehicles.length === 0 ? (
           <div className="text-center py-20">
-            <div className="w-20 h-20 rounded-full bg-dark-800 flex items-center justify-center mx-auto mb-6">
-              <Car className="w-10 h-10 text-gray-500" />
+            <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
+              <Car className="w-10 h-10 text-gray-400" />
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Garajınız Boş</h2>
-            <p className="text-gray-400 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Garajınız Boş</h2>
+            <p className="text-gray-500 mb-6">
               Araç ekleyerek hızlıca parça araması yapabilirsiniz.
             </p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-lg transition-all"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all"
             >
               <Plus className="w-5 h-5" />
               İlk Aracınızı Ekleyin

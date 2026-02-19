@@ -46,19 +46,19 @@ export default function HakkimizdaPage() {
     <div className="min-h-screen py-8 md:py-12">
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
+          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Hakkımızda</span>
+          <span className="text-gray-900">Hakkımızda</span>
         </nav>
 
         {/* Hero Section */}
         <div className="text-center mb-16">
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-6">
             Yedek Parça Sektöründe
             <span className="text-primary-500"> Güvenilir Çözüm Ortağınız</span>
           </h1>
-          <p className="text-gray-400 max-w-3xl mx-auto text-lg leading-relaxed">
+          <p className="text-gray-500 max-w-3xl mx-auto text-lg leading-relaxed">
             ParcaBizden olarak, araç sahipleri ve kasko eksperleri için yedek parça ve çıkma parça
             tedarikinde güvenilir bir köprü olmak amacımızdır. Kaliteli parçaları uygun koşullarda
             size ulaştırmak için çalışıyoruz.
@@ -67,20 +67,20 @@ export default function HakkimizdaPage() {
 
         {/* Values Section */}
         <div className="mb-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">
             Değerlerimiz
           </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {values.map((value, index) => (
               <div
                 key={index}
-                className="bg-dark-800 border border-dark-700 rounded-xl p-6 text-center hover:border-primary-500/30 transition-all"
+                className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 text-center hover:border-primary-300 transition-all"
               >
-                <div className="w-16 h-16 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-4">
                   <value.icon className="w-8 h-8 text-primary-500" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">{value.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{value.description}</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{value.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{value.description}</p>
               </div>
             ))}
           </div>
@@ -89,10 +89,10 @@ export default function HakkimizdaPage() {
         {/* About Content */}
         <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
           <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-6">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">
               Biz Kimiz?
             </h2>
-            <div className="space-y-4 text-gray-400 leading-relaxed">
+            <div className="space-y-4 text-gray-500 leading-relaxed">
               <p>
                 ParcaBizden, otomotiv sektöründe yılların tecrübesiyle yedek parça ve çıkma parça
                 tedarikinde uzmanlaşmış bir platformdur. Amacımız, araç sahiplerinin ve kasko
@@ -111,13 +111,13 @@ export default function HakkimizdaPage() {
             </div>
           </div>
 
-          <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8">
-            <h3 className="text-xl font-bold text-white mb-6">Neden Biz?</h3>
+          <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Neden Biz?</h3>
             <div className="grid grid-cols-2 gap-4">
               {highlights.map((highlight, index) => (
                 <div key={index} className="flex items-center gap-2">
                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-gray-300 text-sm">{highlight}</span>
+                  <span className="text-gray-700 text-sm">{highlight}</span>
                 </div>
               ))}
             </div>
@@ -125,32 +125,32 @@ export default function HakkimizdaPage() {
         </div>
 
         {/* Target Audience */}
-        <div className="bg-dark-800 border border-dark-700 rounded-2xl p-8 md:p-12 mb-16">
-          <h2 className="text-2xl md:text-3xl font-bold text-white text-center mb-10">
+        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-8 md:p-12 mb-16">
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-10">
             Kimler İçin Hizmet Veriyoruz?
           </h2>
           <div className="grid md:grid-cols-2 gap-8">
             <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-10 h-10 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Araç Sahipleri</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Araç Sahipleri</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
                 Aracınız için ihtiyacınız olan yedek veya çıkma parçayı uygun fiyatlarla
                 bulmanıza yardımcı oluyoruz. Şase numaranız ile arama yaparak doğru
                 parçaya ulaşın.
               </p>
             </div>
             <div className="text-center">
-              <div className="w-20 h-20 rounded-full bg-primary-500/20 flex items-center justify-center mx-auto mb-4">
+              <div className="w-20 h-20 rounded-full bg-primary-50 flex items-center justify-center mx-auto mb-4">
                 <svg className="w-10 h-10 text-primary-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Kasko Eksperleri</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Kasko Eksperleri</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">
                 Hasar tespitlerinde ihtiyacınız olan parçaların tedarikinde size
                 yardımcı oluyoruz. Toplu talepleriniz için özel iletişim kanalınız.
               </p>

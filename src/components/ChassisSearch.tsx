@@ -83,7 +83,7 @@ function OemBadge({ oem }: { oem: string }) {
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-1.5 px-2 py-1 bg-dark-900/60 border border-white/[0.06] rounded-md text-xs font-mono text-gray-400 hover:text-white hover:border-primary-500/30 transition-all"
+      className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 border border-gray-200 rounded-md text-xs font-mono text-gray-600 hover:text-gray-900 hover:border-primary-400 transition-all"
       title="Kopyala"
     >
       <span className="tracking-wider">{oem}</span>
@@ -389,7 +389,7 @@ export default function ChassisSearch() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="bg-dark-900 border border-dark-700 rounded-2xl p-6 md:p-8">
+      <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-6 md:p-8">
 
         {/* ── Search Input ── */}
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -403,7 +403,7 @@ export default function ChassisSearch() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="Şase numarasını girin (17 karakter)"
               maxLength={17}
-              className="w-full px-4 py-4 bg-dark-800 border border-dark-600 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors font-mono text-lg tracking-wider"
+              className="w-full px-4 py-4 bg-white border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 transition-colors font-mono text-lg tracking-wider"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
               {chassisNumber.length}/17
@@ -429,9 +429,9 @@ export default function ChassisSearch() {
         </div>
 
         {/* ── Info Box ── */}
-        <div className="flex items-start gap-3 p-4 bg-secondary-900/50 rounded-lg mb-6">
-          <Info className="w-5 h-5 text-secondary-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-gray-400">
+        <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg mb-6">
+          <Info className="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-500">
             Şase numarası (VIN) araç ruhsatınızda, ön camın sol alt köşesinde veya sürücü kapısı
             çerçevesinde bulunur. 17 karakterden oluşur ve I, O, Q harflerini içermez.
           </p>
@@ -439,9 +439,9 @@ export default function ChassisSearch() {
 
         {/* ── Error Message ── */}
         {error && (
-          <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/30 rounded-lg mb-6 animate-fadeIn">
-            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-            <p className="text-red-400 text-sm">{error}</p>
+          <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg mb-6 animate-fadeIn">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <p className="text-red-600 text-sm">{error}</p>
           </div>
         )}
 
@@ -450,27 +450,27 @@ export default function ChassisSearch() {
           <div className="animate-fadeIn">
 
             {/* ── Vehicle Card ── */}
-            <div className="bg-gradient-to-br from-dark-800 to-dark-800/80 border border-dark-700 rounded-2xl overflow-hidden mb-8 shadow-2xl shadow-black/20">
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden mb-8">
               {/* Status Bar */}
               <div
                 className={`px-6 py-3 ${
                   missingModel
-                    ? 'bg-amber-500/[0.06] border-b border-amber-500/10'
-                    : 'bg-green-500/[0.06] border-b border-green-500/10'
+                    ? 'bg-amber-50 border-b border-amber-100'
+                    : 'bg-green-50 border-b border-green-100'
                 }`}
               >
                 <div className="flex items-center gap-2">
                   {missingModel ? (
                     <>
                       <AlertCircle className="w-4 h-4 text-amber-500" />
-                      <span className="text-amber-400 text-sm font-medium">
+                      <span className="text-amber-600 text-sm font-medium">
                         Marka bulundu — model bilgisi eksik
                       </span>
                     </>
                   ) : (
                     <>
                       <CheckCircle className="w-4 h-4 text-green-500" />
-                      <span className="text-green-400 text-sm font-medium">
+                      <span className="text-green-600 text-sm font-medium">
                         Araç bilgileri bulundu
                       </span>
                     </>
@@ -484,7 +484,7 @@ export default function ChassisSearch() {
                   {/* Left: Vehicle Image or Brand Logo */}
                   <div className="flex-shrink-0 mx-auto md:mx-0">
                     {selectedModelImage ? (
-                      <div className="w-40 h-28 md:w-48 md:h-32 rounded-2xl bg-gradient-to-b from-dark-900/80 to-dark-900 border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                      <div className="w-40 h-28 md:w-48 md:h-32 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={selectedModelImage}
@@ -493,7 +493,7 @@ export default function ChassisSearch() {
                         />
                       </div>
                     ) : (
-                      <div className="w-24 h-24 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                      <div className="w-24 h-24 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center">
                         <BrandLogo brand={vehicleInfo.make} size={56} />
                       </div>
                     )}
@@ -501,17 +501,17 @@ export default function ChassisSearch() {
 
                   {/* Right: Title + Quick Info */}
                   <div className="flex-1 min-w-0 text-center md:text-left">
-                    <h3 className="text-2xl md:text-3xl font-bold text-white mb-1">
+                    <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
                       {vehicleInfo.make}{' '}
                       {vehicleInfo.model ? (
                         cleanModelName(vehicleInfo.model)
                       ) : (
-                        <span className="text-gray-600 italic font-normal text-xl">
+                        <span className="text-gray-400 italic font-normal text-xl">
                           Model seçilmedi
                         </span>
                       )}
                     </h3>
-                    <p className="text-gray-400 mb-4">
+                    <p className="text-gray-500 mb-4">
                       {[vehicleInfo.year, vehicleInfo.series, vehicleInfo.bodyType]
                         .filter(Boolean)
                         .join(' · ')}
@@ -526,9 +526,9 @@ export default function ChassisSearch() {
                           WhatsApp ile Talep Et
                         </button>
                       )}
-                      <div className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-dark-900/60 border border-white/[0.06] rounded-xl">
+                      <div className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-xl">
                         <span className="text-[10px] text-gray-500 uppercase tracking-wider">VIN</span>
-                        <span className="text-white font-mono text-xs tracking-wider">{chassisNumber}</span>
+                        <span className="text-gray-900 font-mono text-xs tracking-wider">{chassisNumber}</span>
                       </div>
                     </div>
                   </div>
@@ -538,9 +538,9 @@ export default function ChassisSearch() {
                 {missingModel && brandModels.length > 0 && (
                   <div
                     ref={modelSelectRef}
-                    className="mb-6 p-4 md:p-5 bg-amber-500/[0.04] border border-amber-500/15 rounded-xl animate-fadeIn"
+                    className="mb-6 p-4 md:p-5 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn"
                   >
-                    <p className="text-amber-400 text-sm font-medium mb-1">Aracınızın modelini seçin</p>
+                    <p className="text-amber-600 text-sm font-medium mb-1">Aracınızın modelini seçin</p>
                     <p className="text-gray-500 text-xs mb-3">
                       NHTSA veritabanında bu VIN için model bilgisi bulunamadı.
                     </p>
@@ -551,7 +551,7 @@ export default function ChassisSearch() {
                         value={modelSearch}
                         onChange={(e) => setModelSearch(e.target.value)}
                         placeholder="Model ara..."
-                        className="w-full pl-9 pr-4 py-2.5 bg-dark-900 border border-dark-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
                       />
                     </div>
                     <div className="max-h-[420px] overflow-y-auto">
@@ -568,9 +568,9 @@ export default function ChassisSearch() {
                               <button
                                 key={i}
                                 onClick={() => handleModelSelect(m.name, m.image)}
-                                className="group relative rounded-lg overflow-hidden bg-dark-900 border border-dark-600 hover:border-primary-500/40 hover:shadow-[0_4px_16px_rgba(234,179,8,0.08)] transition-all duration-200 text-left"
+                                className="group relative rounded-lg overflow-hidden bg-white border border-gray-200 hover:border-primary-400 hover:shadow-[0_4px_16px_rgba(234,179,8,0.08)] transition-all duration-200 text-left"
                               >
-                                <div className="relative aspect-[4/3] bg-gradient-to-b from-dark-800/60 to-dark-900/80 overflow-hidden">
+                                <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img
                                     src={m.image}
@@ -579,16 +579,16 @@ export default function ChassisSearch() {
                                     loading="lazy"
                                   />
                                   {year > 0 && (
-                                    <span className="absolute top-1 right-1 text-[8px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-dark-900/70 backdrop-blur-sm border border-white/[0.08] text-gray-400">
+                                    <span className="absolute top-1 right-1 text-[8px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-500">
                                       {year}
                                     </span>
                                   )}
-                                  <span className="absolute top-1 left-1 text-[8px] font-medium text-gray-500 bg-dark-900/80 backdrop-blur-sm px-1 py-0.5 rounded">
+                                  <span className="absolute top-1 left-1 text-[8px] font-medium text-gray-500 bg-white/90 backdrop-blur-sm px-1 py-0.5 rounded">
                                     {m.bodyType}
                                   </span>
                                 </div>
                                 <div className="px-2 py-1.5">
-                                  <p className="text-[11px] text-gray-400 group-hover:text-white transition-colors duration-200 leading-tight line-clamp-1 font-medium">
+                                  <p className="text-[11px] text-gray-600 group-hover:text-gray-900 transition-colors duration-200 leading-tight line-clamp-1 font-medium">
                                     {cleanModelName(m.name)}
                                   </p>
                                 </div>
@@ -610,9 +610,9 @@ export default function ChassisSearch() {
                 {missingModel && brandModels.length === 0 && (
                   <div
                     ref={modelSelectRef}
-                    className="mb-6 p-4 bg-amber-500/[0.04] border border-amber-500/15 rounded-xl animate-fadeIn"
+                    className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn"
                   >
-                    <p className="text-amber-400 text-sm font-medium mb-1">
+                    <p className="text-amber-600 text-sm font-medium mb-1">
                       Model bilgisi bulunamadı
                     </p>
                     <p className="text-gray-500 text-xs mb-3">
@@ -630,13 +630,13 @@ export default function ChassisSearch() {
 
                 {/* ── Vehicle Specs Grid ── */}
                 {vehicleFields.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-px bg-white/[0.04] rounded-xl overflow-hidden border border-white/[0.06]">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
                     {vehicleFields.map((field) => (
-                      <div key={field.label} className="bg-dark-800 px-4 py-3.5">
+                      <div key={field.label} className="bg-white px-4 py-3.5">
                         <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium mb-1">
                           {field.label}
                         </p>
-                        <p className="text-white text-sm font-semibold">{field.value}</p>
+                        <p className="text-gray-900 text-sm font-semibold">{field.value}</p>
                       </div>
                     ))}
                   </div>
@@ -650,11 +650,11 @@ export default function ChassisSearch() {
                 {/* Section Header */}
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+                    <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
                       <Wrench className="w-5 h-5 text-primary-500" />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-white">Uyumlu Parçalar</h3>
+                      <h3 className="text-lg font-bold text-gray-900">Uyumlu Parçalar</h3>
                       {apiAvailable && totalApiParts > 0 && (
                         <p className="text-gray-500 text-xs">
                           {apiCategories.length} kategori · {totalApiParts.toLocaleString('tr-TR')} parça
@@ -666,14 +666,14 @@ export default function ChassisSearch() {
 
                 {/* ── No API Data: WhatsApp CTA ── */}
                 {!apiAvailable && !loadingParts && (
-                  <div className="bg-dark-800 border border-dark-700 rounded-xl p-8 text-center">
-                    <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
-                      <Wrench className="w-6 h-6 text-gray-600" />
+                  <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                      <Wrench className="w-6 h-6 text-gray-400" />
                     </div>
-                    <p className="text-gray-400 mb-1 text-sm">
+                    <p className="text-gray-500 mb-1 text-sm">
                       Bu araç için katalog verisi henüz sistemimizde yok.
                     </p>
-                    <p className="text-gray-600 text-xs mb-4">
+                    <p className="text-gray-500 text-xs mb-4">
                       WhatsApp üzerinden tüm parçaları talep edebilirsiniz.
                     </p>
                     <button
@@ -695,9 +695,9 @@ export default function ChassisSearch() {
 
                 {/* ── API Error ── */}
                 {partsError && !loadingParts && (
-                  <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6">
-                    <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-                    <p className="text-red-400 text-sm">{partsError}</p>
+                  <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <p className="text-red-600 text-sm">{partsError}</p>
                   </div>
                 )}
 
@@ -716,15 +716,15 @@ export default function ChassisSearch() {
                         }}
                         className={`transition-colors ${
                           partsView === 'categories'
-                            ? 'text-white font-medium'
-                            : 'text-gray-400 hover:text-white'
+                            ? 'text-gray-900 font-medium'
+                            : 'text-gray-500 hover:text-gray-900'
                         }`}
                       >
                         Kategoriler
                       </button>
                       {selectedCat && (
                         <>
-                          <ChevronRight className="w-4 h-4 text-gray-600" />
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
                           <button
                             onClick={() => {
                               setPartsView('nodes')
@@ -733,8 +733,8 @@ export default function ChassisSearch() {
                             }}
                             className={`transition-colors ${
                               partsView === 'nodes'
-                                ? 'text-white font-medium'
-                                : 'text-gray-400 hover:text-white'
+                                ? 'text-gray-900 font-medium'
+                                : 'text-gray-500 hover:text-gray-900'
                             }`}
                           >
                             {selectedCat.name_tr}
@@ -743,8 +743,8 @@ export default function ChassisSearch() {
                       )}
                       {selectedNode && (
                         <>
-                          <ChevronRight className="w-4 h-4 text-gray-600" />
-                          <span className="text-white font-medium">{selectedNode.label}</span>
+                          <ChevronRight className="w-4 h-4 text-gray-400" />
+                          <span className="text-gray-900 font-medium">{selectedNode.label}</span>
                         </>
                       )}
                     </nav>
@@ -752,7 +752,7 @@ export default function ChassisSearch() {
                     {/* ── GENERATION PICKER ── */}
                     {partsView === 'generations' && (
                       <div>
-                        <p className="text-gray-400 text-sm mb-5">
+                        <p className="text-gray-500 text-sm mb-5">
                           {(vehicleInfo.generations ?? []).length} nesil eşleşme bulundu. Aracınızın nesline göre seçin:
                         </p>
                         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -760,13 +760,13 @@ export default function ChassisSearch() {
                             <button
                               key={gen.generation_slug}
                               onClick={() => handleGenerationSelect(gen, brandSlug)}
-                              className="group bg-dark-800 border border-dark-700 rounded-xl p-5 hover:border-primary-500/40 hover:shadow-[0_4px_20px_rgba(234,179,8,0.06)] transition-all text-left"
+                              className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-[0_4px_20px_rgba(234,179,8,0.06)] transition-all text-left"
                             >
                               <div className="flex items-center justify-between mb-2">
-                                <h4 className="text-white font-semibold text-sm group-hover:text-primary-500 transition-colors">
+                                <h4 className="text-gray-900 font-semibold text-sm group-hover:text-primary-500 transition-colors">
                                   {gen.generation_name}
                                 </h4>
-                                <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-primary-500 transition-colors" />
+                                <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 transition-colors" />
                               </div>
                               <p className="text-gray-500 text-xs">
                                 {gen.part_count.toLocaleString('tr-TR')} parça
@@ -789,7 +789,7 @@ export default function ChassisSearch() {
                               setSelectedGen(null)
                               setApiAvailable(false)
                             }}
-                            className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm mb-4 transition-colors"
+                            className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors"
                           >
                             <ChevronLeft className="w-4 h-4" /> Nesillere Dön
                           </button>
@@ -806,7 +806,7 @@ export default function ChassisSearch() {
                               <button
                                 key={cat.id}
                                 onClick={() => handleCategoryClick(cat)}
-                                className="group bg-dark-800 border border-dark-700 rounded-xl p-5 hover:border-primary-500/40 hover:shadow-[0_4px_20px_rgba(234,179,8,0.04)] transition-all text-left"
+                                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-[0_4px_20px_rgba(234,179,8,0.04)] transition-all text-left"
                               >
                                 <div className="flex items-start gap-3">
                                   <div
@@ -815,14 +815,14 @@ export default function ChassisSearch() {
                                     {cat.icon}
                                   </div>
                                   <div className="flex-1 min-w-0">
-                                    <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">
+                                    <h3 className="text-gray-900 font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">
                                       {cat.name_tr}
                                     </h3>
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-500 text-xs">
                                         {cat.total_parts.toLocaleString('tr-TR')} parça
                                       </span>
-                                      <span className="text-gray-600 text-xs">
+                                      <span className="text-gray-500 text-xs">
                                         {cat.node_count} grup
                                       </span>
                                     </div>
@@ -840,7 +840,7 @@ export default function ChassisSearch() {
                       <div>
                         <button
                           onClick={goBack}
-                          className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm mb-4 transition-colors"
+                          className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors"
                         >
                           <ChevronLeft className="w-4 h-4" /> Kategorilere Dön
                         </button>
@@ -853,7 +853,7 @@ export default function ChassisSearch() {
                               value={nodeSearch}
                               onChange={(e) => setNodeSearch(e.target.value)}
                               placeholder="Grup ara..."
-                              className="w-full pl-9 pr-4 py-2.5 bg-dark-800 border border-dark-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                              className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
                             />
                           </div>
                         )}
@@ -863,16 +863,16 @@ export default function ChassisSearch() {
                             <button
                               key={node.name}
                               onClick={() => handleNodeClick(node)}
-                              className="group bg-dark-800 border border-dark-700 rounded-xl p-4 hover:border-primary-500/30 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all text-left flex items-center gap-3"
+                              className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all text-left flex items-center gap-3"
                             >
-                              <div className="w-9 h-9 rounded-lg bg-white/[0.04] group-hover:bg-primary-500/10 flex items-center justify-center flex-shrink-0 transition-colors">
+                              <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-primary-50 flex items-center justify-center flex-shrink-0 transition-colors">
                                 <Package className="w-4 h-4 text-gray-500 group-hover:text-primary-500 transition-colors" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm text-gray-300 group-hover:text-white font-medium transition-colors truncate">
+                                <p className="text-sm text-gray-700 group-hover:text-gray-900 font-medium transition-colors truncate">
                                   {node.label}
                                 </p>
-                                <p className="text-xs text-gray-600">{node.part_count} parça</p>
+                                <p className="text-xs text-gray-400">{node.part_count} parça</p>
                               </div>
                               <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-primary-500 flex-shrink-0 transition-colors" />
                             </button>
@@ -892,7 +892,7 @@ export default function ChassisSearch() {
                       <div>
                         <button
                           onClick={goBack}
-                          className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm mb-4 transition-colors"
+                          className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors"
                         >
                           <ChevronLeft className="w-4 h-4" />
                           {selectedCat?.name_tr || 'Geri'}
@@ -908,9 +908,9 @@ export default function ChassisSearch() {
                               {paginatedParts.map((part, i) => (
                                 <div
                                   key={`${part.oem_number}-${i}`}
-                                  className="group bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.06] rounded-xl p-4 hover:border-primary-500/25 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all duration-200"
+                                  className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all duration-200"
                                 >
-                                  <h4 className="text-white font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">
+                                  <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">
                                     {part.name}
                                   </h4>
                                   <div className="mb-3">
@@ -930,7 +930,7 @@ export default function ChassisSearch() {
                             {remainingParts > 0 && (
                               <button
                                 onClick={() => setPartsPage((p) => p + 1)}
-                                className="mt-4 w-full py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl text-gray-400 hover:text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
+                                className="mt-4 w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 text-sm font-medium transition-all flex items-center justify-center gap-2"
                               >
                                 Daha Fazla Göster
                                 <span className="text-xs text-gray-500">
@@ -940,14 +940,14 @@ export default function ChassisSearch() {
                             )}
                           </>
                         ) : (
-                          <div className="bg-dark-800 border border-dark-700 rounded-xl p-8 text-center">
-                            <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
-                              <Package className="w-6 h-6 text-gray-600" />
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+                            <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                              <Package className="w-6 h-6 text-gray-400" />
                             </div>
-                            <p className="text-gray-400 mb-1 text-sm">
+                            <p className="text-gray-500 mb-1 text-sm">
                               Bu grup için parça detayları yüklenemedi.
                             </p>
-                            <p className="text-gray-600 text-xs mb-4">
+                            <p className="text-gray-500 text-xs mb-4">
                               WhatsApp üzerinden bu gruptaki parçaları talep edebilirsiniz.
                             </p>
                             <button
@@ -975,10 +975,10 @@ export default function ChassisSearch() {
             {/* ── Bottom CTA ── */}
             <div className="mt-8 bg-gradient-to-r from-green-500/10 to-green-600/5 border border-green-500/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-4">
               <div className="flex-1 text-center md:text-left">
-                <h4 className="text-white font-bold text-base mb-1">
+                <h4 className="text-gray-900 font-bold text-base mb-1">
                   Aradığınız parça listede yok mu?
                 </h4>
-                <p className="text-gray-400 text-sm">
+                <p className="text-gray-500 text-sm">
                   Şase numaranızla birlikte WhatsApp&apos;tan talep gönderin, size en uygun parçayı
                   bulalım.
                 </p>

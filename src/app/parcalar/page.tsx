@@ -6,7 +6,7 @@ import { useSearchParams } from 'next/navigation'
 import { Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check } from 'lucide-react'
 import { categories } from '@/data/parts'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, searchOemParts } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -60,7 +60,7 @@ function OemBadge({ oem }: { oem: string }) {
     setTimeout(() => setCopied(false), 1500)
   }
   return (
-    <button onClick={copy} className="inline-flex items-center gap-1.5 px-2 py-1 bg-dark-900/60 border border-white/[0.06] rounded-md text-xs font-mono text-gray-400 hover:text-white hover:border-primary-500/30 transition-all" title="Kopyala">
+    <button onClick={copy} className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 border border-gray-200 rounded-md text-xs font-mono text-gray-600 hover:text-gray-900 hover:border-primary-400 transition-all" title="Kopyala">
       <span className="tracking-wider">{oem}</span>
       {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
     </button>
@@ -72,24 +72,24 @@ function StaticCategoriesView() {
   return (
     <>
       <div className="text-center mb-12">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
           Parça <span className="text-primary-500">Kategorileri</span>
         </h1>
-        <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+        <p className="text-gray-500 max-w-2xl mx-auto text-lg">
           İhtiyacınız olan parçayı kategoriye göre bulun. Tüm marka ve modellere uygun yedek parça ve çıkma parça seçenekleri.
         </p>
       </div>
 
       <div className="max-w-2xl mx-auto mb-12">
-        <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-dark-800 border border-dark-700 rounded-2xl hover:border-primary-500/50 transition-all group">
+        <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-primary-500/50 transition-all group">
           <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
             <Search className="w-7 h-7 text-primary-500" />
           </div>
           <div className="flex-1">
-            <h3 className="text-white font-semibold text-lg mb-1">Şase Numarası ile Ara</h3>
-            <p className="text-gray-400 text-sm">Aracınıza uygun parçaları bulmak için şase numaranızı girin</p>
+            <h3 className="text-gray-900 font-semibold text-lg mb-1">Şase Numarası ile Ara</h3>
+            <p className="text-gray-500 text-sm">Aracınıza uygun parçaları bulmak için şase numaranızı girin</p>
           </div>
-          <ChevronRight className="w-6 h-6 text-gray-500 group-hover:text-primary-500 transition-colors" />
+          <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-primary-500 transition-colors" />
         </Link>
       </div>
 
@@ -98,17 +98,17 @@ function StaticCategoriesView() {
           const IconComponent = iconMap[category.icon] || Car
           const gradientColor = colorMap[category.id] || 'from-gray-500 to-gray-600'
           return (
-            <Link key={category.id} href={`/parcalar/${category.id}`} className="group bg-dark-800 border border-dark-700 rounded-2xl p-6 hover:border-primary-500/50 transition-all card-hover">
+            <Link key={category.id} href={`/parcalar/${category.id}`} className="group bg-white border border-gray-200 shadow-sm rounded-2xl p-6 hover:border-primary-500/50 transition-all card-hover">
               <div className="flex items-start gap-4">
                 <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientColor} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
                   <IconComponent className="w-7 h-7 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-white mb-2 group-hover:text-primary-500 transition-colors">{category.name}</h2>
-                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">{category.description}</p>
+                  <h2 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-primary-500 transition-colors">{category.name}</h2>
+                  <p className="text-gray-500 text-sm mb-3 line-clamp-2">{category.description}</p>
                   <div className="flex items-center justify-between">
                     <span className="text-primary-500 text-sm font-medium">{category.partCount}+ Parça</span>
-                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
+                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
               </div>
@@ -227,26 +227,26 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   return (
     <>
       {/* Vehicle Banner */}
-      <div className="mb-8 bg-gradient-to-br from-dark-800 to-dark-800/80 border border-primary-500/20 rounded-2xl overflow-hidden shadow-xl shadow-black/10">
-        <div className="px-6 py-3 bg-primary-500/[0.04] border-b border-primary-500/10">
+      <div className="mb-8 bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
+        <div className="px-6 py-3 bg-primary-50 border-b border-primary-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Car className="w-4 h-4 text-primary-500" />
-              <span className="text-primary-400 text-sm font-medium">Seçili Araç</span>
+              <span className="text-primary-600 text-sm font-medium">Seçili Araç</span>
             </div>
-            <span className="text-xs text-gray-500 tabular-nums">{totalParts.toLocaleString('tr-TR')} parça</span>
+            <span className="text-xs text-gray-400 tabular-nums">{totalParts.toLocaleString('tr-TR')} parça</span>
           </div>
         </div>
         <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-6">
           {vehicleImage && (
-            <div className="w-36 h-24 md:w-44 md:h-28 rounded-xl bg-gradient-to-b from-dark-900/80 to-dark-900 border border-white/[0.06] flex-shrink-0 overflow-hidden">
+            <div className="w-36 h-24 md:w-44 md:h-28 rounded-xl bg-gray-100 border border-gray-200 flex-shrink-0 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={vehicleImage} alt={modelName} className="w-full h-full object-contain p-2" />
             </div>
           )}
           <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="text-xl md:text-2xl font-bold text-white">{marka} {modelName}</h2>
-            <p className="text-sm text-gray-400 mt-1">Aşağıdan kategori seçin veya WhatsApp ile bize ulaşın.</p>
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka} {modelName}</h2>
+            <p className="text-sm text-gray-500 mt-1">Aşağıdan kategori seçin veya WhatsApp ile bize ulaşın.</p>
           </div>
           <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all flex-shrink-0">
@@ -259,22 +259,22 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm mb-6 flex-wrap">
         <button onClick={() => { setView('categories'); setSelectedCat(null); setSelectedNode(null) }}
-          className={`transition-colors ${view === 'categories' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+          className={`transition-colors ${view === 'categories' ? 'text-gray-900 font-medium' : 'text-gray-500 hover:text-gray-900'}`}>
           Kategoriler
         </button>
         {selectedCat && (
           <>
-            <ChevronRight className="w-4 h-4 text-gray-600" />
+            <ChevronRight className="w-4 h-4 text-gray-400" />
             <button onClick={() => { setView('nodes'); setSelectedNode(null) }}
-              className={`transition-colors ${view === 'nodes' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+              className={`transition-colors ${view === 'nodes' ? 'text-gray-900 font-medium' : 'text-gray-500 hover:text-gray-900'}`}>
               {selectedCat.name_tr}
             </button>
           </>
         )}
         {selectedNode && (
           <>
-            <ChevronRight className="w-4 h-4 text-gray-600" />
-            <span className="text-white font-medium">{selectedNode.label}</span>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+            <span className="text-gray-900 font-medium">{selectedNode.label}</span>
           </>
         )}
       </nav>
@@ -301,16 +301,16 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
             const style = catStyleMap[cat.id] || catStyleMap.other
             return (
               <button key={cat.id} onClick={() => handleCategoryClick(cat)}
-                className="group bg-dark-800 border border-dark-700 rounded-xl p-5 hover:border-primary-500/40 hover:shadow-[0_4px_20px_rgba(234,179,8,0.04)] transition-all text-left">
+                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-md transition-all text-left">
                 <div className="flex items-start gap-3">
                   <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${style.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform text-lg`}>
                     {cat.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-white font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
+                    <h3 className="text-gray-900 font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-500 text-xs">{cat.total_parts.toLocaleString('tr-TR')} parça</span>
-                      <span className="text-gray-600 text-xs">{cat.node_count} grup</span>
+                      <span className="text-gray-400 text-xs">{cat.total_parts.toLocaleString('tr-TR')} parça</span>
+                      <span className="text-gray-400 text-xs">{cat.node_count} grup</span>
                     </div>
                   </div>
                 </div>
@@ -323,7 +323,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       {/* ── NODES VIEW ── */}
       {view === 'nodes' && !loading && !error && (
         <div>
-          <button onClick={goBack} className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm mb-4 transition-colors">
+          <button onClick={goBack} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors">
             <ChevronLeft className="w-4 h-4" /> Kategorilere Dön
           </button>
 
@@ -332,22 +332,22 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
             <div className="relative mb-5">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
               <input type="text" value={nodeSearch} onChange={e => setNodeSearch(e.target.value)} placeholder="Grup ara..."
-                className="w-full pl-9 pr-4 py-2.5 bg-dark-800 border border-dark-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
+                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
             </div>
           )}
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {filteredNodes.map(node => (
               <button key={node.name} onClick={() => handleNodeClick(node)}
-                className="group bg-dark-800 border border-dark-700 rounded-xl p-4 hover:border-primary-500/30 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all text-left flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-white/[0.04] group-hover:bg-primary-500/10 flex items-center justify-center flex-shrink-0 transition-colors">
-                  <Package className="w-4 h-4 text-gray-500 group-hover:text-primary-500 transition-colors" />
+                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all text-left flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-primary-500/10 flex items-center justify-center flex-shrink-0 transition-colors">
+                  <Package className="w-4 h-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-300 group-hover:text-white font-medium transition-colors truncate">{node.label}</p>
-                  <p className="text-xs text-gray-600">{node.part_count} parça</p>
+                  <p className="text-sm text-gray-700 group-hover:text-gray-900 font-medium transition-colors truncate">{node.label}</p>
+                  <p className="text-xs text-gray-400">{node.part_count} parça</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-primary-500 flex-shrink-0 transition-colors" />
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-500 flex-shrink-0 transition-colors" />
               </button>
             ))}
           </div>
@@ -360,7 +360,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       {/* ── PARTS VIEW ── */}
       {view === 'parts' && !loading && (
         <div>
-          <button onClick={goBack} className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm mb-4 transition-colors">
+          <button onClick={goBack} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors">
             <ChevronLeft className="w-4 h-4" /> {selectedCat?.name_tr || 'Geri'}
           </button>
 
@@ -371,16 +371,16 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
                 <div className="relative mb-5">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                   <input type="text" value={partSearch} onChange={e => { setPartSearch(e.target.value); setPartsPage(1) }} placeholder="Parça adı veya OEM numarası ara..."
-                    className="w-full pl-9 pr-4 py-2.5 bg-dark-800 border border-dark-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
+                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
                 </div>
               )}
 
-              <p className="text-xs text-gray-500 mb-4">{filteredParts.length} parça listeleniyor</p>
+              <p className="text-xs text-gray-400 mb-4">{filteredParts.length} parça listeleniyor</p>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {paginatedParts.map((part, i) => (
-                  <div key={`${part.oem_number}-${i}`} className="group bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.06] rounded-xl p-4 hover:border-primary-500/25 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all duration-200">
-                    <h4 className="text-white font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
+                  <div key={`${part.oem_number}-${i}`} className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all duration-200">
+                    <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
                     <div className="mb-3">
                       <OemBadge oem={part.oem_number} />
                     </div>
@@ -400,9 +400,9 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
 
               {remainingParts > 0 && (
                 <button onClick={() => setPartsPage(p => p + 1)}
-                  className="mt-4 w-full py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl text-gray-400 hover:text-white text-sm font-medium transition-all flex items-center justify-center gap-2">
+                  className="mt-4 w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 text-sm font-medium transition-all flex items-center justify-center gap-2">
                   Daha Fazla Göster
-                  <span className="text-xs text-gray-500">({remainingParts} parça daha)</span>
+                  <span className="text-xs text-gray-400">({remainingParts} parça daha)</span>
                 </button>
               )}
 
@@ -411,12 +411,12 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
               )}
             </>
           ) : (
-            <div className="bg-dark-800 border border-dark-700 rounded-xl p-8 text-center">
-              <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
-                <Package className="w-6 h-6 text-gray-600" />
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                <Package className="w-6 h-6 text-gray-400" />
               </div>
-              <p className="text-gray-400 mb-1 text-sm">Bu grup için parça detayları yüklenemedi.</p>
-              <p className="text-gray-600 text-xs mb-4">WhatsApp üzerinden bu gruptaki parçaları talep edebilirsiniz.</p>
+              <p className="text-gray-500 mb-1 text-sm">Bu grup için parça detayları yüklenemedi.</p>
+              <p className="text-gray-400 text-xs mb-4">WhatsApp üzerinden bu gruptaki parçaları talep edebilirsiniz.</p>
               <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} için "${selectedNode?.label}" grubundaki parçalar hakkında bilgi almak istiyorum.`)}
                 target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
@@ -430,14 +430,118 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       {/* Bottom CTA */}
       <div className="mt-10 bg-gradient-to-r from-green-500/10 to-green-600/5 border border-green-500/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-4">
         <div className="flex-1 text-center md:text-left">
-          <h4 className="text-white font-bold text-base mb-1">Aradığınız parça listede yok mu?</h4>
-          <p className="text-gray-400 text-sm">WhatsApp&apos;tan talep gönderin, size en uygun parçayı bulalım.</p>
+          <h4 className="text-gray-900 font-bold text-base mb-1">Aradığınız parça listede yok mu?</h4>
+          <p className="text-gray-500 text-sm">WhatsApp&apos;tan talep gönderin, size en uygun parçayı bulalım.</p>
         </div>
         <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
           className="flex-shrink-0 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors flex items-center gap-2">
           <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Oluştur
         </a>
       </div>
+    </>
+  )
+}
+
+// ── Generation Picker (when brand is known but gen is missing) ──
+function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: string; modelName: string }) {
+  const [generations, setGenerations] = useState<Array<{ generation_slug: string; generation_name: string; part_count: number }>>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [selectedGen, setSelectedGen] = useState<string | null>(null)
+  const searchParams = useSearchParams()
+  const modelSlug = searchParams.get('model_slug')
+  const modelKey = searchParams.get('model_key')
+
+  useEffect(() => {
+    setLoading(true)
+    setError('')
+    fetchGenerations(brand)
+      .then(data => {
+        setGenerations(data.generations || [])
+        // Auto-select if only one generation
+        if (data.generations?.length === 1) {
+          setSelectedGen(data.generations[0].generation_slug)
+        }
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [brand])
+
+  // If a generation is selected, show the full parts explorer
+  if (selectedGen) {
+    const genSlugParam = `${brand}`
+    return <VehiclePartsExplorer brand={genSlugParam} gen={selectedGen} marka={marka} modelName={modelName} />
+  }
+
+  return (
+    <>
+      {/* Vehicle Banner */}
+      <div className="mb-8 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="px-6 py-3 bg-primary-50 border-b border-primary-100">
+          <div className="flex items-center gap-2">
+            <Car className="w-4 h-4 text-primary-500" />
+            <span className="text-primary-600 text-sm font-medium">Seçili Araç</span>
+          </div>
+        </div>
+        <div className="p-5 md:p-6 flex items-center gap-4">
+          <div className="flex-1">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka} {modelName}</h2>
+            <p className="text-sm text-gray-500 mt-1">Aracınızın nesil/dönemini seçin.</p>
+          </div>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      )}
+
+      {!loading && !error && generations.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+              <Car className="w-5 h-5 text-primary-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">{generations.length} nesil bulundu</h3>
+              <p className="text-gray-500 text-xs">Doğru nesil/dönem seçimi daha iyi parça listesi sağlar</p>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {generations.map((gen) => (
+              <button
+                key={gen.generation_slug}
+                onClick={() => setSelectedGen(gen.generation_slug)}
+                className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-5 text-left transition-all duration-200"
+              >
+                <p className="text-gray-900 font-semibold text-sm group-hover:text-primary-600 transition-colors mb-2 leading-snug">{gen.generation_name}</p>
+                <div className="flex items-center gap-1.5">
+                  <Package className="w-3.5 h-3.5 text-gray-400" />
+                  <span className="text-gray-500 text-xs tabular-nums">{gen.part_count.toLocaleString('tr-TR')} parça</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {!loading && !error && generations.length === 0 && (
+        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+          <p className="text-gray-600 mb-4">Bu marka için nesil bilgisi bulunamadı.</p>
+          <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} için parça arıyorum.`)} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
+            <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
+          </a>
+        </div>
+      )}
     </>
   )
 }
@@ -450,17 +554,18 @@ function ParcalarContent() {
   const marka = searchParams.get('marka')
   const modelName = searchParams.get('model_name')
 
-  const hasVehicle = brand && gen && marka && modelName
+  const hasVehicleWithGen = brand && gen && marka && modelName
+  const hasVehicleWithoutGen = brand && marka && !gen
 
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="container mx-auto px-4">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
+          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Parçalar</span>
-          {hasVehicle && (
+          <span className="text-gray-900">Parçalar</span>
+          {(hasVehicleWithGen || hasVehicleWithoutGen) && marka && (
             <>
               <ChevronRight className="w-4 h-4" />
               <span className="text-primary-500">{marka} {modelName}</span>
@@ -468,14 +573,16 @@ function ParcalarContent() {
           )}
         </nav>
 
-        {hasVehicle ? (
+        {hasVehicleWithGen ? (
           <VehiclePartsExplorer brand={brand} gen={gen} marka={marka} modelName={modelName} />
+        ) : hasVehicleWithoutGen ? (
+          <GenerationPicker brand={brand} marka={marka} modelName={modelName || ''} />
         ) : (
           <StaticCategoriesView />
         )}
 
         {/* CTA Section */}
-        {!hasVehicle && (
+        {!hasVehicleWithGen && !hasVehicleWithoutGen && (
           <div className="mt-16 text-center">
             <div className="bg-gradient-to-r from-secondary-700 to-secondary-900 rounded-2xl p-8 md:p-12">
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Aradığınız Parçayı Bulamadınız mı?</h2>

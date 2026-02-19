@@ -24,9 +24,9 @@ export default function WhatsAppButton() {
         </div>
 
         {/* Tooltip */}
-        <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-dark-800 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg">
+        <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 bg-gray-900 text-white text-sm px-3 py-2 rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none shadow-lg">
           WhatsApp ile yazın
-          <div className="absolute left-full top-1/2 -translate-y-1/2 border-8 border-transparent border-l-dark-800"></div>
+          <div className="absolute left-full top-1/2 -translate-y-1/2 border-8 border-transparent border-l-gray-900"></div>
         </div>
       </div>
     </a>

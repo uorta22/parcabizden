@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Shield, Truck, Clock, Search, Phone, MessageCircle, ChevronRight, Car, Settings, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench } from 'lucide-react'
 import HeroSection from '@/components/HeroSection'
 import BrandModelSelector from '@/components/BrandModelSelector'
-import BrandMarquee from '@/components/BrandMarquee'
+
 import { siteConfig, getWhatsAppUrl, getPhoneUrl } from '@/lib/config'
 
 const categories = [
@@ -47,17 +47,14 @@ export default function Home() {
       {/* Hero - Motto + VIN Search + CTAs */}
       <HeroSection />
 
-      {/* Brand Marquee */}
-      <BrandMarquee />
-
       {/* Brand / Model Selector */}
-      <section className="py-16 md:py-24 bg-dark-900">
+      <section className="py-16 md:py-24 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Marka ve Model <span className="text-primary-500">Seçin</span>
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-gray-500 max-w-2xl mx-auto">
               Aracınızın markasını seçin, modele özel uyumlu parçaları görüntüleyin.
             </p>
           </div>
@@ -66,13 +63,13 @@ export default function Home() {
       </section>
 
       {/* Categories */}
-      <section className="py-16 md:py-24 bg-dark-800">
+      <section className="py-16 md:py-24 bg-white">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Parça <span className="text-primary-500">Kategorileri</span>
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-gray-500 max-w-2xl mx-auto">
               Tüm marka ve modellere uygun yedek parça ve çıkma parça çeşitlerimizi keşfedin.
             </p>
           </div>
@@ -82,15 +79,15 @@ export default function Home() {
               <Link
                 key={category.id}
                 href={`/parcalar/${category.id}`}
-                className="group bg-dark-900 border border-dark-700 rounded-xl p-5 hover:border-primary-500/50 transition-all card-hover"
+                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-500/50 transition-all card-hover"
               >
                 <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${category.color} flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
                   <category.icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-white font-semibold mb-1 group-hover:text-primary-500 transition-colors">
+                <h3 className="text-gray-900 font-semibold mb-1 group-hover:text-primary-500 transition-colors">
                   {category.name}
                 </h3>
-                <p className="text-gray-500 text-sm">{category.count} Parça</p>
+                <p className="text-gray-400 text-sm">{category.count} Parça</p>
               </Link>
             ))}
           </div>
@@ -98,7 +95,7 @@ export default function Home() {
           <div className="text-center mt-10">
             <Link
               href="/parcalar"
-              className="inline-flex items-center gap-2 px-6 py-3 border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-dark-900 rounded-lg transition-all font-medium"
+              className="inline-flex items-center gap-2 px-6 py-3 border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white rounded-lg transition-all font-medium"
             >
               Tüm Parçaları Gör
               <ChevronRight className="w-5 h-5" />
@@ -108,13 +105,13 @@ export default function Home() {
       </section>
 
       {/* Features */}
-      <section className="py-16 md:py-24 bg-dark-900">
+      <section className="py-16 md:py-24 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
               Neden <span className="text-primary-500">ParcaBizden?</span>
             </h2>
-            <p className="text-gray-400 max-w-2xl mx-auto">
+            <p className="text-gray-500 max-w-2xl mx-auto">
               Yılların tecrübesi ve müşteri memnuniyeti odaklı hizmet anlayışımız ile yanınızdayız.
             </p>
           </div>
@@ -123,13 +120,13 @@ export default function Home() {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className="bg-dark-800 border border-dark-700 rounded-xl p-6 hover:border-primary-500/30 transition-all card-hover"
+                className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 hover:border-primary-500/30 transition-all card-hover"
               >
-                <div className="w-14 h-14 rounded-xl bg-primary-500/10 flex items-center justify-center mb-4">
+                <div className="w-14 h-14 rounded-xl bg-primary-50 flex items-center justify-center mb-4">
                   <feature.icon className="w-7 h-7 text-primary-500" />
                 </div>
-                <h3 className="text-xl font-semibold text-white mb-2">{feature.title}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">{feature.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -169,23 +166,23 @@ export default function Home() {
       </section>
 
       {/* Trust Badges */}
-      <section className="py-12 bg-dark-900 border-t border-dark-700">
+      <section className="py-12 bg-gray-50 border-t border-gray-200">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 text-gray-500">
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16 text-gray-400">
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">5000+</p>
+              <p className="text-3xl font-bold text-gray-900">5000+</p>
               <p className="text-sm">Mutlu Müşteri</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">10.000+</p>
+              <p className="text-3xl font-bold text-gray-900">10.000+</p>
               <p className="text-sm">Parça Çeşidi</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">50+</p>
+              <p className="text-3xl font-bold text-gray-900">50+</p>
               <p className="text-sm">Marka</p>
             </div>
             <div className="text-center">
-              <p className="text-3xl font-bold text-white">7/24</p>
+              <p className="text-3xl font-bold text-gray-900">7/24</p>
               <p className="text-sm">WhatsApp Destek</p>
             </div>
           </div>

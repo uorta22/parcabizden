@@ -113,25 +113,21 @@ export async function searchParts(query: string, page = 1): Promise<ApiResponse<
   return fetchApi<ApiResponse<ApiPart[]>>(`/search?q=${encodeURIComponent(query)}&page=${page}`)
 }
 
-// ==================== Auth ====================
+// ==================== Auth (action-based) ====================
 
 export async function register(email: string, password: string, name: string, phone?: string): Promise<AuthResponse> {
-  return fetchApi<AuthResponse>('/auth/register', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, name, phone }),
-  })
+  const params: Record<string, string> = { action: 'register', email, password, name }
+  if (phone) params.phone = phone
+  return actionPost<AuthResponse>(params)
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-  return fetchApi<AuthResponse>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  })
+  return actionPost<AuthResponse>({ action: 'login', email, password })
 }
 
 export async function getProfile(): Promise<User> {
-  const res = await fetchApi<ApiResponse<User>>('/auth/profile')
-  return res.data
+  const res = await actionPost<{ user: User }>({ action: 'profile' })
+  return res.user
 }
 
 // ==================== Garage ====================
@@ -203,6 +199,25 @@ async function actionFetch<T>(params: Record<string, string>): Promise<T> {
   return data
 }
 
+async function actionPost<T>(params: Record<string, string>): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}/`, {
+    method: 'POST',
+    headers,
+    body: new URLSearchParams(params).toString(),
+  })
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const data = await res.json()
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
 export function fetchVehicleCategories(brand: string, gen: string) {
   return actionFetch<{ categories: VehicleCategory[]; total_parts: number }>({
     action: 'categories', brand, gen,
@@ -215,6 +230,12 @@ export function fetchVehicleNodes(brand: string, gen: string, cat: string) {
 
 export function fetchVehicleParts(brand: string, gen: string, node: string) {
   return actionFetch<{ parts: VehiclePart[] }>({ action: 'parts', brand, gen, node })
+}
+
+export function fetchGenerations(brand: string) {
+  return actionFetch<{ generations: Array<{ generation_slug: string; generation_name: string; part_count: number }> }>({
+    action: 'generations', brand,
+  })
 }
 
 export function searchOemParts(query: string) {

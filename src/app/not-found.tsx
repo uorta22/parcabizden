@@ -10,10 +10,10 @@ export default function NotFound() {
           <div className="mb-8">
             <span className="text-8xl font-bold text-primary-500">404</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-4">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
             Sayfa Bulunamadı
           </h1>
-          <p className="text-gray-400 mb-8">
+          <p className="text-gray-500 mb-8">
             Aradığınız sayfa mevcut değil veya taşınmış olabilir.
             Aşağıdaki bağlantıları kullanarak devam edebilirsiniz.
           </p>
@@ -27,7 +27,7 @@ export default function NotFound() {
             </Link>
             <Link
               href="/parcalar"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-dark-800 hover:bg-dark-700 text-white font-semibold rounded-lg transition-all border border-dark-600"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-gray-100 text-gray-900 font-semibold rounded-lg transition-all border border-gray-200"
             >
               <Search className="w-5 h-5" />
               Parçalar

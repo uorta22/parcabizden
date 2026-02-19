@@ -12,10 +12,10 @@ export default function KullanimSartlariPage() {
   return (
     <div className="min-h-screen py-8 md:py-12">
       <div className="container mx-auto px-4">
-        <nav className="flex items-center gap-2 text-sm text-gray-400 mb-8">
-          <Link href="/" className="hover:text-white transition-colors">Ana Sayfa</Link>
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
+          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-white">Kullanım Şartları</span>
+          <span className="text-gray-900">Kullanım Şartları</span>
         </nav>
 
         <div className="max-w-4xl mx-auto">
@@ -24,24 +24,24 @@ export default function KullanimSartlariPage() {
               <FileText className="w-6 h-6 text-primary-500" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white">Kullanım Şartları</h1>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">Kullanım Şartları</h1>
               <p className="text-gray-500 text-sm mt-1">Son güncelleme: Şubat 2026</p>
             </div>
           </div>
 
-          <div className="prose prose-invert max-w-none space-y-8">
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">1. Kabul</h2>
-              <p className="text-gray-400 leading-relaxed">
+          <div className="prose prose max-w-none space-y-8">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">1. Kabul</h2>
+              <p className="text-gray-500 leading-relaxed">
                 {siteConfig.url} web sitesini (&quot;Site&quot;) kullanarak bu kullanım şartlarını kabul etmiş
                 sayılırsınız. Bu şartları kabul etmiyorsanız siteyi kullanmayınız. {siteConfig.name},
                 bu şartları önceden bildirimde bulunmaksızın değiştirme hakkını saklı tutar.
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">2. Hizmet Tanımı</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">2. Hizmet Tanımı</h2>
+              <p className="text-gray-500 leading-relaxed">
                 {siteConfig.name}, araç yedek parçası ve çıkma parça arama, sorgulama ve talep oluşturma
                 hizmeti sunan bir platformdur. Kullanıcılar şase numarası ile araç sorgulama yapabilir,
                 parça kategorilerini inceleyebilir ve WhatsApp üzerinden parça talepleri oluşturabilir.
@@ -49,9 +49,9 @@ export default function KullanimSartlariPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">3. Kullanıcı Hesapları</h2>
-              <ul className="space-y-3 text-gray-400">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">3. Kullanıcı Hesapları</h2>
+              <ul className="space-y-3 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
                   <span>Hesap oluşturmak için geçerli bir e-posta adresi ve güçlü bir şifre gerekmektedir.</span>
@@ -71,10 +71,10 @@ export default function KullanimSartlariPage() {
               </ul>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">4. Kabul Edilebilir Kullanım</h2>
-              <p className="text-gray-400 leading-relaxed mb-4">Siteyi kullanırken aşağıdaki kurallara uymanız gerekmektedir:</p>
-              <ul className="space-y-2 text-gray-400">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">4. Kabul Edilebilir Kullanım</h2>
+              <p className="text-gray-500 leading-relaxed mb-4">Siteyi kullanırken aşağıdaki kurallara uymanız gerekmektedir:</p>
+              <ul className="space-y-2 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 mt-2 flex-shrink-0" />
                   <span>Siteyi yasa dışı amaçlarla kullanmak yasaktır.</span>
@@ -98,9 +98,9 @@ export default function KullanimSartlariPage() {
               </ul>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">5. Parça Bilgileri ve Sorumluluk</h2>
-              <ul className="space-y-3 text-gray-400">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">5. Parça Bilgileri ve Sorumluluk</h2>
+              <ul className="space-y-3 text-gray-500">
                 <li className="flex items-start gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary-500 mt-2 flex-shrink-0" />
                   <span>Sitede listelenen parça bilgileri referans amaçlıdır. Stok durumu ve fiyatlar değişkenlik gösterebilir.</span>
@@ -120,9 +120,9 @@ export default function KullanimSartlariPage() {
               </ul>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">6. Fikri Mülkiyet</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">6. Fikri Mülkiyet</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Site üzerindeki tüm içerik, tasarım, logo, grafik ve yazılım {siteConfig.name}&apos;e aittir
                 veya lisans altında kullanılmaktadır. İzinsiz kopyalama, çoğaltma veya dağıtım yasaktır.
                 Kullanıcılar, site üzerindeki içerikleri yalnızca kişisel, ticari olmayan amaçlarla
@@ -130,9 +130,9 @@ export default function KullanimSartlariPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">7. Sorumluluk Sınırlaması</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">7. Sorumluluk Sınırlaması</h2>
+              <p className="text-gray-500 leading-relaxed">
                 {siteConfig.name}, sitenin kesintisiz veya hatasız çalışacağını garanti etmez.
                 Teknik sorunlar, bakım çalışmaları veya üçüncü taraf hizmetlerindeki aksaklıklardan
                 dolayı yaşanabilecek erişim problemlerinden sorumlu tutulamaz. Site &quot;olduğu gibi&quot;
@@ -140,20 +140,20 @@ export default function KullanimSartlariPage() {
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">8. Uygulanacak Hukuk</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">8. Uygulanacak Hukuk</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Bu kullanım şartları Türkiye Cumhuriyeti kanunlarına tabidir. Uyuşmazlık halinde
                 İstanbul Mahkemeleri ve İcra Daireleri yetkilidir.
               </p>
             </section>
 
-            <section className="bg-dark-800 border border-dark-700 rounded-xl p-6 md:p-8">
-              <h2 className="text-xl font-semibold text-white mb-4">9. İletişim</h2>
-              <p className="text-gray-400 leading-relaxed">
+            <section className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 md:p-8">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">9. İletişim</h2>
+              <p className="text-gray-500 leading-relaxed">
                 Bu kullanım şartları ile ilgili sorularınız için:
               </p>
-              <div className="mt-4 space-y-2 text-gray-400">
+              <div className="mt-4 space-y-2 text-gray-500">
                 <p>E-posta: <a href={`mailto:${siteConfig.email}`} className="text-primary-500 hover:underline">{siteConfig.email}</a></p>
                 <p>Telefon: <a href={`tel:${siteConfig.phone.raw}`} className="text-primary-500 hover:underline">{siteConfig.phone.display}</a></p>
               </div>
