@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronRight, MessageCircle, Search, ArrowLeft } from 'lucide-react'
+import { ChevronRight, MessageCircle, Search, ArrowLeft, Car } from 'lucide-react'
 import { parts, categories, getPartById, getRelatedParts, getCategoryById, getPartsByCategory } from '@/data/parts'
 import { BrandLogo } from '@/components/BrandLogos'
 import { notFound } from 'next/navigation'
@@ -180,6 +180,24 @@ export default function PartDetailPage({ params }: PageProps) {
                 <MessageCircle className="w-4 h-4" />
                 WhatsApp ile Talep Et
               </a>
+            </div>
+
+            {/* Brand picker CTA card */}
+            <div className="bg-primary-50 border border-primary-200 rounded-xl p-6">
+              <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center mb-3">
+                <Car className="w-5 h-5 text-primary-500" />
+              </div>
+              <h3 className="text-gray-900 font-semibold mb-2">Aracınıza Özel Parça Bulun</h3>
+              <p className="text-gray-500 text-sm mb-4">
+                Marka ve model seçerek aracınıza uygun parça kataloğuna ulaşın.
+              </p>
+              <Link
+                href="/parcalar"
+                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 rounded-lg transition-all font-medium text-sm"
+              >
+                <Car className="w-4 h-4" />
+                Marka Seçerek Ara
+              </Link>
             </div>
 
             {/* Chassis search card */}

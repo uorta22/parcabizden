@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { ChevronRight, MessageCircle, Search } from 'lucide-react'
+import { ChevronRight, MessageCircle, Search, Car } from 'lucide-react'
 import { categories, getPartsByCategory, getCategoryById } from '@/data/parts'
 import { BrandLogo } from '@/components/BrandLogos'
 import { notFound } from 'next/navigation'
@@ -52,6 +52,21 @@ export default function CategoryPage({ params }: PageProps) {
           <ChevronRight className="w-4 h-4" />
           <span className="text-gray-900">{category.name}</span>
         </nav>
+
+        {/* Brand CTA Banner */}
+        <Link
+          href="/parcalar"
+          className="flex items-center gap-4 p-4 mb-8 bg-primary-50 border border-primary-200 rounded-xl hover:border-primary-400 transition-all group"
+        >
+          <div className="w-10 h-10 rounded-lg bg-primary-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-500/30 transition-colors">
+            <Car className="w-5 h-5 text-primary-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-gray-900 font-semibold text-sm">Aracınıza uygun parçaları görmek için marka seçin</p>
+            <p className="text-gray-500 text-xs">Marka ve model seçerek size özel parça kataloğuna ulaşın</p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0 group-hover:translate-x-0.5 transition-all" />
+        </Link>
 
         {/* Header */}
         <div className="mb-10">

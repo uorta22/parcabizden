@@ -9,6 +9,7 @@ import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import PartDetailModal from '@/components/PartDetailModal'
+import BrandPicker from '@/components/BrandPicker'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square,
@@ -72,14 +73,8 @@ function OemBadge({ oem }: { oem: string }) {
 function StaticCategoriesView() {
   return (
     <>
-      <div className="text-center mb-12">
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-          Parça <span className="text-primary-500">Kategorileri</span>
-        </h1>
-        <p className="text-gray-500 max-w-2xl mx-auto text-lg">
-          İhtiyacınız olan parçayı kategoriye göre bulun. Tüm marka ve modellere uygun yedek parça ve çıkma parça seçenekleri.
-        </p>
-      </div>
+      {/* Brand Picker — API-first approach */}
+      <BrandPicker />
 
       <div className="max-w-2xl mx-auto mb-12">
         <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-primary-500/50 transition-all group">
@@ -92,6 +87,16 @@ function StaticCategoriesView() {
           </div>
           <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-primary-500 transition-colors" />
         </Link>
+      </div>
+
+      {/* Static categories for SEO */}
+      <div className="mb-8">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
+          Parça <span className="text-primary-500">Kategorileri</span>
+        </h2>
+        <p className="text-gray-500 max-w-2xl text-base">
+          Kategoriye göre de yedek parça ve çıkma parça seçeneklerini inceleyebilirsiniz.
+        </p>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
