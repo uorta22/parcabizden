@@ -1,39 +1,266 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
-import { Search, MessageCircle, Sparkles, AlertCircle, CheckCircle, ChevronDown, ChevronRight, Wrench, Info, Car } from 'lucide-react'
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
+import { Search, MessageCircle, Sparkles, AlertCircle, CheckCircle, Wrench, Info, Car, Loader2, Copy, Check, Package, ChevronLeft } from 'lucide-react'
 import { BrandLogo } from '@/components/BrandLogos'
-import type { VehicleInfo } from '@/types/vehicle'
-import { getCompatibleParts, groupPartsByCategory, getCategoryById } from '@/data/parts'
-import type { Part } from '@/data/parts'
+import type { VehicleInfo, VehicleGeneration } from '@/types/vehicle'
 import { siteConfig } from '@/lib/config'
-import { validateVIN as validateVINUtil, decodeVIN, translateFuelType, translateTransmission } from '@/lib/vehicle'
+import { validateVIN as validateVINUtil, decodeVIN, translateFuelType, translateTransmission, parseModelYear, cleanModelName } from '@/lib/vehicle'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts } from '@/lib/api'
+import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
+
+interface BrandModelItem {
+  name: string
+  bodyType: string
+  image: string
+}
+
+function findBrandModels(tree: Record<string, { body_types: Record<string, { name: string; image: string }[]> }>, make: string): BrandModelItem[] {
+  const normalizedMake = make.toLowerCase().replace(/[- ]/g, '')
+  for (const [brandName, brandData] of Object.entries(tree)) {
+    const normalizedBrand = brandName.toLowerCase().replace(/[- ]/g, '')
+    if (normalizedBrand === normalizedMake || normalizedMake.includes(normalizedBrand) || normalizedBrand.includes(normalizedMake)) {
+      const models: BrandModelItem[] = []
+      for (const [bodyType, bodyModels] of Object.entries(brandData.body_types)) {
+        for (const m of bodyModels) {
+          models.push({ name: m.name, bodyType, image: m.image })
+        }
+      }
+      models.sort((a, b) => parseModelYear(a.name) - parseModelYear(b.name))
+      return models
+    }
+  }
+  return []
+}
+
+const PARTS_PER_PAGE = 20
+
+const CATEGORY_STYLE_MAP: Record<string, { color: string; icon: string }> = {
+  engine:        { color: 'from-red-500 to-orange-500',    icon: '🔧' },
+  turbo_intake:  { color: 'from-sky-500 to-blue-500',      icon: '💨' },
+  fuel:          { color: 'from-amber-500 to-yellow-500',  icon: '⛽' },
+  exhaust:       { color: 'from-gray-500 to-slate-500',    icon: '🏭' },
+  transmission:  { color: 'from-blue-500 to-cyan-500',     icon: '⚙️' },
+  brake:         { color: 'from-purple-500 to-pink-500',   icon: '🛑' },
+  suspension:    { color: 'from-green-500 to-emerald-500', icon: '🔩' },
+  wheel_tyre:    { color: 'from-gray-600 to-gray-500',     icon: '🛞' },
+  body_exterior: { color: 'from-yellow-500 to-orange-500', icon: '🚗' },
+  glass_mirror:  { color: 'from-teal-500 to-cyan-500',     icon: '🪞' },
+  lighting:      { color: 'from-amber-400 to-yellow-500',  icon: '💡' },
+  electrical:    { color: 'from-cyan-500 to-blue-500',     icon: '⚡' },
+  climate:       { color: 'from-indigo-500 to-blue-500',   icon: '❄️' },
+  interior:      { color: 'from-violet-500 to-purple-500', icon: '💺' },
+  audio_media:   { color: 'from-pink-500 to-rose-500',     icon: '🔊' },
+  tow_transport: { color: 'from-stone-500 to-gray-500',    icon: '🪝' },
+  other:         { color: 'from-gray-500 to-gray-600',     icon: '📦' },
+}
+
+function getCategoryStyle(id: string) {
+  return CATEGORY_STYLE_MAP[id] ?? CATEGORY_STYLE_MAP['other']
+}
 
 export default function HeroSection() {
   const [vin, setVin] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null)
-  const [parts, setParts] = useState<Record<string, Part[]>>({})
   const [error, setError] = useState('')
-  const [openCats, setOpenCats] = useState<Set<string>>(new Set())
   const [showAI, setShowAI] = useState(false)
   const [aiQuery, setAiQuery] = useState('')
+  const [missingModel, setMissingModel] = useState(false)
+  const [brandModels, setBrandModels] = useState<BrandModelItem[]>([])
+  const [modelSearch, setModelSearch] = useState('')
+  const [selectedModelImage, setSelectedModelImage] = useState('')
+  const modelSelectRef = useRef<HTMLDivElement>(null)
+
+  // API-driven parts state
+  const [selectedGen, setSelectedGen] = useState<{ slug: string; name: string } | null>(null)
+  const [apiCategories, setApiCategories] = useState<VehicleCategory[]>([])
+  const [apiNodes, setApiNodes] = useState<VehicleNode[]>([])
+  const [apiParts, setApiParts] = useState<VehiclePart[]>([])
+  const [selectedCat, setSelectedCat] = useState<string | null>(null)
+  const [selectedNode, setSelectedNode] = useState<string | null>(null)
+  const [partsView, setPartsView] = useState<'generations' | 'categories' | 'nodes' | 'parts'>('categories')
+  const [loadingParts, setLoadingParts] = useState(false)
+  const [totalApiParts, setTotalApiParts] = useState(0)
+  const [partsPage, setPartsPage] = useState(1)
+  const [nodeSearch, setNodeSearch] = useState('')
+  const [copiedOem, setCopiedOem] = useState<string | null>(null)
+  // Generations from VIN decode
+  const [generations, setGenerations] = useState<VehicleGeneration[]>([])
+
+  useEffect(() => {
+    const resetState = () => {
+      setVin('')
+      setIsSearching(false)
+      setVehicleInfo(null)
+      setError('')
+      setShowAI(false)
+      setAiQuery('')
+      setMissingModel(false)
+      setBrandModels([])
+      setModelSearch('')
+      setSelectedModelImage('')
+      setSelectedGen(null)
+      setApiCategories([])
+      setApiNodes([])
+      setApiParts([])
+      setSelectedCat(null)
+      setSelectedNode(null)
+      setPartsView('categories')
+      setLoadingParts(false)
+      setTotalApiParts(0)
+      setPartsPage(1)
+      setNodeSearch('')
+      setCopiedOem(null)
+      setGenerations([])
+    }
+    window.addEventListener('page-reset', resetState)
+    return () => window.removeEventListener('page-reset', resetState)
+  }, [])
+
+  const loadCategories = useCallback(async (brandSlug: string, genSlug: string, genName: string) => {
+    setLoadingParts(true)
+    setApiCategories([])
+    setApiNodes([])
+    setApiParts([])
+    setSelectedCat(null)
+    setSelectedNode(null)
+    setPartsPage(1)
+    setNodeSearch('')
+    try {
+      const res = await fetchVehicleCategories(brandSlug, genSlug)
+      setApiCategories(res.categories)
+      setTotalApiParts(res.total_parts)
+      setSelectedGen({ slug: genSlug, name: genName })
+      setPartsView('categories')
+    } catch {
+      // silently fail — WhatsApp CTA remains visible
+    } finally {
+      setLoadingParts(false)
+    }
+  }, [])
 
   const handleSearch = useCallback(async () => {
-    setError(''); setVehicleInfo(null); setParts({}); setOpenCats(new Set())
+    setError('')
+    setVehicleInfo(null)
+    setMissingModel(false)
+    setBrandModels([])
+    setSelectedModelImage('')
+    setSelectedGen(null)
+    setApiCategories([])
+    setApiNodes([])
+    setApiParts([])
+    setSelectedCat(null)
+    setSelectedNode(null)
+    setPartsView('categories')
+    setTotalApiParts(0)
+    setPartsPage(1)
+    setNodeSearch('')
+    setGenerations([])
+
     if (!vin.trim()) { setError('Lütfen şase numarası girin'); return }
     if (!validateVINUtil(vin.trim())) { setError('Geçersiz VIN. 17 karakter, I/O/Q hariç.'); return }
     setIsSearching(true)
     const result = await decodeVIN(vin.trim())
     setIsSearching(false)
     if (result.error || !result.data) { setError(result.error || 'Bulunamadı.'); return }
-    setVehicleInfo(result.data)
-    const filtered = getCompatibleParts(result.data.make, result.data.fuelType, result.data.transmissionType)
-    const grouped = groupPartsByCategory(filtered)
-    setParts(grouped)
-    const first = Object.keys(grouped)[0]
-    if (first) setOpenCats(new Set([first]))
-  }, [vin])
+
+    const data = result.data
+
+    // Case: no model in NHTSA response
+    if (!data.model) {
+      setVehicleInfo(data)
+      setMissingModel(true)
+      try {
+        const treeRes = await fetch('/data/vehicle-tree.json')
+        const tree = await treeRes.json()
+        const models = findBrandModels(tree, data.make)
+        setBrandModels(models)
+      } catch { /* ignore */ }
+      setTimeout(() => modelSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+      return
+    }
+
+    setVehicleInfo(data)
+
+    const gens = data.generations ?? []
+    const brandSlug = data.brandSlug
+
+    if (brandSlug && gens.length === 1) {
+      // Auto-select the single generation
+      const g = gens[0]
+      setGenerations(gens)
+      await loadCategories(brandSlug, g.generation_slug, g.generation_name)
+    } else if (brandSlug && gens.length > 1) {
+      setGenerations(gens)
+      setPartsView('generations')
+    } else if (!brandSlug && data.model) {
+      // Has model but no brandSlug — show WhatsApp CTA (no drill-down possible)
+      setGenerations([])
+    }
+    // No brandSlug and no model is handled above by the missingModel branch
+  }, [vin, loadCategories])
+
+  const handleModelSelect = useCallback((modelName: string, image?: string) => {
+    if (!vehicleInfo) return
+    const updated = { ...vehicleInfo, model: modelName }
+    setVehicleInfo(updated)
+    setMissingModel(false)
+    setModelSearch('')
+    if (image) setSelectedModelImage(image)
+    // Model selected from vehicle-tree.json but no generations available — show WhatsApp CTA
+    setSelectedGen(null)
+    setApiCategories([])
+    setPartsView('categories')
+  }, [vehicleInfo])
+
+  const handleGenSelect = useCallback(async (gen: VehicleGeneration) => {
+    if (!vehicleInfo?.brandSlug) return
+    await loadCategories(vehicleInfo.brandSlug, gen.generation_slug, gen.generation_name)
+  }, [vehicleInfo, loadCategories])
+
+  const handleCatSelect = useCallback(async (catId: string) => {
+    if (!vehicleInfo?.brandSlug || !selectedGen) return
+    setLoadingParts(true)
+    setApiNodes([])
+    setApiParts([])
+    setSelectedNode(null)
+    setPartsPage(1)
+    setNodeSearch('')
+    setSelectedCat(catId)
+    try {
+      const res = await fetchVehicleNodes(vehicleInfo.brandSlug, selectedGen.slug, catId)
+      setApiNodes(res.nodes)
+      setPartsView('nodes')
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingParts(false)
+    }
+  }, [vehicleInfo, selectedGen])
+
+  const handleNodeSelect = useCallback(async (nodeName: string) => {
+    if (!vehicleInfo?.brandSlug || !selectedGen) return
+    setLoadingParts(true)
+    setApiParts([])
+    setPartsPage(1)
+    setSelectedNode(nodeName)
+    try {
+      const res = await fetchVehicleParts(vehicleInfo.brandSlug, selectedGen.slug, nodeName)
+      setApiParts(res.parts)
+      setPartsView('parts')
+    } catch {
+      // silently fail
+    } finally {
+      setLoadingParts(false)
+    }
+  }, [vehicleInfo, selectedGen])
+
+  const handleCopyOem = useCallback((oem: string) => {
+    navigator.clipboard.writeText(oem).catch(() => {})
+    setCopiedOem(oem)
+    setTimeout(() => setCopiedOem(null), 2000)
+  }, [])
 
   const whatsappBase = useCallback((extra: string) => {
     const msg = vehicleInfo
@@ -50,8 +277,6 @@ export default function HeroSection() {
     setAiQuery('')
   }, [aiQuery, vehicleInfo, vin])
 
-  const totalParts = Object.values(parts).reduce((s, p) => s + p.length, 0)
-
   const vehicleFields = useMemo(() => vehicleInfo ? [
     { l: 'Marka', v: vehicleInfo.make }, { l: 'Model', v: vehicleInfo.model },
     { l: 'Yıl', v: vehicleInfo.year }, { l: 'Kasa', v: vehicleInfo.bodyType },
@@ -60,6 +285,24 @@ export default function HeroSection() {
     { l: 'Güç', v: vehicleInfo.engineHP ? `${vehicleInfo.engineHP} HP` : '' },
     { l: 'Şanzıman', v: translateTransmission(vehicleInfo.transmissionType) },
   ].filter(f => f.v) : [], [vehicleInfo])
+
+  // Breadcrumb label for current selected category
+  const selectedCatLabel = useMemo(() => {
+    if (!selectedCat) return null
+    const cat = apiCategories.find(c => c.id === selectedCat)
+    return cat?.name_tr ?? selectedCat
+  }, [selectedCat, apiCategories])
+
+  // Filtered nodes by search
+  const filteredNodes = useMemo(() => {
+    if (!nodeSearch) return apiNodes
+    const q = nodeSearch.toLowerCase()
+    return apiNodes.filter(n => n.label.toLowerCase().includes(q) || n.name.toLowerCase().includes(q))
+  }, [apiNodes, nodeSearch])
+
+  // Paginated parts
+  const visibleParts = useMemo(() => apiParts.slice(0, partsPage * PARTS_PER_PAGE), [apiParts, partsPage])
+  const remainingParts = apiParts.length - visibleParts.length
 
   return (
     <>
@@ -248,123 +491,395 @@ export default function HeroSection() {
       {vehicleInfo && (
         <section className="py-10 md:py-14 bg-dark-900">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto animate-fadeIn">
-              {/* Vehicle Card */}
-              <div className="bg-dark-800 border border-dark-700 rounded-2xl p-5 md:p-6 mb-6">
-                <div className="flex items-center gap-2 mb-4">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-green-500 text-sm font-medium">Araç bilgileri bulundu</span>
+            <div className="max-w-7xl mx-auto animate-fadeIn">
+
+              {/* ── Vehicle Card ── */}
+              <div className="bg-gradient-to-br from-dark-800 to-dark-800/80 border border-dark-700 rounded-2xl overflow-hidden mb-8 shadow-2xl shadow-black/20">
+                {/* Status Bar */}
+                <div className={`px-6 py-3 ${missingModel ? 'bg-amber-500/[0.06] border-b border-amber-500/10' : 'bg-green-500/[0.06] border-b border-green-500/10'}`}>
+                  <div className="flex items-center gap-2">
+                    {missingModel ? (
+                      <><AlertCircle className="w-4 h-4 text-amber-500" /><span className="text-amber-400 text-sm font-medium">Marka bulundu — model bilgisi eksik</span></>
+                    ) : (
+                      <><CheckCircle className="w-4 h-4 text-green-500" /><span className="text-green-400 text-sm font-medium">Araç bilgileri bulundu</span></>
+                    )}
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-4 mb-5 pb-5 border-b border-dark-600">
-                  <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center p-1.5 flex-shrink-0">
-                    <BrandLogo brand={vehicleInfo.make} size={40} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-xl font-bold text-white truncate">{vehicleInfo.make} {vehicleInfo.model}</h3>
-                    <p className="text-gray-400 text-sm">{vehicleInfo.year}{vehicleInfo.series ? ` | ${vehicleInfo.series}` : ''}</p>
-                  </div>
-                  <button
-                    onClick={() => whatsappBase('Bu araç için parça talebi oluşturmak istiyorum.')}
-                    className="hidden md:flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors flex-shrink-0"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    Parça Talep Et
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {vehicleFields.map((f) => (
-                    <div key={f.l} className="bg-dark-900/50 rounded-lg px-3 py-2.5">
-                      <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">{f.l}</p>
-                      <p className="text-white text-sm font-medium">{f.v}</p>
+                <div className="p-6 md:p-8">
+                  {/* Vehicle Header - Image + Info + CTA */}
+                  <div className="flex flex-col md:flex-row gap-6 mb-6">
+                    {/* Left: Vehicle Image or Brand Logo */}
+                    <div className="flex-shrink-0 mx-auto md:mx-0">
+                      {selectedModelImage ? (
+                        <div className="w-40 h-28 md:w-48 md:h-32 rounded-2xl bg-gradient-to-b from-dark-900/80 to-dark-900 border border-white/[0.06] flex items-center justify-center overflow-hidden">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={selectedModelImage} alt={vehicleInfo.model} className="w-full h-full object-contain p-2" />
+                        </div>
+                      ) : (
+                        <div className="w-24 h-24 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center">
+                          <BrandLogo brand={vehicleInfo.make} size={56} />
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
 
-                <div className="mt-4 bg-dark-900/50 rounded-lg px-3 py-2.5">
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider mb-0.5">Şase Numarası</p>
-                  <p className="text-white font-mono text-sm tracking-wider">{vin}</p>
-                </div>
+                    {/* Right: Title + Quick Info */}
+                    <div className="flex-1 min-w-0 text-center md:text-left">
+                      <h3 className="text-2xl md:text-3xl font-bold text-white mb-1">
+                        {vehicleInfo.make} {vehicleInfo.model ? cleanModelName(vehicleInfo.model) : <span className="text-gray-600 italic font-normal text-xl">Model seçilmedi</span>}
+                      </h3>
+                      <p className="text-gray-400 mb-4">
+                        {[vehicleInfo.year, vehicleInfo.series, vehicleInfo.bodyType].filter(Boolean).join(' · ')}
+                      </p>
+                      <div className="flex flex-wrap gap-2 justify-center md:justify-start">
+                        {!missingModel && (
+                          <button
+                            onClick={() => whatsappBase('Bu araç için parça talebi oluşturmak istiyorum.')}
+                            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                          >
+                            <MessageCircle className="w-4 h-4" />
+                            WhatsApp ile Talep Et
+                          </button>
+                        )}
+                        <div className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-dark-900/60 border border-white/[0.06] rounded-xl">
+                          <span className="text-[10px] text-gray-500 uppercase tracking-wider">VIN</span>
+                          <span className="text-white font-mono text-xs tracking-wider">{vin}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Mobile WhatsApp CTA */}
-                <button
-                  onClick={() => whatsappBase('Bu araç için parça talebi oluşturmak istiyorum.')}
-                  className="md:hidden flex items-center justify-center gap-2 w-full mt-4 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-xl transition-colors"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp ile Parça Talep Et
-                </button>
+                  {/* Model Selection Panel */}
+                  {missingModel && brandModels.length > 0 && (
+                    <div ref={modelSelectRef} className="mb-6 p-4 md:p-5 bg-amber-500/[0.04] border border-amber-500/15 rounded-xl animate-fadeIn">
+                      <p className="text-amber-400 text-sm font-medium mb-1">Aracınızın modelini seçin</p>
+                      <p className="text-gray-500 text-xs mb-3">NHTSA veritabanında bu VIN için model bilgisi bulunamadı.</p>
+                      <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input type="text" value={modelSearch} onChange={(e) => setModelSearch(e.target.value)} placeholder="Model ara..."
+                          className="w-full pl-9 pr-4 py-2.5 bg-dark-900 border border-dark-600 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
+                      </div>
+                      <div className="max-h-[420px] overflow-y-auto">
+                        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                          {brandModels.filter(m => !modelSearch || m.name.toLowerCase().includes(modelSearch.toLowerCase())).map((m, i) => {
+                            const year = parseModelYear(m.name)
+                            return (
+                              <button key={i} onClick={() => handleModelSelect(m.name, m.image)}
+                                className="group relative rounded-lg overflow-hidden bg-dark-900 border border-dark-600 hover:border-primary-500/40 hover:shadow-[0_4px_16px_rgba(234,179,8,0.08)] transition-all duration-200 text-left">
+                                <div className="relative aspect-[4/3] bg-gradient-to-b from-dark-800/60 to-dark-900/80 overflow-hidden">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={m.image} alt={m.name} className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                                  {year > 0 && <span className="absolute top-1 right-1 text-[8px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-dark-900/70 backdrop-blur-sm border border-white/[0.08] text-gray-400">{year}</span>}
+                                  <span className="absolute top-1 left-1 text-[8px] font-medium text-gray-500 bg-dark-900/80 backdrop-blur-sm px-1 py-0.5 rounded">{m.bodyType}</span>
+                                </div>
+                                <div className="px-2 py-1.5">
+                                  <p className="text-[11px] text-gray-400 group-hover:text-white transition-colors duration-200 leading-tight line-clamp-1 font-medium">{cleanModelName(m.name)}</p>
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                        {brandModels.filter(m => !modelSearch || m.name.toLowerCase().includes(modelSearch.toLowerCase())).length === 0 && (
+                          <p className="text-gray-500 text-xs text-center py-6">Sonuç bulunamadı</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {missingModel && brandModels.length === 0 && (
+                    <div ref={modelSelectRef} className="mb-6 p-4 bg-amber-500/[0.04] border border-amber-500/15 rounded-xl animate-fadeIn">
+                      <p className="text-amber-400 text-sm font-medium mb-1">Model bilgisi bulunamadı</p>
+                      <p className="text-gray-500 text-xs mb-3">Bu marka için veritabanımızda model listesi bulunmuyor.</p>
+                      <button onClick={() => whatsappBase('Bu VIN için model bilgisi bulunamadı. Yardımcı olur musunuz?')}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors">
+                        <MessageCircle className="w-4 h-4" />WhatsApp ile Sor
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Vehicle Specs Grid */}
+                  {vehicleFields.length > 0 && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-px bg-white/[0.04] rounded-xl overflow-hidden border border-white/[0.06]">
+                      {vehicleFields.map((f) => (
+                        <div key={f.l} className="bg-dark-800 px-4 py-3.5">
+                          <p className="text-[10px] text-gray-500 uppercase tracking-wider font-medium mb-1">{f.l}</p>
+                          <p className="text-white text-sm font-semibold">{f.v}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Compatible Parts */}
-              {totalParts > 0 ? (
+              {/* ── Compatible Parts (API-driven) ── */}
+              {!missingModel && (
                 <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <Wrench className="w-5 h-5 text-primary-500" />
-                    <h3 className="text-lg font-bold text-white">Uyumlu Parçalar</h3>
-                    <span className="px-2.5 py-0.5 bg-primary-500/15 text-primary-500 rounded-full text-xs font-semibold">{totalParts}</span>
-                  </div>
+                  {/* Loading spinner */}
+                  {loadingParts && (
+                    <div className="flex items-center justify-center py-16">
+                      <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+                      <span className="ml-3 text-gray-400 text-sm">Parçalar yükleniyor...</span>
+                    </div>
+                  )}
 
-                  <div className="space-y-2">
-                    {Object.entries(parts).map(([catId, catParts]) => {
-                      const cat = getCategoryById(catId)
-                      const isOpen = openCats.has(catId)
-                      return (
-                        <div key={catId} className="bg-dark-800 border border-dark-700 rounded-xl overflow-hidden">
-                          <button
-                            onClick={() => setOpenCats(prev => { const n = new Set(prev); n.has(catId) ? n.delete(catId) : n.add(catId); return n })}
-                            className="w-full flex items-center justify-between p-4 hover:bg-dark-700/50 transition-colors"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="text-white font-semibold text-sm">{cat?.name || catId}</span>
-                              <span className="px-2 py-0.5 bg-dark-600 text-gray-400 rounded-full text-[11px]">{catParts.length}</span>
-                            </div>
-                            {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
-                          </button>
-                          {isOpen && (
-                            <div className="border-t border-dark-700 p-4">
-                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-                                {catParts.map((part) => (
-                                  <div key={part.id} className="bg-dark-900 border border-dark-600 rounded-lg p-4 hover:border-primary-500/30 transition-all group">
-                                    <h4 className="text-white font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">{part.name}</h4>
-                                    <p className="text-gray-500 text-xs mb-3">{part.description}</p>
-                                    <button
-                                      onClick={() => {
-                                        const msg = `Parça: ${part.name}\nKategori: ${part.categoryName}\nAraç: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}\nŞase: ${vin}`
-                                        whatsappBase(msg)
-                                      }}
-                                      className="flex items-center justify-center gap-1.5 w-full px-3 py-2 bg-green-600/15 hover:bg-green-600 text-green-400 hover:text-white rounded-lg transition-all text-xs font-medium"
-                                    >
-                                      <MessageCircle className="w-3.5 h-3.5" />
-                                      Fiyat Sor
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                  {/* Generation Picker */}
+                  {!loadingParts && partsView === 'generations' && generations.length > 1 && (
+                    <div className="animate-fadeIn">
+                      <div className="flex items-center gap-3 mb-5">
+                        <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+                          <Car className="w-5 h-5 text-primary-500" />
                         </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-dark-800 border border-dark-700 rounded-xl p-6 text-center">
-                  <p className="text-gray-400 mb-1 text-sm">Bu araç için spesifik parça bulunamadı.</p>
-                  <p className="text-gray-600 text-xs">WhatsApp üzerinden tüm parçaları talep edebilirsiniz.</p>
+                        <div>
+                          <h3 className="text-lg font-bold text-white">{generations.length} eşleşme bulundu — Aracınızı seçin</h3>
+                          <p className="text-gray-500 text-xs">Doğru nesil/dönem seçimi daha iyi parça listesi sağlar</p>
+                        </div>
+                      </div>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {generations.map((gen) => (
+                          <button
+                            key={gen.generation_slug}
+                            onClick={() => handleGenSelect(gen)}
+                            className="group bg-dark-800 border border-dark-700 hover:border-primary-500/40 hover:shadow-[0_4px_20px_rgba(234,179,8,0.06)] rounded-xl p-5 text-left transition-all duration-200"
+                          >
+                            <p className="text-white font-semibold text-sm group-hover:text-primary-500 transition-colors mb-2 leading-snug">{gen.generation_name}</p>
+                            <div className="flex items-center gap-1.5">
+                              <Package className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="text-gray-500 text-xs tabular-nums">{gen.part_count.toLocaleString('tr-TR')} parça</span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Categories View */}
+                  {!loadingParts && partsView === 'categories' && apiCategories.length > 0 && (
+                    <div className="animate-fadeIn">
+                      <div className="flex items-center justify-between mb-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-primary-500/10 flex items-center justify-center">
+                            <Wrench className="w-5 h-5 text-primary-500" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-bold text-white">Uyumlu Parçalar</h3>
+                            <p className="text-gray-500 text-xs">
+                              {selectedGen?.name && <span className="text-primary-500 font-medium">{selectedGen.name} · </span>}
+                              {apiCategories.length} kategori, {totalApiParts.toLocaleString('tr-TR')} parça
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                        {apiCategories.map((cat) => {
+                          const style = getCategoryStyle(cat.id)
+                          return (
+                            <button
+                              key={cat.id}
+                              onClick={() => handleCatSelect(cat.id)}
+                              className="group relative bg-dark-800 border border-dark-700 hover:border-white/20 rounded-xl p-5 text-left transition-all duration-200 overflow-hidden hover:shadow-[0_4px_24px_rgba(0,0,0,0.3)]"
+                            >
+                              <div className={`absolute inset-0 bg-gradient-to-br ${style.color} opacity-0 group-hover:opacity-[0.06] transition-opacity duration-200`} />
+                              <div className="relative">
+                                <div className="flex items-start justify-between mb-3">
+                                  <span className="text-2xl leading-none">{style.icon}</span>
+                                  <span className="text-[11px] tabular-nums px-2 py-0.5 rounded-md bg-white/[0.05] text-gray-400 border border-white/[0.06]">
+                                    {cat.total_parts.toLocaleString('tr-TR')}
+                                  </span>
+                                </div>
+                                <p className="text-white font-semibold text-sm group-hover:text-white transition-colors leading-snug">{cat.name_tr}</p>
+                                <p className="text-gray-500 text-xs mt-1">{cat.node_count} alt grup</p>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Nodes View */}
+                  {!loadingParts && partsView === 'nodes' && (
+                    <div className="animate-fadeIn">
+                      {/* Breadcrumb + back */}
+                      <div className="flex items-center gap-2 mb-5">
+                        <button
+                          onClick={() => { setPartsView('categories'); setSelectedCat(null); setApiNodes([]) }}
+                          className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          Kategoriler
+                        </button>
+                        {selectedCatLabel && (
+                          <>
+                            <span className="text-gray-600">/</span>
+                            <span className="text-white text-sm font-medium">{selectedCatLabel}</span>
+                          </>
+                        )}
+                      </div>
+
+                      <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <input
+                          type="text"
+                          value={nodeSearch}
+                          onChange={(e) => setNodeSearch(e.target.value)}
+                          placeholder="Alt grup ara..."
+                          className="w-full pl-9 pr-4 py-2.5 bg-dark-800 border border-dark-700 rounded-xl text-white text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                        />
+                      </div>
+
+                      {filteredNodes.length === 0 ? (
+                        <p className="text-gray-500 text-sm text-center py-10">Sonuç bulunamadı</p>
+                      ) : (
+                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                          {filteredNodes.map((node) => (
+                            <button
+                              key={node.name}
+                              onClick={() => handleNodeSelect(node.name)}
+                              className="group bg-dark-800 border border-dark-700 hover:border-primary-500/40 hover:shadow-[0_4px_20px_rgba(234,179,8,0.06)] rounded-xl p-4 text-left transition-all duration-200"
+                            >
+                              <p className="text-white font-medium text-sm group-hover:text-primary-500 transition-colors mb-1.5 leading-snug">{node.label}</p>
+                              <div className="flex items-center gap-1.5">
+                                <Package className="w-3.5 h-3.5 text-gray-500" />
+                                <span className="text-gray-500 text-xs tabular-nums">{node.part_count.toLocaleString('tr-TR')} parça</span>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Parts View */}
+                  {!loadingParts && partsView === 'parts' && (
+                    <div className="animate-fadeIn">
+                      {/* Breadcrumb + back */}
+                      <div className="flex items-center gap-2 mb-5 flex-wrap">
+                        <button
+                          onClick={() => { setPartsView('categories'); setSelectedCat(null); setSelectedNode(null); setApiNodes([]); setApiParts([]) }}
+                          className="flex items-center gap-1.5 text-gray-400 hover:text-white text-sm transition-colors"
+                        >
+                          <ChevronLeft className="w-4 h-4" />
+                          Kategoriler
+                        </button>
+                        {selectedCatLabel && (
+                          <>
+                            <span className="text-gray-600">/</span>
+                            <button
+                              onClick={() => { setPartsView('nodes'); setSelectedNode(null); setApiParts([]) }}
+                              className="text-gray-400 hover:text-white text-sm transition-colors"
+                            >
+                              {selectedCatLabel}
+                            </button>
+                          </>
+                        )}
+                        {selectedNode && (
+                          <>
+                            <span className="text-gray-600">/</span>
+                            <span className="text-white text-sm font-medium">
+                              {apiNodes.find(n => n.name === selectedNode)?.label ?? selectedNode}
+                            </span>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Parts header */}
+                      <div className="flex items-center justify-between mb-4">
+                        <p className="text-gray-400 text-sm">
+                          <span className="text-white font-semibold tabular-nums">{apiParts.length}</span> parça bulundu
+                        </p>
+                      </div>
+
+                      {apiParts.length === 0 ? (
+                        <div className="bg-dark-800 border border-dark-700 rounded-xl p-8 text-center">
+                          <Package className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                          <p className="text-gray-400 text-sm">Bu alt grup için parça bulunamadı.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                            {visibleParts.map((part, idx) => (
+                              <div
+                                key={`${part.oem_number}-${idx}`}
+                                className="group bg-gradient-to-b from-white/[0.03] to-transparent border border-white/[0.06] rounded-xl p-4 hover:border-primary-500/25 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all duration-200 flex flex-col gap-3"
+                              >
+                                {/* OEM Badge */}
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-mono text-xs text-primary-400 bg-primary-500/10 border border-primary-500/20 rounded-md px-2 py-1 truncate max-w-[calc(100%-2rem)]">
+                                    {part.oem_number}
+                                  </span>
+                                  <button
+                                    onClick={() => handleCopyOem(part.oem_number)}
+                                    title="Kopyala"
+                                    className="flex-shrink-0 w-7 h-7 flex items-center justify-center rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.06] transition-colors"
+                                  >
+                                    {copiedOem === part.oem_number ? (
+                                      <Check className="w-3.5 h-3.5 text-green-400" />
+                                    ) : (
+                                      <Copy className="w-3.5 h-3.5 text-gray-500 group-hover:text-gray-300 transition-colors" />
+                                    )}
+                                  </button>
+                                </div>
+
+                                {/* Part name */}
+                                <p className="text-white font-semibold text-sm leading-snug flex-1">{part.name}</p>
+
+                                {/* WhatsApp CTA */}
+                                <button
+                                  onClick={() => whatsappBase(`OEM No: ${part.oem_number}\nParça: ${part.name}\nAraç: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}\nŞase: ${vin}`)}
+                                  className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-green-600/10 hover:bg-green-600 text-green-400 hover:text-white border border-green-500/20 hover:border-green-600 rounded-lg transition-all text-xs font-semibold"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  Fiyat Sor
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+
+                          {remainingParts > 0 && (
+                            <button
+                              onClick={() => setPartsPage(p => p + 1)}
+                              className="mt-6 w-full py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] rounded-xl text-gray-400 hover:text-white text-sm font-medium transition-all flex items-center justify-center gap-2"
+                            >
+                              Daha Fazla Göster
+                              <span className="text-xs text-gray-500">({remainingParts} parça daha)</span>
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* No API data + no loading: WhatsApp CTA fallback */}
+                  {!loadingParts && partsView === 'categories' && apiCategories.length === 0 && !missingModel && vehicleInfo.model && (
+                    <div className="bg-dark-800 border border-dark-700 rounded-xl p-8 text-center">
+                      <div className="w-12 h-12 rounded-xl bg-white/[0.03] flex items-center justify-center mx-auto mb-3">
+                        <Wrench className="w-6 h-6 text-gray-600" />
+                      </div>
+                      <p className="text-gray-400 mb-1 text-sm">Bu araç için veritabanımızda parça bulunamadı.</p>
+                      <p className="text-gray-600 text-xs mb-4">WhatsApp üzerinden tüm parçaları talep edebilirsiniz.</p>
+                      <button
+                        onClick={() => whatsappBase('Bu araç için uyumlu parça arıyorum. Yardımcı olur musunuz?')}
+                        className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        WhatsApp ile Talep Et
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Bottom CTA */}
-              <div className="mt-6 bg-green-500/10 border border-green-500/20 rounded-xl p-5">
-                <h4 className="text-white font-semibold text-sm mb-1">Aradığınız parça listede yok mu?</h4>
-                <p className="text-gray-400 text-xs mb-3">Şase numaranızla birlikte WhatsApp&apos;tan talep gönderin, size en uygun parçayı bulalım.</p>
+              <div className="mt-8 bg-gradient-to-r from-green-500/10 to-green-600/5 border border-green-500/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-4">
+                <div className="flex-1 text-center md:text-left">
+                  <h4 className="text-white font-bold text-base mb-1">Aradığınız parça listede yok mu?</h4>
+                  <p className="text-gray-400 text-sm">Şase numaranızla birlikte WhatsApp&apos;tan talep gönderin, size en uygun parçayı bulalım.</p>
+                </div>
                 <button
                   onClick={() => whatsappBase('Listede olmayan bir parça arıyorum. Yardımcı olur musunuz?')}
-                  className="w-full md:w-auto px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-2"
+                  className="flex-shrink-0 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors flex items-center gap-2"
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-5 h-5" />
                   WhatsApp ile Talep Oluştur
                 </button>
               </div>

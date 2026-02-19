@@ -10,7 +10,7 @@ import type {
   User,
 } from '@/types/api'
 
-const API_BASE = '/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const url = `${API_BASE}${endpoint}`
@@ -157,5 +157,68 @@ export async function addGarageVehicle(data: {
 export async function removeGarageVehicle(id: number): Promise<{ message: string }> {
   return fetchApi(`/garage/remove?id=${id}`, {
     method: 'DELETE',
+  })
+}
+
+// ==================== Vehicle Parts API (action-based) ====================
+
+export interface VehicleCategory {
+  id: string
+  name_tr: string
+  name_en: string
+  icon: string
+  sort_order: number
+  total_parts: number
+  node_count: number
+}
+
+export interface VehicleNode {
+  name: string
+  label: string
+  part_count: number
+}
+
+export interface VehiclePart {
+  oem_number: string
+  name: string
+  brand_slug?: string
+  generation_slug?: string
+  node_name_en?: string
+}
+
+export interface OemSearchResult {
+  oem_number: string
+  name: string
+  brand_slug: string
+  generation_slug: string
+  node_name_en: string
+}
+
+async function actionFetch<T>(params: Record<string, string>): Promise<T> {
+  const query = new URLSearchParams(params).toString()
+  const res = await fetch(`${API_BASE}/?${query}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const data = await res.json()
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
+export function fetchVehicleCategories(brand: string, gen: string) {
+  return actionFetch<{ categories: VehicleCategory[]; total_parts: number }>({
+    action: 'categories', brand, gen,
+  })
+}
+
+export function fetchVehicleNodes(brand: string, gen: string, cat: string) {
+  return actionFetch<{ nodes: VehicleNode[] }>({ action: 'nodes', brand, gen, cat })
+}
+
+export function fetchVehicleParts(brand: string, gen: string, node: string) {
+  return actionFetch<{ parts: VehiclePart[] }>({ action: 'parts', brand, gen, node })
+}
+
+export function searchOemParts(query: string) {
+  return actionFetch<{ results: OemSearchResult[]; query: string }>({
+    action: 'search_oem', q: query,
   })
 }

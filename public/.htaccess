@@ -1,28 +1,41 @@
+RewriteEngine On
+
+# HTTPS yonlendirme
+RewriteCond %{HTTPS} off
+RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# www yonlendirme (www olmadan kullanmak icin)
+RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+RewriteRule ^(.*)$ https://%1/$1 [R=301,L]
+
+# Trailing slash: dizin varsa ama ayni isimde .html de varsa, .html dosyasini sun
+RewriteCond %{REQUEST_URI} ^(.+)/$
+RewriteCond %{DOCUMENT_ROOT}%1.html -f
+RewriteRule ^(.+)/$ /$1 [R=301,L]
+
+# Mevcut dosya varsa dokunma
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# .html uzantisi olmadan sayfalari sun
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.*)$ $1.html [L]
+
+# 404 sayfa yonlendirmesi
+ErrorDocument 404 /404.html
+
 # Security Headers
 <IfModule mod_headers.c>
-  # Clickjacking koruması
   Header always set X-Frame-Options "SAMEORIGIN"
-
-  # MIME type sniffing koruması
   Header always set X-Content-Type-Options "nosniff"
-
-  # XSS koruması
   Header always set X-XSS-Protection "1; mode=block"
-
-  # HTTPS zorunluluğu (1 yıl)
   Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-
-  # Referrer politikası
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
-
-  # Permissions Policy
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), interest-cohort=()"
-
-  # Content Security Policy
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://vpic.nhtsa.dot.gov https://*.parcabizden.com.tr; frame-ancestors 'self';"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://vpic.nhtsa.dot.gov https://*.parcabizden.com.tr; frame-ancestors 'self'; media-src 'self' https://videos.pexels.com;"
 </IfModule>
 
-# Hassas dosyalara erişimi engelle
+# Hassas dosyalara erisimi engelle
 <FilesMatch "\.(env|log|ini|bak|sql|git)$">
   Require all denied
 </FilesMatch>
@@ -30,8 +43,26 @@
 # Directory listing engelle
 Options -Indexes
 
-# ETags devre dışı (bilgi sızıntısı)
+# ETags devre disi
 <IfModule mod_headers.c>
   Header unset ETag
 </IfModule>
 FileETag None
+
+# Onbellekleme
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 1 hour"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
+</IfModule>
+
+# Gzip sikistirma
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css application/javascript application/json image/svg+xml
+</IfModule>

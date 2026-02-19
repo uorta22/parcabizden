@@ -1,3 +1,9 @@
+export interface VehicleGeneration {
+  generation_slug: string
+  generation_name: string
+  part_count: number
+}
+
 export interface VehicleInfo {
   make: string
   model: string
@@ -13,6 +19,10 @@ export interface VehicleInfo {
   plantCountry: string
   doors: string
   vin: string
+  brandSlug?: string
+  generations?: VehicleGeneration[]
+  platformCode?: string | null
+  matched?: boolean
 }
 
 export interface NHTSAResult {

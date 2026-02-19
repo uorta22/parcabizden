@@ -39,19 +39,33 @@ ini_set('error_log', getenv('ERROR_LOG_PATH') ?: __DIR__ . '/logs/php_errors.log
 // Timezone
 date_default_timezone_set('Europe/Istanbul');
 
-// CORS Configuration - Restrict to specific origin
-$allowedOrigin = getenv('ALLOWED_ORIGIN') ?: 'https://parcabizden.com.tr';
+// CORS Configuration - Allow multiple origins (Vercel + production domain)
+$allowedOrigins = array_filter([
+    getenv('ALLOWED_ORIGIN') ?: 'https://parcabizden.com.tr',
+    'https://parcabizden.com.tr',
+    'https://www.parcabizden.com.tr',
+]);
 
 // Handle CORS headers
 header('Content-Type: application/json; charset=utf-8');
 
-// Check if Origin header exists and matches allowed origin
+// Check if Origin header matches any allowed origin
 $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if ($requestOrigin === $allowedOrigin ||
-    ($requestOrigin && strpos($requestOrigin, 'localhost') !== false && getenv('APP_ENV') === 'development')) {
+$originAllowed = false;
+
+if (in_array($requestOrigin, $allowedOrigins, true)) {
+    $originAllowed = true;
+} elseif ($requestOrigin && strpos($requestOrigin, 'localhost') !== false && getenv('APP_ENV') !== 'production') {
+    $originAllowed = true;
+} elseif ($requestOrigin && strpos($requestOrigin, '.vercel.app') !== false) {
+    // Allow Vercel preview deployments
+    $originAllowed = true;
+}
+
+if ($originAllowed) {
     header('Access-Control-Allow-Origin: ' . $requestOrigin);
 } else {
-    header('Access-Control-Allow-Origin: ' . $allowedOrigin);
+    header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
 }
 
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');

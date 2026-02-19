@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Menu, X, Car, Phone, MessageCircle, LogIn, User, LogOut, Warehouse } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getWhatsAppUrl } from '@/lib/config'
@@ -9,6 +10,14 @@ import { getWhatsAppUrl } from '@/lib/config'
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const { user, logout } = useAuth()
+  const pathname = usePathname()
+
+  const handleNavClick = (href: string) => {
+    if (pathname === href) {
+      window.dispatchEvent(new CustomEvent('page-reset'))
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
 
   const navLinks = [
     { href: '/', label: 'Ana Sayfa' },
@@ -23,7 +32,7 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 group">
+          <Link href="/" onClick={() => handleNavClick('/')} className="flex items-center gap-2 group">
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg gradient-accent flex items-center justify-center">
               <Car className="w-6 h-6 md:w-7 md:h-7 text-dark-900" />
             </div>
@@ -41,6 +50,7 @@ export default function Header() {
               <Link
                 key={link.href}
                 href={link.href}
+                onClick={() => handleNavClick(link.href)}
                 className="text-gray-300 hover:text-primary-500 transition-colors font-medium"
               >
                 {link.label}
@@ -111,7 +121,7 @@ export default function Header() {
                   key={link.href}
                   href={link.href}
                   className="px-4 py-3 text-gray-300 hover:text-primary-500 hover:bg-dark-800 rounded-lg transition-all"
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={() => { handleNavClick(link.href); setIsMenuOpen(false) }}
                 >
                   {link.label}
                 </Link>

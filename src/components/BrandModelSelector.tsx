@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Search, X, ChevronRight, Car, ArrowUpDown } from 'lucide-react'
+import { parseModelYear, cleanModelName } from '@/lib/vehicle'
 
 interface VehicleModel {
   key: string
@@ -30,15 +31,6 @@ const brandLogoOverrides: Record<string, string> = {
 function getBrandLogo(name: string): string {
   if (brandLogoOverrides[name]) return brandLogoOverrides[name]
   return name.toLowerCase().replace(/\s+/g, '-') + '.png'
-}
-
-function parseModelYear(name: string): number {
-  const match = name.match(/\((?:\d{2}\.)?(\d{4})->/)
-  return match ? parseInt(match[1], 10) : 0
-}
-
-function cleanModelName(name: string): string {
-  return name.replace(/\((?:\d{2}\.)?\d{4}->\)\s*$/, '').trim()
 }
 
 const POPULAR_BRANDS = ['BMW', 'Mercedes', 'Volkswagen', 'Audi', 'Toyota', 'Ford', 'Renault', 'Hyundai']
@@ -129,7 +121,7 @@ export default function BrandModelSelector() {
         <div className="flex flex-col lg:flex-row">
 
           {/* ── Left Panel - Brand List ── */}
-          <div className="lg:w-[360px] border-b lg:border-b-0 lg:border-r border-white/[0.06] flex flex-col bg-white/[0.01]">
+          <div className="lg:w-[380px] border-b lg:border-b-0 lg:border-r border-white/[0.06] flex flex-col bg-white/[0.01]">
 
             {/* Search */}
             <div className="p-4 flex-shrink-0">
@@ -211,10 +203,10 @@ export default function BrandModelSelector() {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <span className={`text-sm font-medium block truncate transition-colors duration-200 ${
-                          isActive ? 'text-white' : 'text-gray-300 group-hover:text-white'
+                        <span className={`text-[15px] font-semibold block truncate transition-colors duration-200 ${
+                          isActive ? 'text-white' : 'text-gray-200 group-hover:text-white'
                         }`}>{brandName}</span>
-                        <span className="text-[11px] text-gray-500 tabular-nums">{modelCount} model</span>
+                        <span className="text-xs text-gray-500 tabular-nums">{modelCount} model</span>
                       </div>
                       <ChevronRight className={`w-4 h-4 flex-shrink-0 transition-all duration-200 ${
                         isActive ? 'text-primary-500 translate-x-0.5' : 'text-gray-600 group-hover:text-gray-400 group-hover:translate-x-0.5'
