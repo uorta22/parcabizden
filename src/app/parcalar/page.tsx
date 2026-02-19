@@ -8,6 +8,7 @@ import { categories } from '@/data/parts'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
+import PartDetailModal from '@/components/PartDetailModal'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square,
@@ -142,6 +143,9 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   const [nodeSearch, setNodeSearch] = useState('')
   const [partSearch, setPartSearch] = useState('')
   const [partsPage, setPartsPage] = useState(1)
+
+  // Modal
+  const [selectedApiPart, setSelectedApiPart] = useState<VehiclePart | null>(null)
 
   // Vehicle image
   const [vehicleImage, setVehicleImage] = useState('')
@@ -379,22 +383,19 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {paginatedParts.map((part, i) => (
-                  <div key={`${part.oem_number}-${i}`} className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all duration-200">
+                  <button
+                    key={`${part.oem_number}-${i}`}
+                    onClick={() => setSelectedApiPart(part)}
+                    className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all duration-200 text-left"
+                  >
                     <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
                     <div className="mb-3">
                       <OemBadge oem={part.oem_number} />
                     </div>
-                    <button
-                      onClick={() => {
-                        const msg = `Merhaba, aşağıdaki parça için fiyat bilgisi almak istiyorum.\n\nParça: ${part.name}\nOEM No: ${part.oem_number}\nAraç: ${marka} ${modelName}`
-                        window.open(`https://wa.me/${siteConfig.phone.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank')
-                      }}
-                      className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-green-600/10 hover:bg-green-600 text-green-400 hover:text-white border border-green-500/20 hover:border-green-600 rounded-lg transition-all text-xs font-semibold"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Fiyat Sor
-                    </button>
-                  </div>
+                    <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
+                      Detay & Fiyat Al
+                    </span>
+                  </button>
                 ))}
               </div>
 
@@ -438,6 +439,17 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
           <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Oluştur
         </a>
       </div>
+
+      {/* Part Detail Modal */}
+      {selectedApiPart && (
+        <PartDetailModal
+          part={selectedApiPart}
+          vehicleName={`${marka} ${modelName}`}
+          categoryName={selectedCat?.name_tr}
+          nodeName={selectedNode?.label}
+          onClose={() => setSelectedApiPart(null)}
+        />
+      )}
     </>
   )
 }

@@ -298,3 +298,15 @@ export const groupPartsByCategory = (compatibleParts: Part[]): Record<string, Pa
     return acc
   }, {} as Record<string, Part[]>)
 }
+
+export const getPartById = (id: string): Part | undefined => {
+  return parts.find(part => part.id === id)
+}
+
+export const getRelatedParts = (partId: string, limit = 6): Part[] => {
+  const part = getPartById(partId)
+  if (!part) return []
+  return parts
+    .filter(p => p.category === part.category && p.id !== partId)
+    .slice(0, limit)
+}

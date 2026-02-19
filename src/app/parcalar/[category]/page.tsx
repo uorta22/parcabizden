@@ -87,9 +87,10 @@ export default function CategoryPage({ params }: PageProps) {
         {/* Parts Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categoryParts.map((part) => (
-            <div
+            <Link
               key={part.id}
-              className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 hover:border-primary-300 transition-all group"
+              href={`/parcalar/${params.category}/${part.id}`}
+              className="bg-white border border-gray-200 shadow-sm rounded-xl p-6 hover:border-primary-300 transition-all group block"
             >
               <div className="mb-4">
                 <span className="inline-block px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
@@ -125,16 +126,11 @@ export default function CategoryPage({ params }: PageProps) {
                 </div>
               </div>
 
-              <a
-                href={getWhatsAppUrl(`Merhaba, ${part.name} parçası hakkında bilgi almak istiyorum.`)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-green-600/20 hover:bg-green-600 text-green-500 hover:text-white rounded-lg transition-all font-medium"
-              >
-                <MessageCircle className="w-5 h-5" />
-                WhatsApp ile Talep Et
-              </a>
-            </div>
+              <span className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all font-medium">
+                Detayları Gör
+                <ChevronRight className="w-4 h-4" />
+              </span>
+            </Link>
           ))}
         </div>
 

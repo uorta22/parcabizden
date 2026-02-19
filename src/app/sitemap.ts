@@ -1,5 +1,5 @@
 import { MetadataRoute } from 'next'
-import { categories } from '@/data/parts'
+import { categories, parts } from '@/data/parts'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://parcabizden.com.tr'
@@ -70,5 +70,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  return [...staticPages, ...categoryPages]
+  // Part detail pages
+  const partPages = parts.map((part) => ({
+    url: `${baseUrl}/parcalar/${part.category}/${part.id}`,
+    lastModified: new Date(),
+    changeFrequency: 'weekly' as const,
+    priority: 0.7,
+  }))
+
+  return [...staticPages, ...categoryPages, ...partPages]
 }

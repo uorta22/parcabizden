@@ -9,6 +9,7 @@ import type { VehicleInfo, VehicleGeneration } from '@/types/vehicle'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts } from '@/lib/api'
 import { BrandLogo } from '@/components/BrandLogos'
+import PartDetailModal from '@/components/PartDetailModal'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { validateVIN, decodeVIN, translateFuelType, translateTransmission, formatEngine, parseModelYear, cleanModelName } from '@/lib/vehicle'
 
@@ -124,6 +125,9 @@ export default function ChassisSearch() {
 
   // ── API data available? (brandSlug present and generation resolved) ──
   const [apiAvailable, setApiAvailable] = useState(false)
+
+  // ── Modal ──
+  const [selectedApiPart, setSelectedApiPart] = useState<VehiclePart | null>(null)
 
   const modelSelectRef = useRef<HTMLDivElement>(null)
 
@@ -906,9 +910,10 @@ export default function ChassisSearch() {
 
                             <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                               {paginatedParts.map((part, i) => (
-                                <div
+                                <button
                                   key={`${part.oem_number}-${i}`}
-                                  className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all duration-200"
+                                  onClick={() => setSelectedApiPart(part)}
+                                  className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-[0_4px_16px_rgba(234,179,8,0.04)] transition-all duration-200 text-left"
                                 >
                                   <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">
                                     {part.name}
@@ -916,14 +921,10 @@ export default function ChassisSearch() {
                                   <div className="mb-3">
                                     <OemBadge oem={part.oem_number} />
                                   </div>
-                                  <button
-                                    onClick={() => handlePartWhatsApp(part)}
-                                    className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-green-600/10 hover:bg-green-600 text-green-400 hover:text-white border border-green-500/20 hover:border-green-600 rounded-lg transition-all text-xs font-semibold"
-                                  >
-                                    <MessageCircle className="w-3.5 h-3.5" />
-                                    Fiyat Sor
-                                  </button>
-                                </div>
+                                  <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
+                                    Detay & Fiyat Al
+                                  </span>
+                                </button>
                               ))}
                             </div>
 
@@ -994,6 +995,17 @@ export default function ChassisSearch() {
               </a>
             </div>
           </div>
+        )}
+
+        {/* Part Detail Modal */}
+        {selectedApiPart && vehicleInfo && (
+          <PartDetailModal
+            part={selectedApiPart}
+            vehicleName={`${vehicleInfo.make} ${vehicleInfo.model || ''}`}
+            categoryName={selectedCat?.name_tr}
+            nodeName={selectedNode?.label}
+            onClose={() => setSelectedApiPart(null)}
+          />
         )}
       </div>
     </div>
