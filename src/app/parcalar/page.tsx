@@ -3,32 +3,12 @@
 import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check } from 'lucide-react'
-import { categories } from '@/data/parts'
+import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import PartDetailModal from '@/components/PartDetailModal'
 import BrandPicker from '@/components/BrandPicker'
-
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  Settings, Car, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench, Layout, Square,
-}
-
-const colorMap: Record<string, string> = {
-  'motor': 'from-red-500 to-orange-500',
-  'sanziman': 'from-blue-500 to-cyan-500',
-  'suspansiyon': 'from-green-500 to-emerald-500',
-  'fren': 'from-purple-500 to-pink-500',
-  'kaporta': 'from-yellow-500 to-orange-500',
-  'aydinlatma': 'from-amber-500 to-yellow-500',
-  'elektrik': 'from-cyan-500 to-blue-500',
-  'sogutma': 'from-sky-500 to-indigo-500',
-  'egzoz': 'from-gray-500 to-slate-500',
-  'direksiyon': 'from-rose-500 to-red-500',
-  'ic-aksesuar': 'from-violet-500 to-purple-500',
-  'cam': 'from-teal-500 to-cyan-500',
-}
 
 // Category icon/color mapping for API categories
 const catStyleMap: Record<string, { color: string; icon: string }> = {
@@ -76,7 +56,7 @@ function StaticCategoriesView() {
       {/* Brand Picker — API-first approach */}
       <BrandPicker />
 
-      <div className="max-w-2xl mx-auto mb-12">
+      <div className="max-w-2xl mx-auto">
         <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-primary-500/50 transition-all group">
           <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
             <Search className="w-7 h-7 text-primary-500" />
@@ -87,40 +67,6 @@ function StaticCategoriesView() {
           </div>
           <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-primary-500 transition-colors" />
         </Link>
-      </div>
-
-      {/* Static categories for SEO */}
-      <div className="mb-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-          Parça <span className="text-primary-500">Kategorileri</span>
-        </h2>
-        <p className="text-gray-500 max-w-2xl text-base">
-          Kategoriye göre de yedek parça ve çıkma parça seçeneklerini inceleyebilirsiniz.
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories.map((category) => {
-          const IconComponent = iconMap[category.icon] || Car
-          const gradientColor = colorMap[category.id] || 'from-gray-500 to-gray-600'
-          return (
-            <Link key={category.id} href={`/parcalar/${category.id}`} className="group bg-white border border-gray-200 shadow-sm rounded-2xl p-6 hover:border-primary-500/50 transition-all card-hover">
-              <div className="flex items-start gap-4">
-                <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientColor} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                  <IconComponent className="w-7 h-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-primary-500 transition-colors">{category.name}</h2>
-                  <p className="text-gray-500 text-sm mb-3 line-clamp-2">{category.description}</p>
-                  <div className="flex items-center justify-between">
-                    <span className="text-primary-500 text-sm font-medium">{category.partCount}+ Parça</span>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-primary-500 group-hover:translate-x-1 transition-all" />
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )
-        })}
       </div>
     </>
   )
