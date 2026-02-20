@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Shield, Truck, Clock, Search, Phone, MessageCircle, ChevronRight, Car, Settings, Disc, Lightbulb, Battery, Thermometer, Wind, Wrench } from 'lucide-react'
 import HeroSection from '@/components/HeroSection'
+import OemSearchBox from '@/components/OemSearchBox'
 import BrandModelSelector from '@/components/BrandModelSelector'
 
 import { siteConfig, getWhatsAppUrl, getPhoneUrl } from '@/lib/config'
@@ -46,6 +47,9 @@ export default function Home() {
     <div className="min-h-screen">
       {/* Hero - Motto + VIN Search + CTAs */}
       <HeroSection />
+
+      {/* OEM Number Search */}
+      <OemSearchBox />
 
       {/* Brand / Model Selector */}
       <section className="py-16 md:py-24 bg-gray-50">

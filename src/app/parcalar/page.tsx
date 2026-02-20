@@ -73,8 +73,11 @@ function OemBadge({ oem }: { oem: string }) {
 // ── Static view (no vehicle selected) ──
 function StaticCategoriesView() {
   const brandPickerRef = useRef<HTMLDivElement>(null)
+  const [toast, setToast] = useState<string | null>(null)
 
-  const scrollToBrandPicker = () => {
+  const handleCategorySelect = (cat: { id: string; name_tr: string }) => {
+    sessionStorage.setItem('preselect_cat', cat.id)
+    setToast(`${cat.name_tr} parçalarını görmek için araç seçin`)
     brandPickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
@@ -84,6 +87,15 @@ function StaticCategoriesView() {
       <div ref={brandPickerRef}>
         <BrandPicker />
       </div>
+
+      {/* Toast / info banner */}
+      {toast && (
+        <div className="mb-6 flex items-center gap-3 p-4 bg-primary-50 border border-primary-200 rounded-xl animate-in fade-in">
+          <Car className="w-5 h-5 text-primary-500 flex-shrink-0" />
+          <p className="text-primary-700 text-sm font-medium">{toast}</p>
+          <button onClick={() => setToast(null)} className="ml-auto text-primary-400 hover:text-primary-600 text-lg leading-none">&times;</button>
+        </div>
+      )}
 
       <div className="max-w-2xl mx-auto">
         <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-primary-500/50 transition-all group">
@@ -108,7 +120,7 @@ function StaticCategoriesView() {
             return (
               <button
                 key={cat.id}
-                onClick={scrollToBrandPicker}
+                onClick={() => handleCategorySelect(cat)}
                 className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all text-left"
               >
                 <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${style.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform text-base`}>
@@ -172,19 +184,6 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       .catch(() => {})
   }, [marka, modelSlug, modelKey])
 
-  // Load categories
-  useEffect(() => {
-    setLoading(true)
-    setError('')
-    fetchVehicleCategories(brand, gen)
-      .then(data => {
-        setApiCategories(data.categories)
-        setTotalParts(data.total_parts)
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [brand, gen])
-
   const handleCategoryClick = useCallback(async (cat: VehicleCategory) => {
     setSelectedCat(cat)
     setView('nodes')
@@ -200,6 +199,29 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       setLoading(false)
     }
   }, [brand, gen])
+
+  // Load categories
+  useEffect(() => {
+    setLoading(true)
+    setError('')
+    fetchVehicleCategories(brand, gen)
+      .then(data => {
+        setApiCategories(data.categories)
+        setTotalParts(data.total_parts)
+
+        // Auto-select preselected category from sessionStorage
+        const preselect = sessionStorage.getItem('preselect_cat')
+        if (preselect) {
+          sessionStorage.removeItem('preselect_cat')
+          const matched = data.categories.find(c => c.id === preselect)
+          if (matched) {
+            setTimeout(() => handleCategoryClick(matched), 0)
+          }
+        }
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false))
+  }, [brand, gen, handleCategoryClick])
 
   const handleNodeClick = useCallback(async (node: VehicleNode) => {
     setSelectedNode(node)
