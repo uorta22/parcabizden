@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check } from 'lucide-react'
@@ -31,6 +31,27 @@ const catStyleMap: Record<string, { color: string; icon: string }> = {
   other: { color: 'from-gray-500 to-gray-600', icon: '📦' },
 }
 
+// All 17 API categories with Turkish names (hardcoded — these don't change)
+const STATIC_API_CATEGORIES: { id: string; name_tr: string }[] = [
+  { id: 'engine', name_tr: 'Motor' },
+  { id: 'turbo_intake', name_tr: 'Turbo & Emme' },
+  { id: 'fuel', name_tr: 'Yakıt Sistemi' },
+  { id: 'exhaust', name_tr: 'Egzoz' },
+  { id: 'transmission', name_tr: 'Şanzıman' },
+  { id: 'brake', name_tr: 'Fren' },
+  { id: 'suspension', name_tr: 'Süspansiyon' },
+  { id: 'wheel_tyre', name_tr: 'Jant & Lastik' },
+  { id: 'body_exterior', name_tr: 'Kaporta & Dış' },
+  { id: 'glass_mirror', name_tr: 'Cam & Ayna' },
+  { id: 'lighting', name_tr: 'Aydınlatma' },
+  { id: 'electrical', name_tr: 'Elektrik' },
+  { id: 'climate', name_tr: 'Klima & Isıtma' },
+  { id: 'interior', name_tr: 'İç Aksam' },
+  { id: 'audio_media', name_tr: 'Ses & Medya' },
+  { id: 'tow_transport', name_tr: 'Çeki & Taşıma' },
+  { id: 'other', name_tr: 'Diğer' },
+]
+
 const PARTS_PER_PAGE = 20
 
 // ── OEM Copy Button ──
@@ -51,10 +72,18 @@ function OemBadge({ oem }: { oem: string }) {
 
 // ── Static view (no vehicle selected) ──
 function StaticCategoriesView() {
+  const brandPickerRef = useRef<HTMLDivElement>(null)
+
+  const scrollToBrandPicker = () => {
+    brandPickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   return (
     <>
       {/* Brand Picker — API-first approach */}
-      <BrandPicker />
+      <div ref={brandPickerRef}>
+        <BrandPicker />
+      </div>
 
       <div className="max-w-2xl mx-auto">
         <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-primary-500/50 transition-all group">
@@ -67,6 +96,29 @@ function StaticCategoriesView() {
           </div>
           <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-primary-500 transition-colors" />
         </Link>
+      </div>
+
+      {/* API Category Grid */}
+      <div className="mt-10">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Parça Kategorileri</h2>
+        <p className="text-sm text-gray-500 mb-5">Kategori seçmek için önce yukarıdan araç belirleyin.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+          {STATIC_API_CATEGORIES.map(cat => {
+            const style = catStyleMap[cat.id] || catStyleMap.other
+            return (
+              <button
+                key={cat.id}
+                onClick={scrollToBrandPicker}
+                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all text-left"
+              >
+                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${style.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform text-base`}>
+                  {style.icon}
+                </div>
+                <h3 className="text-gray-900 font-medium text-sm group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
+              </button>
+            )
+          })}
+        </div>
       </div>
     </>
   )

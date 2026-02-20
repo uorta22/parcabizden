@@ -232,10 +232,27 @@ export function fetchVehicleParts(brand: string, gen: string, node: string) {
   return actionFetch<{ parts: VehiclePart[] }>({ action: 'parts', brand, gen, node })
 }
 
-export function fetchGenerations(brand: string) {
-  return actionFetch<{ generations: Array<{ generation_slug: string; generation_name: string; part_count: number }> }>({
-    action: 'generations', brand,
-  })
+// ── In-memory generations cache (10 min TTL) ──
+type GenerationsData = { generations: Array<{ generation_slug: string; generation_name: string; part_count: number }> }
+const generationsCache = new Map<string, { data: GenerationsData; timestamp: number }>()
+const GEN_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
+
+export async function fetchGenerations(brand: string): Promise<GenerationsData> {
+  const cached = generationsCache.get(brand)
+  if (cached && Date.now() - cached.timestamp < GEN_CACHE_TTL) {
+    return cached.data
+  }
+
+  // Use our ISR-cached proxy route instead of hitting external API directly
+  const res = await fetch(`/api/generations?brand=${encodeURIComponent(brand)}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const data: GenerationsData = await res.json()
+  if ((data as unknown as { error?: string }).error) {
+    throw new Error((data as unknown as { error: string }).error)
+  }
+
+  generationsCache.set(brand, { data, timestamp: Date.now() })
+  return data
 }
 
 export function searchOemParts(query: string) {
