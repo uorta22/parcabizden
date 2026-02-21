@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
 import { Search, ChevronRight, ChevronDown, X, Car } from 'lucide-react'
 import { cleanModelName } from '@/lib/vehicle'
@@ -126,12 +125,12 @@ export default function BrandPicker() {
               }`}
             >
               <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
-                <Image
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
                   src={getBrandLogoPath(brandName)}
                   alt={brandName}
-                  width={56}
-                  height={56}
                   className="object-contain w-12 h-12 sm:w-14 sm:h-14"
+                  loading="lazy"
                   onError={(e) => {
                     const target = e.currentTarget
                     target.style.display = 'none'
