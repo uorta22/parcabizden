@@ -5,31 +5,11 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
+import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import PartDetailModal from '@/components/PartDetailModal'
 import BrandPicker from '@/components/BrandPicker'
-
-// Category icon/color mapping for API categories
-const catStyleMap: Record<string, { color: string; icon: string }> = {
-  engine: { color: 'from-red-500 to-orange-500', icon: '🔧' },
-  turbo_intake: { color: 'from-sky-500 to-blue-500', icon: '💨' },
-  fuel: { color: 'from-amber-500 to-yellow-500', icon: '⛽' },
-  exhaust: { color: 'from-gray-500 to-slate-500', icon: '🏭' },
-  transmission: { color: 'from-blue-500 to-cyan-500', icon: '⚙️' },
-  brake: { color: 'from-purple-500 to-pink-500', icon: '🛑' },
-  suspension: { color: 'from-green-500 to-emerald-500', icon: '🔩' },
-  wheel_tyre: { color: 'from-gray-600 to-gray-500', icon: '🛞' },
-  body_exterior: { color: 'from-yellow-500 to-orange-500', icon: '🚗' },
-  glass_mirror: { color: 'from-teal-500 to-cyan-500', icon: '🪞' },
-  lighting: { color: 'from-amber-400 to-yellow-500', icon: '💡' },
-  electrical: { color: 'from-cyan-500 to-blue-500', icon: '⚡' },
-  climate: { color: 'from-indigo-500 to-blue-500', icon: '❄️' },
-  interior: { color: 'from-violet-500 to-purple-500', icon: '💺' },
-  audio_media: { color: 'from-pink-500 to-rose-500', icon: '🔊' },
-  tow_transport: { color: 'from-stone-500 to-gray-500', icon: '🪝' },
-  other: { color: 'from-gray-500 to-gray-600', icon: '📦' },
-}
 
 // All 17 API categories with Turkish names (hardcoded — these don't change)
 const STATIC_API_CATEGORIES: { id: string; name_tr: string }[] = [
@@ -116,15 +96,15 @@ function StaticCategoriesView() {
         <p className="text-sm text-gray-500 mb-5">Kategori seçmek için önce yukarıdan araç belirleyin.</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {STATIC_API_CATEGORIES.map(cat => {
-            const style = catStyleMap[cat.id] || catStyleMap.other
+            const color = getCategoryColor(cat.id)
             return (
               <button
                 key={cat.id}
                 onClick={() => handleCategorySelect(cat)}
                 className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all text-left"
               >
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${style.color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform text-base`}>
-                  {style.icon}
+                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform`}>
+                  <CategoryIcon id={cat.id} className="text-white" size={20} stroke={2} />
                 </div>
                 <h3 className="text-gray-900 font-medium text-sm group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
               </button>
@@ -327,13 +307,13 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
       {view === 'categories' && !loading && !error && (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {apiCategories.map(cat => {
-            const style = catStyleMap[cat.id] || catStyleMap.other
+            const color = getCategoryColor(cat.id)
             return (
               <button key={cat.id} onClick={() => handleCategoryClick(cat)}
                 className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-md transition-all text-left">
                 <div className="flex items-start gap-3">
-                  <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${style.color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform text-lg`}>
-                    {cat.icon}
+                  <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
+                    <CategoryIcon id={cat.id} className="text-white" size={22} stroke={2} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-gray-900 font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
