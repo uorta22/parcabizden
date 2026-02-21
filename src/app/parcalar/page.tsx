@@ -8,7 +8,6 @@ import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
-import PartDetailModal from '@/components/PartDetailModal'
 import BrandPicker from '@/components/BrandPicker'
 
 // All 17 API categories with Turkish names (hardcoded — these don't change)
@@ -138,9 +137,6 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   const [nodeSearch, setNodeSearch] = useState('')
   const [partSearch, setPartSearch] = useState('')
   const [partsPage, setPartsPage] = useState(1)
-
-  // Modal
-  const [selectedApiPart, setSelectedApiPart] = useState<VehiclePart | null>(null)
 
   // Vehicle image
   const [vehicleImage, setVehicleImage] = useState('')
@@ -387,21 +383,32 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
               <p className="text-xs text-gray-400 mb-4">{filteredParts.length} parça listeleniyor</p>
 
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {paginatedParts.map((part, i) => (
-                  <button
-                    key={`${part.oem_number}-${i}`}
-                    onClick={() => setSelectedApiPart(part)}
-                    className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all duration-200 text-left"
-                  >
-                    <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
-                    <div className="mb-3">
-                      <OemBadge oem={part.oem_number} />
-                    </div>
-                    <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
-                      Detay & Fiyat Al
-                    </span>
-                  </button>
-                ))}
+                {paginatedParts.map((part, i) => {
+                  const detailParams = new URLSearchParams()
+                  if (brand) detailParams.set('brand', brand)
+                  if (gen) detailParams.set('gen', gen)
+                  if (marka) detailParams.set('marka', marka)
+                  if (modelName) detailParams.set('model_name', modelName)
+                  if (selectedCat) { detailParams.set('cat', selectedCat.id); detailParams.set('cat_name', selectedCat.name_tr) }
+                  if (selectedNode) { detailParams.set('node', selectedNode.name); detailParams.set('node_name', selectedNode.label) }
+                  const detailHref = `/parca/${encodeURIComponent(part.oem_number)}?${detailParams.toString()}`
+
+                  return (
+                    <Link
+                      key={`${part.oem_number}-${i}`}
+                      href={detailHref}
+                      className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all duration-200 text-left block"
+                    >
+                      <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
+                      <div className="mb-3">
+                        <OemBadge oem={part.oem_number} />
+                      </div>
+                      <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
+                        Detay & Fiyat Al
+                      </span>
+                    </Link>
+                  )
+                })}
               </div>
 
               {remainingParts > 0 && (
@@ -445,16 +452,6 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
         </a>
       </div>
 
-      {/* Part Detail Modal */}
-      {selectedApiPart && (
-        <PartDetailModal
-          part={selectedApiPart}
-          vehicleName={`${marka} ${modelName}`}
-          categoryName={selectedCat?.name_tr}
-          nodeName={selectedNode?.label}
-          onClose={() => setSelectedApiPart(null)}
-        />
-      )}
     </>
   )
 }

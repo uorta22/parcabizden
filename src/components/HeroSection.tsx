@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
-import { Search, MessageCircle, Sparkles, AlertCircle, CheckCircle, Wrench, Info, Car, Loader2, Copy, Check, Package, ChevronLeft, Hash } from 'lucide-react'
+import Link from 'next/link'
+import { Search, MessageCircle, Sparkles, AlertCircle, CheckCircle, Wrench, Info, Car, Loader2, Copy, Check, Package, ChevronLeft, Hash, ChevronRight } from 'lucide-react'
 import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import type { VehicleInfo, VehicleGeneration } from '@/types/vehicle'
@@ -445,7 +446,11 @@ export default function HeroSection() {
                       {oemResults.length > 0 ? (
                         <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200 overflow-hidden max-h-[360px] overflow-y-auto">
                           {oemResults.slice(0, 10).map((r, i) => (
-                            <div key={`${r.oem_number}-${i}`} className="flex items-center gap-3 p-3.5 hover:bg-gray-100/70 transition-colors">
+                            <Link
+                              key={`${r.oem_number}-${i}`}
+                              href={`/parca/${encodeURIComponent(r.oem_number)}`}
+                              className="flex items-center gap-3 p-3.5 hover:bg-gray-100/70 transition-colors"
+                            >
                               <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
                                 <Package className="w-4 h-4 text-primary-500" />
                               </div>
@@ -453,16 +458,11 @@ export default function HeroSection() {
                                 <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
                                 <p className="text-xs text-gray-500 font-mono">{r.oem_number}</p>
                               </div>
-                              <a
-                                href={getWhatsAppUrl(`Merhaba, ${r.oem_number} OEM numaralı "${r.name}" parçası için fiyat almak istiyorum.`)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center gap-1.5 px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                                Fiyat Sor
-                              </a>
-                            </div>
+                              <span className="flex items-center gap-1.5 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0">
+                                Detay
+                                <ChevronRight className="w-3.5 h-3.5" />
+                              </span>
+                            </Link>
                           ))}
                           {oemResults.length > 10 && (
                             <div className="px-4 py-3 bg-gray-100/50 text-center">
