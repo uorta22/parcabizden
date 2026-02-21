@@ -55,16 +55,7 @@ export default function BrandPicker() {
 
   const brands = useMemo(() => {
     if (!tree) return []
-    const all = Object.keys(tree)
-    // Sort: popular first, then alphabetical
-    return all.sort((a, b) => {
-      const aIdx = popularBrands.indexOf(a)
-      const bIdx = popularBrands.indexOf(b)
-      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx
-      if (aIdx !== -1) return -1
-      if (bIdx !== -1) return 1
-      return a.localeCompare(b)
-    })
+    return Object.keys(tree).sort((a, b) => a.localeCompare(b, 'tr'))
   }, [tree])
 
   const filteredBrands = useMemo(() => {
