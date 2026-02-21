@@ -121,40 +121,40 @@ export default function BrandPicker() {
       </div>
 
       {/* Brand grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-9 gap-3">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
         {filteredBrands.map(brandName => {
           const isExpanded = expandedBrand === brandName
           return (
             <button
               key={brandName}
               onClick={() => setExpandedBrand(isExpanded ? null : brandName)}
-              className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${
+              className={`flex flex-col items-center gap-2.5 p-3 sm:p-4 rounded-xl border transition-all ${
                 isExpanded
                   ? 'border-primary-500 bg-primary-50 shadow-sm'
                   : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-sm'
               }`}
             >
-              <div className="w-10 h-10 flex items-center justify-center">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
                 <Image
                   src={getBrandLogoPath(brandName)}
                   alt={brandName}
-                  width={36}
-                  height={36}
-                  className="object-contain"
+                  width={56}
+                  height={56}
+                  className="object-contain w-12 h-12 sm:w-14 sm:h-14"
                   onError={(e) => {
                     const target = e.currentTarget
                     target.style.display = 'none'
                     const parent = target.parentElement
                     if (parent && !parent.querySelector('span')) {
                       const span = document.createElement('span')
-                      span.className = 'w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-sm'
+                      span.className = 'w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-base'
                       span.textContent = brandName.charAt(0)
                       parent.appendChild(span)
                     }
                   }}
                 />
               </div>
-              <span className={`text-xs font-medium text-center leading-tight ${isExpanded ? 'text-primary-600' : 'text-gray-700'}`}>
+              <span className={`text-xs sm:text-sm font-medium text-center leading-tight ${isExpanded ? 'text-primary-600' : 'text-gray-700'}`}>
                 {brandName}
               </span>
               {isExpanded ? (
