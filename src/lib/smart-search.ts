@@ -289,43 +289,149 @@ export function parseSmartQuery(text: string): ParsedQuery {
   return result
 }
 
-/** ParsedQuery'den searchOemParts için aranacak terimleri oluşturur */
-export function buildSearchQueries(parsed: ParsedQuery): string[] {
-  const queries: string[] = []
+/** Türkçe parça terimi → olası API kategori ID'leri */
+export const PART_TO_CATEGORIES: Record<string, string[]> = {
+  // Motor
+  'klima kompresörü': ['climate'],
+  'klima': ['climate'],
+  'kompresör': ['climate', 'engine'],
+  'radyatör': ['engine'],
+  'fan': ['engine'],
+  'turbo': ['turbo_intake'],
+  'enjektör': ['fuel'],
+  'buji': ['engine'],
+  'supap': ['engine'],
+  'piston': ['engine'],
+  'krank': ['engine'],
+  'eksantrik': ['engine'],
+  'yağ pompası': ['engine'],
+  'su pompası': ['engine'],
+  'termostat': ['engine'],
+  'alternatör': ['electrical'],
+  'marş motoru': ['electrical'],
+  'marş': ['electrical'],
+  'kayış': ['engine'],
+  'triger': ['engine'],
+  'conta': ['engine'],
+  'motor kulağı': ['engine'],
+  'motor takozu': ['engine'],
+  'egzoz': ['exhaust'],
+  'katalitik': ['exhaust'],
+  'egr': ['exhaust', 'engine'],
+  'hava filtresi': ['turbo_intake'],
+  'yağ filtresi': ['engine'],
+  'yakıt filtresi': ['fuel'],
+  'filtre': ['engine', 'fuel', 'turbo_intake'],
 
-  // If we found specific part keywords, use them
-  if (parsed.parts.length > 0) {
-    for (const part of parsed.parts.slice(0, 3)) {
-      queries.push(part)
-    }
-  }
+  // Fren
+  'fren diski': ['brake'],
+  'fren balata': ['brake'],
+  'balata': ['brake'],
+  'fren kaliperi': ['brake'],
+  'fren': ['brake'],
+  'el freni': ['brake'],
+  'abs': ['brake'],
 
-  // Also try raw terms joined
-  if (parsed.rawTerms.length > 0) {
-    const rawJoined = parsed.rawTerms
-      .filter(t => !parsed.brand || t !== parsed.brand)
-      .filter(t => !parsed.model || t !== parsed.model)
-      .join(' ')
-    if (rawJoined.trim()) {
-      queries.push(rawJoined.trim())
-    }
-  }
+  // Süspansiyon
+  'amortisör': ['suspension'],
+  'yay': ['suspension'],
+  'salıncak': ['suspension'],
+  'rotil': ['suspension'],
+  'rot': ['suspension'],
+  'rulman': ['suspension', 'wheel_tyre'],
+  'aks': ['transmission', 'suspension'],
+  'şaft': ['transmission'],
+  'körük': ['suspension'],
 
-  return Array.from(new Set(queries))
+  // Kaporta
+  'far': ['lighting'],
+  'ön far': ['lighting'],
+  'sis farı': ['lighting'],
+  'stop lambası': ['lighting'],
+  'stop': ['lighting'],
+  'sinyal': ['lighting'],
+  'ayna': ['glass_mirror'],
+  'dikiz aynası': ['glass_mirror'],
+  'tampon': ['body_exterior'],
+  'ön tampon': ['body_exterior'],
+  'arka tampon': ['body_exterior'],
+  'çamurluk': ['body_exterior'],
+  'kaput': ['body_exterior'],
+  'bagaj': ['body_exterior'],
+  'kapı': ['body_exterior'],
+  'cam': ['glass_mirror'],
+  'ön cam': ['glass_mirror'],
+  'silecek': ['body_exterior'],
+  'izgara': ['body_exterior'],
+  'marşpiyel': ['body_exterior'],
+
+  // İç
+  'gösterge': ['interior'],
+  'direksiyon': ['interior'],
+  'koltuk': ['interior'],
+  'torpido': ['interior'],
+  'klima paneli': ['climate'],
+  'cam kriko': ['interior'],
+  'cam motoru': ['interior'],
+  'kilit': ['interior'],
+  'merkezi kilit': ['electrical'],
+  'anahtar': ['electrical'],
+  'kontak': ['electrical'],
+
+  // Elektrik
+  'akü': ['electrical'],
+  'sigorta': ['electrical'],
+  'sensör': ['electrical', 'engine'],
+  'oksijen sensörü': ['exhaust'],
+  'abs sensörü': ['brake'],
+  'park sensörü': ['electrical'],
+  'beyin': ['electrical'],
+  'motor beyni': ['electrical'],
+  'bobin': ['electrical'],
+
+  // Şanzıman
+  'şanzıman': ['transmission'],
+  'debriyaj': ['transmission'],
+  'volan': ['transmission'],
+  'diferansiyel': ['transmission'],
+  'kardan': ['transmission'],
+
+  // Soğutma
+  'kalorifer': ['climate'],
+  'kalorifer motoru': ['climate'],
+  'kondenser': ['climate'],
+  'fan motoru': ['engine', 'climate'],
 }
 
-/** Popüler arama önerileri */
+/** Kullanıcının parça terimlerinden hedef kategori ID'lerini çıkar */
+export function getTargetCategories(rawText: string): string[] {
+  const normalized = rawText.toLowerCase().trim()
+  const cats = new Set<string>()
+
+  const sortedKeys = Object.keys(PART_TO_CATEGORIES).sort((a, b) => b.length - a.length)
+  for (const key of sortedKeys) {
+    if (normalized.includes(key)) {
+      for (const cat of PART_TO_CATEGORIES[key]) {
+        cats.add(cat)
+      }
+    }
+  }
+
+  return Array.from(cats)
+}
+
+/** Popüler arama önerileri (marka + parça formatında) */
 export const POPULAR_SEARCHES = [
-  'Far',
-  'Stop lambası',
-  'Fren diski',
-  'Amortisör',
-  'Klima kompresörü',
-  'Radyatör',
-  'Silecek',
-  'Tampon',
-  'Ayna',
-  'Turbo',
-  'Enjektör',
-  'Alternatör',
+  'Golf far',
+  'BMW fren diski',
+  'Passat klima',
+  'Clio amortisör',
+  'Focus radyatör',
+  'Astra turbo',
+  'Corolla tampon',
+  'A4 stop lambası',
+  'Megane enjektör',
+  'Civic alternatör',
+  'Polo ayna',
+  'E46 silecek',
 ]
