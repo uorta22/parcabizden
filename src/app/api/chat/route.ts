@@ -76,14 +76,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const params = new URLSearchParams()
-    params.set('action', 'chat_message')
     params.set('ticket_id', ticketId)
     params.set('message', message.trim())
     if (name) params.set('name', name)
     if (vehicle) params.set('vehicle', vehicle)
     if (pageUrl) params.set('page_url', pageUrl)
 
-    const backendRes = await fetch(`${API_BASE}/`, {
+    const backendRes = await fetch(`${API_BASE}/?action=chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: params.toString(),
