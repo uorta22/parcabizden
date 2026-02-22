@@ -43,6 +43,11 @@ export const siteConfig = {
     support: '7/24',
   },
 
+  // Chat widget
+  chat: {
+    enabled: process.env.NEXT_PUBLIC_CHAT_ENABLED !== 'false',
+  },
+
   // Sosyal medya
   social: {
     instagram: '',
