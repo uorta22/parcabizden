@@ -48,8 +48,6 @@ export default function HeroSection() {
   const [isSearching, setIsSearching] = useState(false)
   const [vehicleInfo, setVehicleInfo] = useState<VehicleInfo | null>(null)
   const [error, setError] = useState('')
-  const [showAI, setShowAI] = useState(false)
-  const [aiQuery, setAiQuery] = useState('')
   const [missingModel, setMissingModel] = useState(false)
   const [brandModels, setBrandModels] = useState<BrandModelItem[]>([])
   const [modelSearch, setModelSearch] = useState('')
@@ -84,8 +82,6 @@ export default function HeroSection() {
       setIsSearching(false)
       setVehicleInfo(null)
       setError('')
-      setShowAI(false)
-      setAiQuery('')
       setMissingModel(false)
       setBrandModels([])
       setModelSearch('')
@@ -277,13 +273,6 @@ export default function HeroSection() {
     window.open(`https://wa.me/${siteConfig.phone.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank')
   }, [vehicleInfo, vin])
 
-  const handleAISend = useCallback(() => {
-    if (!aiQuery.trim()) return
-    const msg = `Merhaba, AI asistanınız aracılığıyla sormak istiyorum:\n\n${aiQuery}${vehicleInfo ? `\n\nArac: ${vehicleInfo.make} ${vehicleInfo.model} ${vehicleInfo.year}\nSase: ${vin}` : ''}`
-    window.open(`https://wa.me/${siteConfig.phone.whatsapp}?text=${encodeURIComponent(msg)}`, '_blank')
-    setShowAI(false)
-    setAiQuery('')
-  }, [aiQuery, vehicleInfo, vin])
 
   const vehicleFields = useMemo(() => vehicleInfo ? [
     { l: 'Marka', v: vehicleInfo.make }, { l: 'Model', v: vehicleInfo.model },
@@ -509,13 +498,13 @@ export default function HeroSection() {
                   <MessageCircle className="w-4 h-4" />
                   WhatsApp ile Sor
                 </button>
-                <button
-                  onClick={() => setShowAI(true)}
+                <Link
+                  href="/ai-asistan"
                   className="flex items-center justify-center gap-2 py-3 bg-purple-50 hover:bg-purple-600 border border-purple-200 hover:border-purple-600 text-purple-700 hover:text-white rounded-xl transition-all text-sm font-medium"
                 >
                   <Sparkles className="w-4 h-4" />
                   AI Asistan ile Sor
-                </button>
+                </Link>
               </div>
             </div>
 
@@ -538,68 +527,6 @@ export default function HeroSection() {
         </div>
       </section>
 
-      {/* ═══ AI MODAL ═══ */}
-      {showAI && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowAI(false)} />
-          <div className="relative bg-white border border-gray-200 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-fadeIn">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-purple-50 to-transparent">
-              <div className="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h3 className="text-gray-900 font-semibold text-sm">AI Parça Asistanı</h3>
-                <p className="text-gray-500 text-xs">Aradığınız parçayı tarif edin</p>
-              </div>
-              <button onClick={() => setShowAI(false)} className="ml-auto text-gray-400 hover:text-gray-700 text-xl leading-none">&times;</button>
-            </div>
-
-            <div className="px-5 pt-4 pb-2">
-              <p className="text-[11px] text-gray-500 uppercase tracking-wider mb-2">Hızlı Seçim</p>
-              <div className="flex flex-wrap gap-2">
-                {['Motor parçası arıyorum', 'Kaporta parçası lazım', 'Far/Stop lamba arıyorum', 'Fren sistemi parçası'].map((q) => (
-                  <button
-                    key={q}
-                    onClick={() => setAiQuery(q)}
-                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg text-xs text-gray-700 transition-colors"
-                  >
-                    {q}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-5">
-              {vehicleInfo && (
-                <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
-                  <Car className="w-4 h-4 text-primary-500" />
-                  <span className="text-xs text-gray-600">
-                    {vehicleInfo.make} {vehicleInfo.model} {vehicleInfo.year}
-                  </span>
-                </div>
-              )}
-              <textarea
-                value={aiQuery}
-                onChange={(e) => setAiQuery(e.target.value)}
-                placeholder="Hangi parçayı arıyorsunuz? Detaylı tarif edin..."
-                rows={3}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-purple-500 focus:bg-white transition-colors resize-none"
-              />
-              <button
-                onClick={handleAISend}
-                disabled={!aiQuery.trim()}
-                className="w-full mt-3 py-3 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2"
-              >
-                <MessageCircle className="w-4 h-4" />
-                WhatsApp ile Gönder
-              </button>
-              <p className="text-center text-[10px] text-gray-400 mt-2">
-                AI destekli otomatik yanıt sistemi yakında aktif olacak
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ═══ SEARCH RESULTS ═══ */}
       {vehicleInfo && (

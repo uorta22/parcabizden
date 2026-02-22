@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Car, Phone, MessageCircle, LogIn, User, LogOut, Warehouse } from 'lucide-react'
+import { Menu, X, Car, Phone, MessageCircle, LogIn, User, LogOut, Warehouse, Sparkles } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { getWhatsAppUrl } from '@/lib/config'
 
@@ -23,6 +23,7 @@ export default function Header() {
     { href: '/', label: 'Ana Sayfa' },
     { href: '/parcalar', label: 'Parçalar' },
     { href: '/sase-sorgula', label: 'Şase Sorgula' },
+    { href: '/ai-asistan', label: 'AI Asistan', icon: true },
     { href: '/hakkimizda', label: 'Hakkımızda' },
     { href: '/iletisim', label: 'İletişim' },
   ]
@@ -51,8 +52,13 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={() => handleNavClick(link.href)}
-                className="text-gray-600 hover:text-primary-500 transition-colors font-medium"
+                className={`transition-colors font-medium ${
+                  link.icon
+                    ? 'flex items-center gap-1.5 text-purple-600 hover:text-purple-700'
+                    : 'text-gray-600 hover:text-primary-500'
+                }`}
               >
+                {link.icon && <Sparkles className="w-3.5 h-3.5" />}
                 {link.label}
               </Link>
             ))}
@@ -120,9 +126,14 @@ export default function Header() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="px-4 py-3 text-gray-600 hover:text-primary-500 hover:bg-gray-100 rounded-lg transition-all"
+                  className={`px-4 py-3 rounded-lg transition-all ${
+                    link.icon
+                      ? 'flex items-center gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50'
+                      : 'text-gray-600 hover:text-primary-500 hover:bg-gray-100'
+                  }`}
                   onClick={() => { handleNavClick(link.href); setIsMenuOpen(false) }}
                 >
+                  {link.icon && <Sparkles className="w-4 h-4" />}
                   {link.label}
                 </Link>
               ))}

@@ -2,8 +2,6 @@ import type {
   Brand,
   Model,
   Segment,
-  ApiCategory,
-  ApiPart,
   ApiResponse,
   AuthResponse,
   GarageVehicle,
@@ -77,40 +75,6 @@ export async function getSegments(modelId: number): Promise<Segment[]> {
 export async function getYears(segmentId: number): Promise<number[]> {
   const res = await fetchApi<ApiResponse<number[]>>(`/years?segment_id=${segmentId}`)
   return res.data
-}
-
-// ==================== Categories ====================
-
-export async function getCategories(): Promise<ApiCategory[]> {
-  const res = await fetchApi<ApiResponse<ApiCategory[]>>('/categories')
-  return res.data
-}
-
-// ==================== Parts ====================
-
-interface PartsParams {
-  category?: string
-  brand_id?: number
-  model_id?: number
-  year?: number
-  page?: number
-}
-
-export async function getParts(params: PartsParams): Promise<ApiResponse<ApiPart[]>> {
-  const searchParams = new URLSearchParams()
-  if (params.category) searchParams.set('category', params.category)
-  if (params.brand_id) searchParams.set('brand_id', String(params.brand_id))
-  if (params.model_id) searchParams.set('model_id', String(params.model_id))
-  if (params.year) searchParams.set('year', String(params.year))
-  if (params.page) searchParams.set('page', String(params.page))
-
-  return fetchApi<ApiResponse<ApiPart[]>>(`/parts?${searchParams.toString()}`)
-}
-
-// ==================== Search ====================
-
-export async function searchParts(query: string, page = 1): Promise<ApiResponse<ApiPart[]>> {
-  return fetchApi<ApiResponse<ApiPart[]>>(`/search?q=${encodeURIComponent(query)}&page=${page}`)
 }
 
 // ==================== Auth (action-based) ====================
