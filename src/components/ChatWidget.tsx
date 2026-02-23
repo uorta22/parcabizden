@@ -430,22 +430,23 @@ function LiveChat({
         if (!msgs || msgs.length === 0) return
 
         // Only pick up admin messages (customer + system are handled locally)
-        const existingIds = new Set(session.messages.map(m => m.id))
-        const newMsgs: ChatMessage[] = msgs
-          .filter(m => m.sender === 'admin' && !existingIds.has(`server-${m.id}`))
-          .map(m => ({
-            id: `server-${m.id}`,
-            sender: 'admin' as const,
-            text: m.message,
-            timestamp: new Date(m.created_at).getTime(),
-          }))
+        const adminMsgs = msgs.filter(m => m.sender === 'admin')
+        if (adminMsgs.length === 0) return
 
-        if (newMsgs.length > 0) {
-          setSession(prev => ({
-            ...prev,
-            messages: [...prev.messages, ...newMsgs],
-          }))
-        }
+        // Duplicate check inside setSession to avoid stale closure
+        setSession(prev => {
+          const existingIds = new Set(prev.messages.map(m => m.id))
+          const newMsgs: ChatMessage[] = adminMsgs
+            .filter(m => !existingIds.has(`server-${m.id}`))
+            .map(m => ({
+              id: `server-${m.id}`,
+              sender: 'admin' as const,
+              text: m.message,
+              timestamp: new Date(m.created_at).getTime(),
+            }))
+          if (newMsgs.length === 0) return prev
+          return { ...prev, messages: [...prev.messages, ...newMsgs] }
+        })
       } catch { /* ignore polling errors */ }
     }
 
