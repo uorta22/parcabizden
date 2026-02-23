@@ -386,6 +386,7 @@ function LiveChat({
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const seenIdsRef = useRef<Set<string>>(new Set())
 
   // Persist session on change
   useEffect(() => {
@@ -429,24 +430,25 @@ function LiveChat({
         }>
         if (!msgs || msgs.length === 0) return
 
-        // Only pick up admin messages (customer + system are handled locally)
-        const adminMsgs = msgs.filter(m => m.sender === 'admin')
-        if (adminMsgs.length === 0) return
+        // Only pick up admin messages not yet seen (ref is mutable, never stale)
+        const newMsgs: ChatMessage[] = msgs
+          .filter(m => m.sender === 'admin' && !seenIdsRef.current.has(String(m.id)))
+          .map(m => ({
+            id: `server-${m.id}`,
+            sender: 'admin' as const,
+            text: m.message,
+            timestamp: new Date(m.created_at).getTime(),
+          }))
 
-        // Duplicate check inside setSession to avoid stale closure
-        setSession(prev => {
-          const existingIds = new Set(prev.messages.map(m => m.id))
-          const newMsgs: ChatMessage[] = adminMsgs
-            .filter(m => !existingIds.has(`server-${m.id}`))
-            .map(m => ({
-              id: `server-${m.id}`,
-              sender: 'admin' as const,
-              text: m.message,
-              timestamp: new Date(m.created_at).getTime(),
-            }))
-          if (newMsgs.length === 0) return prev
-          return { ...prev, messages: [...prev.messages, ...newMsgs] }
-        })
+        if (newMsgs.length === 0) return
+
+        // Mark as seen BEFORE updating state
+        newMsgs.forEach(m => seenIdsRef.current.add(m.id.replace('server-', '')))
+
+        setSession(prev => ({
+          ...prev,
+          messages: [...prev.messages, ...newMsgs],
+        }))
       } catch { /* ignore polling errors */ }
     }
 
