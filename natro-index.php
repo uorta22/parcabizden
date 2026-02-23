@@ -302,6 +302,8 @@ function handle_chat($pdo) {
         $pdo->prepare('INSERT INTO chat_messages (ticket_id, sender, message) VALUES (?, ?, ?)')->execute([$ticketId, 'system', $autoReply]);
         echo json_encode(['success' => true, 'ticket_id' => $ticketId, 'auto_reply' => $autoReply]);
     } else {
+        // Devam mesajlarında da WhatsApp bildirimi gönder (kısa format)
+        send_whatsapp_followup($ticketId, $message, $name);
         echo json_encode(['success' => true, 'ticket_id' => $ticketId]);
     }
 }
@@ -327,6 +329,22 @@ function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $page
         }
     }
     return $wamid;
+}
+
+function send_whatsapp_followup($ticketId, $message, $name) {
+    $phoneId = '1032269509965333';
+    $token = 'EAAUjcHbTUhgBQwRJVJ9c4fMic6kjjorjfmaSQPy80kNQvgF3ZBlwAHzVXHNUQAYTd9JnVaZBAiYDcKDZCCGxeRFthZBz5IQXSURjMG5wEV5pUKRFphPONP9fPa5q2aZAqa6Dvcw4k635VAw6wyKOr897ZBmLRx1YSGKfZCeFdz9m5AFC7NwXTRF8izJSZCR4IFFe6QZDZD';
+    $adminNumbers = ['905343912013'];
+    if (!$phoneId || !$token || empty($adminNumbers)) return;
+
+    $text = "Devam #$ticketId\n" . ($name ? $name : 'Musteri') . ":\n" . $message;
+
+    foreach ($adminNumbers as $number) {
+        $ch = curl_init("https://graph.facebook.com/v21.0/$phoneId/messages");
+        curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_HTTPHEADER => ["Authorization: Bearer $token", "Content-Type: application/json"], CURLOPT_POSTFIELDS => json_encode(['messaging_product' => 'whatsapp', 'to' => $number, 'type' => 'text', 'text' => ['body' => $text]]), CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10]);
+        curl_exec($ch);
+        curl_close($ch);
+    }
 }
 
 function handle_chat_messages($pdo) {
