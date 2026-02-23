@@ -2,10 +2,12 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ChevronRight, Mail, Lock, User, Phone, UserPlus, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function KayitPage() {
+  const router = useRouter()
   const { register } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -37,7 +39,7 @@ export default function KayitPage() {
     setIsLoading(true)
     try {
       await register(email, password, name, phone || undefined)
-      setSuccess(true)
+      router.push('/garaj')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Kayıt başarısız')
     } finally {

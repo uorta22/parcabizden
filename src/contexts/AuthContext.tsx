@@ -78,8 +78,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (email: string, password: string, name: string, phone?: string): Promise<string> => {
     const res = await api.register(email, password, name, phone)
-    // Do NOT auto-login — user must verify email first
-    return (res as unknown as { message: string }).message || 'Kayıt başarılı! Lütfen e-postanızı kontrol edin.'
+    if (res.token) {
+      localStorage.setItem('token', res.token)
+      setUser(res.user)
+    }
+    return (res as unknown as { message: string }).message || 'Kayıt başarılı!'
   }
 
   return (

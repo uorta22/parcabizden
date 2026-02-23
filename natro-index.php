@@ -453,18 +453,20 @@ function handle_register($pdo) {
         $stmt->execute([$email]);
         if ($stmt->fetch()) { http_response_code(409); echo json_encode(['error' => 'Bu e-posta adresi zaten kayitli']); return; }
 
-        // Create user
+        // Create user — email_verified = 1 (e-posta servisi aktif olunca 0 yapilacak)
         $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-        $verify_token = bin2hex(random_bytes(32));
-        $verify_expires = date('Y-m-d H:i:s', time() + 86400); // 24h
 
-        $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified, verify_token, verify_expires) VALUES (?, ?, ?, ?, 0, ?, ?)');
-        $stmt->execute([$email, $password_hash, $name, $phone ?: null, $verify_token, $verify_expires]);
+        $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified) VALUES (?, ?, ?, ?, 1)');
+        $stmt->execute([$email, $password_hash, $name, $phone ?: null]);
+        $user_id = (int)$pdo->lastInsertId();
 
-        // Send verification email
-        send_verification_email($email, $name, $verify_token);
-
-        echo json_encode(['success' => true, 'message' => 'Kayit basarili! Lutfen e-postanizi kontrol edin ve hesabinizi dogrulayin.']);
+        $token = jwt_encode(['user_id' => $user_id]);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Kayit basarili!',
+            'token' => $token,
+            'user' => ['id' => $user_id, 'email' => $email, 'name' => $name, 'phone' => $phone ?: null]
+        ]);
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Kayit hatasi: ' . $e->getMessage()]);
@@ -487,9 +489,8 @@ function handle_login($pdo) {
             http_response_code(401); echo json_encode(['error' => 'E-posta veya sifre hatali']); return;
         }
 
-        if (!$user['email_verified']) {
-            http_response_code(403); echo json_encode(['error' => 'email_not_verified', 'message' => 'Lutfen e-postanizi dogrulayin. Dogrulama linki e-posta adresinize gonderildi.']); return;
-        }
+        // E-posta dogrulama kontrolu devre disi (e-posta servisi aktif olunca acilacak)
+        // if (!$user['email_verified']) { ... }
 
         $token = jwt_encode(['user_id' => $user['id']]);
         echo json_encode([
