@@ -1,0 +1,8 @@
+node_modules
+.next
+out
+out.zip
+parcabizden-deploy.zip
+api/logs
+api/tmp
+.claude
