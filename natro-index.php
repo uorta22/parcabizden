@@ -302,8 +302,13 @@ function handle_chat($pdo) {
         $pdo->prepare('INSERT INTO chat_messages (ticket_id, sender, message) VALUES (?, ?, ?)')->execute([$ticketId, 'system', $autoReply]);
         echo json_encode(['success' => true, 'ticket_id' => $ticketId, 'auto_reply' => $autoReply]);
     } else {
-        // Devam mesajlarında da WhatsApp bildirimi gönder (kısa format)
-        send_whatsapp_followup($ticketId, $message, $name);
+        // Devam mesajlarında da WhatsApp bildirimi gönder + wamid güncelle
+        $ticketStmt = $pdo->prepare('SELECT name FROM chat_tickets WHERE ticket_id = ?');
+        $ticketStmt->execute([$ticketId]);
+        $ticketData = $ticketStmt->fetch(PDO::FETCH_ASSOC);
+        $chatName = ($ticketData && $ticketData['name']) ? $ticketData['name'] : ($name ?: 'Musteri');
+        $wamid = send_whatsapp_followup($ticketId, $message, $chatName);
+        if ($wamid) { $pdo->prepare('UPDATE chat_tickets SET wa_message_id = ? WHERE ticket_id = ?')->execute([$wamid, $ticketId]); }
         echo json_encode(['success' => true, 'ticket_id' => $ticketId]);
     }
 }
@@ -335,16 +340,23 @@ function send_whatsapp_followup($ticketId, $message, $name) {
     $phoneId = '1032269509965333';
     $token = 'EAAUjcHbTUhgBQwRJVJ9c4fMic6kjjorjfmaSQPy80kNQvgF3ZBlwAHzVXHNUQAYTd9JnVaZBAiYDcKDZCCGxeRFthZBz5IQXSURjMG5wEV5pUKRFphPONP9fPa5q2aZAqa6Dvcw4k635VAw6wyKOr897ZBmLRx1YSGKfZCeFdz9m5AFC7NwXTRF8izJSZCR4IFFe6QZDZD';
     $adminNumbers = ['905343912013'];
-    if (!$phoneId || !$token || empty($adminNumbers)) return;
+    if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
-    $text = "Devam #$ticketId\n" . ($name ? $name : 'Musteri') . ":\n" . $message;
+    $text = ($name ?: 'Musteri') . " (#$ticketId):\n$message";
+    $wamid = null;
 
     foreach ($adminNumbers as $number) {
         $ch = curl_init("https://graph.facebook.com/v21.0/$phoneId/messages");
         curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_HTTPHEADER => ["Authorization: Bearer $token", "Content-Type: application/json"], CURLOPT_POSTFIELDS => json_encode(['messaging_product' => 'whatsapp', 'to' => $number, 'type' => 'text', 'text' => ['body' => $text]]), CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10]);
-        curl_exec($ch);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        if ($httpCode === 200 && $response) {
+            $resData = json_decode($response, true);
+            if (isset($resData['messages'][0]['id'])) $wamid = $resData['messages'][0]['id'];
+        }
     }
+    return $wamid;
 }
 
 function handle_chat_messages($pdo) {
@@ -371,12 +383,24 @@ function handle_chat_webhook($pdo) {
         @file_put_contents(__DIR__ . '/webhook_log.txt', date('Y-m-d H:i:s') . " " . $input . "\n", FILE_APPEND);
         if (isset($data['entry'][0]['changes'][0]['value']['messages'][0])) {
             $msg = $data['entry'][0]['changes'][0]['value']['messages'][0];
-            if (isset($msg['context']['id']) && isset($msg['text']['body'])) {
-                $replyToWamid = $msg['context']['id'];
-                $adminMessage = $msg['text']['body'];
-                $stmt = $pdo->prepare("SELECT ticket_id FROM chat_tickets WHERE wa_message_id = ? LIMIT 1");
-                $stmt->execute([$replyToWamid]);
-                $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+            $adminMessage = $msg['text']['body'] ?? '';
+            if ($adminMessage) {
+                $ticket = null;
+
+                // Yöntem 1: Reply varsa (context.id) → wamid ile eşle
+                if (isset($msg['context']['id'])) {
+                    $stmt = $pdo->prepare("SELECT ticket_id FROM chat_tickets WHERE wa_message_id = ? LIMIT 1");
+                    $stmt->execute([$msg['context']['id']]);
+                    $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+
+                // Yöntem 2: Reply yoksa → en son aktif ticket'a eşle
+                if (!$ticket) {
+                    $stmt = $pdo->prepare("SELECT ct.ticket_id FROM chat_tickets ct INNER JOIN chat_messages cm ON ct.ticket_id = cm.ticket_id WHERE ct.wa_message_id IS NOT NULL GROUP BY ct.ticket_id ORDER BY MAX(cm.id) DESC LIMIT 1");
+                    $stmt->execute();
+                    $ticket = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+
                 if ($ticket) {
                     $pdo->prepare("INSERT INTO chat_messages (ticket_id, sender, message, created_at) VALUES (?, 'admin', ?, NOW())")->execute([$ticket['ticket_id'], $adminMessage]);
                 }
