@@ -4,8 +4,6 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { MessageCircle, X, Send, ChevronDown, Loader2 } from 'lucide-react'
 import { siteConfig } from '@/lib/config'
 import { validateVIN } from '@/lib/vehicle'
-import * as api from '@/lib/api'
-import type { Brand, Model, Segment } from '@/types/api'
 
 // ── Types ──
 
@@ -23,9 +21,8 @@ interface ChatSession {
   phone: string
   vin: string
   vehicle: string
-  brandId: number
-  modelId: number
-  segmentId: number
+  brand: string
+  model: string
   year: number
   messages: ChatMessage[]
 }
@@ -63,9 +60,8 @@ function defaultSession(): ChatSession {
     phone: '',
     vin: '',
     vehicle: '',
-    brandId: 0,
-    modelId: 0,
-    segmentId: 0,
+    brand: '',
+    model: '',
     year: 0,
     messages: [],
   }
@@ -143,6 +139,15 @@ export default function ChatWidget() {
 // STEP 1 — Info Form
 // ══════════════════════════════════════
 
+// Generate year options (current year down to 2000)
+const YEAR_OPTIONS: number[] = []
+for (let y = new Date().getFullYear(); y >= 2000; y--) YEAR_OPTIONS.push(y)
+
+interface ChatBrand {
+  name: string
+  slug: string
+}
+
 function InfoForm({
   session,
   setSession,
@@ -156,93 +161,28 @@ function InfoForm({
   const [vinError, setVinError] = useState('')
   const [phoneError, setPhoneError] = useState('')
 
-  // Cascading dropdowns
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [models, setModels] = useState<Model[]>([])
-  const [segments, setSegments] = useState<Segment[]>([])
-  const [years, setYears] = useState<number[]>([])
-
-  const [brandId, setBrandId] = useState(session.brandId)
-  const [modelId, setModelId] = useState(session.modelId)
-  const [segmentId, setSegmentId] = useState(session.segmentId)
+  const [brands, setBrands] = useState<ChatBrand[]>([])
+  const [brand, setBrand] = useState(session.brand)
+  const [model, setModel] = useState(session.model)
   const [year, setYear] = useState(session.year)
 
   const [loadingBrands, setLoadingBrands] = useState(false)
-  const [loadingModels, setLoadingModels] = useState(false)
-  const [loadingSegments, setLoadingSegments] = useState(false)
-  const [loadingYears, setLoadingYears] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Load brands on mount
+  // Load brands from proxy route (always /api/brands, not external URL)
   useEffect(() => {
     setLoadingBrands(true)
-    api.getBrands()
-      .then(setBrands)
+    fetch('/api/brands')
+      .then(res => res.json())
+      .then(data => setBrands(data.data || []))
       .catch(() => {})
       .finally(() => setLoadingBrands(false))
   }, [])
 
-  // Load models when brand changes
-  useEffect(() => {
-    if (!brandId) { setModels([]); return }
-    setLoadingModels(true)
-    api.getModels(brandId)
-      .then(setModels)
-      .catch(() => setModels([]))
-      .finally(() => setLoadingModels(false))
-  }, [brandId])
-
-  // Load segments when model changes
-  useEffect(() => {
-    if (!modelId) { setSegments([]); return }
-    setLoadingSegments(true)
-    api.getSegments(modelId)
-      .then(setSegments)
-      .catch(() => setSegments([]))
-      .finally(() => setLoadingSegments(false))
-  }, [modelId])
-
-  // Load years when segment changes
-  useEffect(() => {
-    if (!segmentId) { setYears([]); return }
-    setLoadingYears(true)
-    api.getYears(segmentId)
-      .then(setYears)
-      .catch(() => setYears([]))
-      .finally(() => setLoadingYears(false))
-  }, [segmentId])
-
-  const handleBrandChange = (v: number) => {
-    setBrandId(v)
-    setModelId(0)
-    setSegmentId(0)
-    setYear(0)
-  }
-
-  const handleModelChange = (v: number) => {
-    setModelId(v)
-    setSegmentId(0)
-    setYear(0)
-  }
-
-  const handleSegmentChange = (v: number) => {
-    setSegmentId(v)
-    setYear(0)
-  }
-
-  const formatSegmentLabel = (seg: Segment) => {
-    const parts = [seg.name]
-    if (seg.engine_type) parts.push(seg.engine_type)
-    if (seg.body_type) parts.push(seg.body_type)
-    return parts.join(' - ')
-  }
-
   const buildVehicleString = (): string => {
-    const brand = brands.find(b => b.id === brandId)
-    const model = models.find(m => m.id === modelId)
     const parts: string[] = []
-    if (brand) parts.push(brand.name)
-    if (model) parts.push(model.name)
+    if (brand) parts.push(brand)
+    if (model.trim()) parts.push(model.trim())
     if (year) parts.push(String(year))
     return parts.join(' ')
   }
@@ -252,7 +192,6 @@ function InfoForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Validate
     if (!name.trim()) return
     if (!validatePhone(phone)) {
       setPhoneError('Geçerli bir telefon numarası girin (05XX XXX XX XX)')
@@ -280,9 +219,8 @@ function InfoForm({
       phone: phone.replace(/\s/g, ''),
       vin: vin.trim(),
       vehicle,
-      brandId,
-      modelId,
-      segmentId,
+      brand,
+      model: model.trim(),
       year,
       messages: [welcomeMsg],
     }
@@ -351,14 +289,14 @@ function InfoForm({
         <div className="relative">
           <label className="block text-gray-700 text-xs font-medium mb-1">Marka</label>
           <select
-            value={brandId}
-            onChange={(e) => handleBrandChange(Number(e.target.value))}
+            value={brand}
+            onChange={(e) => setBrand(e.target.value)}
             disabled={loadingBrands}
             className="w-full appearance-none text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white disabled:opacity-50"
           >
-            <option value={0}>{loadingBrands ? 'Yükleniyor...' : 'Marka Seçin'}</option>
+            <option value="">{loadingBrands ? 'Yükleniyor...' : 'Marka Seçin'}</option>
             {brands.map((b) => (
-              <option key={b.id} value={b.id}>{b.name}</option>
+              <option key={b.slug} value={b.name}>{b.name}</option>
             ))}
           </select>
           {loadingBrands ? (
@@ -369,45 +307,15 @@ function InfoForm({
         </div>
 
         {/* Model */}
-        <div className="relative">
+        <div>
           <label className="block text-gray-700 text-xs font-medium mb-1">Model</label>
-          <select
-            value={modelId}
-            onChange={(e) => handleModelChange(Number(e.target.value))}
-            disabled={!brandId || loadingModels}
-            className="w-full appearance-none text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white disabled:opacity-50"
-          >
-            <option value={0}>{loadingModels ? 'Yükleniyor...' : 'Model Seçin'}</option>
-            {models.map((m) => (
-              <option key={m.id} value={m.id}>{m.name}</option>
-            ))}
-          </select>
-          {loadingModels ? (
-            <Loader2 className="absolute right-3 bottom-2.5 w-4 h-4 text-green-500 animate-spin pointer-events-none" />
-          ) : (
-            <ChevronDown className="absolute right-3 bottom-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-          )}
-        </div>
-
-        {/* Motor / Kasa Tipi */}
-        <div className="relative">
-          <label className="block text-gray-700 text-xs font-medium mb-1">Motor / Kasa Tipi</label>
-          <select
-            value={segmentId}
-            onChange={(e) => handleSegmentChange(Number(e.target.value))}
-            disabled={!modelId || loadingSegments}
-            className="w-full appearance-none text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white disabled:opacity-50"
-          >
-            <option value={0}>{loadingSegments ? 'Yükleniyor...' : 'Motor / Kasa Tipi Seçin'}</option>
-            {segments.map((s) => (
-              <option key={s.id} value={s.id}>{formatSegmentLabel(s)}</option>
-            ))}
-          </select>
-          {loadingSegments ? (
-            <Loader2 className="absolute right-3 bottom-2.5 w-4 h-4 text-green-500 animate-spin pointer-events-none" />
-          ) : (
-            <ChevronDown className="absolute right-3 bottom-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-          )}
+          <input
+            type="text"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            placeholder="Örn: Golf, Octavia, 320d..."
+            className="w-full text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
         </div>
 
         {/* Yıl */}
@@ -416,19 +324,14 @@ function InfoForm({
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            disabled={!segmentId || loadingYears}
-            className="w-full appearance-none text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white disabled:opacity-50"
+            className="w-full appearance-none text-sm px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white"
           >
-            <option value={0}>{loadingYears ? 'Yükleniyor...' : 'Yıl Seçin'}</option>
-            {years.map((y) => (
+            <option value={0}>Yıl Seçin</option>
+            {YEAR_OPTIONS.map((y) => (
               <option key={y} value={y}>{y}</option>
             ))}
           </select>
-          {loadingYears ? (
-            <Loader2 className="absolute right-3 bottom-2.5 w-4 h-4 text-green-500 animate-spin pointer-events-none" />
-          ) : (
-            <ChevronDown className="absolute right-3 bottom-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
-          )}
+          <ChevronDown className="absolute right-3 bottom-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
         </div>
 
         {/* Submit */}
@@ -470,7 +373,6 @@ function LiveChat({
   const messagesContainerRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const lastMessageIdRef = useRef<string>('')
 
   // Persist session on change
   useEffect(() => {
