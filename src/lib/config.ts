@@ -9,9 +9,9 @@ export const siteConfig = {
 
   // İletişim
   phone: {
-    raw: '+905001234567',
-    display: '0500 123 45 67',
-    whatsapp: '905001234567',
+    raw: '+905343912013',
+    display: '0534 391 20 13',
+    whatsapp: '905343912013',
   },
 
   // WhatsApp
