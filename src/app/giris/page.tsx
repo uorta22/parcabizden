@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { ChevronRight, Mail, Lock, LogIn } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
+import { resendVerify } from '@/lib/api'
 
 export default function GirisPage() {
   const router = useRouter()
@@ -13,10 +14,14 @@ export default function GirisPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [showResend, setShowResend] = useState(false)
+  const [resendStatus, setResendStatus] = useState<'idle' | 'loading' | 'sent'>('idle')
+  const [resendMessage, setResendMessage] = useState('')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+    setShowResend(false)
 
     if (!email || !password) {
       setError('E-posta ve şifre gerekli')
@@ -28,9 +33,28 @@ export default function GirisPage() {
       await login(email, password)
       router.push('/garaj')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Giriş başarısız')
+      const msg = err instanceof Error ? err.message : 'Giriş başarısız'
+      if (msg === 'email_not_verified' || msg.includes('dogrulayin') || msg.includes('doğrulayın')) {
+        setError('Lütfen e-postanızı doğrulayın. Doğrulama linki e-posta adresinize gönderildi.')
+        setShowResend(true)
+      } else {
+        setError(msg)
+      }
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleResend = async () => {
+    if (!email) { setResendMessage('Lütfen e-posta adresinizi girin.'); return }
+    setResendStatus('loading')
+    try {
+      const res = await resendVerify(email)
+      setResendStatus('sent')
+      setResendMessage(res.message || 'Doğrulama e-postası gönderildi!')
+    } catch (err) {
+      setResendStatus('idle')
+      setResendMessage(err instanceof Error ? err.message : 'Gönderilemedi.')
     }
   }
 
@@ -54,6 +78,23 @@ export default function GirisPage() {
               {error && (
                 <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
                   {error}
+                  {showResend && (
+                    <div className="mt-3 pt-3 border-t border-red-100">
+                      <button
+                        type="button"
+                        onClick={handleResend}
+                        disabled={resendStatus === 'loading'}
+                        className="text-primary-500 hover:text-primary-600 font-medium underline text-sm"
+                      >
+                        {resendStatus === 'loading' ? 'Gönderiliyor...' : 'Doğrulama e-postasını tekrar gönder'}
+                      </button>
+                      {resendMessage && (
+                        <p className={`mt-1 text-xs ${resendStatus === 'sent' ? 'text-green-600' : 'text-red-500'}`}>
+                          {resendMessage}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 

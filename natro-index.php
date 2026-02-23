@@ -1,8 +1,12 @@
 <?php
 header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
+
+// ==================== JWT & Auth Constants ====================
+define('JWT_SECRET', 'pBzD_s3cr3t_k3y_2024_xK9mP2vL8nQ4wR7j');
+define('JWT_EXPIRY', 86400); // 24 hours
 
 $DB_HOST = 'localhost';
 $DB_NAME = 'u2547422_parcabizden';
@@ -10,7 +14,13 @@ $DB_USER = 'u2547422_uorta';
 $DB_PASS = 'iR?]gvlh+l[AB_r2';
 
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: public, max-age=3600');
+$action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify'];
+if (in_array($action_check, $auth_actions)) {
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+} else {
+    header('Cache-Control: public, max-age=3600');
+}
 
 try {
     $pdo = new PDO("mysql:host=$DB_HOST;dbname=$DB_NAME;charset=utf8mb4", $DB_USER, $DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_EMULATE_PREPARES => false]);
@@ -20,7 +30,7 @@ try {
     exit;
 }
 
-$action = isset($_GET['action']) ? $_GET['action'] : '';
+$action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
     case 'categories':    get_categories($pdo); break;
     case 'nodes':         get_nodes($pdo); break;
@@ -32,6 +42,11 @@ switch ($action) {
     case 'chat':          handle_chat($pdo); break;
     case 'chat_messages': handle_chat_messages($pdo); break;
     case 'chat_webhook':  handle_chat_webhook($pdo); break;
+    case 'register':      handle_register($pdo); break;
+    case 'login':         handle_login($pdo); break;
+    case 'profile':       handle_profile($pdo); break;
+    case 'verify_email':  handle_verify_email($pdo); break;
+    case 'resend_verify': handle_resend_verify($pdo); break;
     default: echo json_encode(['error' => 'Invalid action']);
 }
 
@@ -366,6 +381,186 @@ function handle_chat_messages($pdo) {
     $stmt = $pdo->prepare("SELECT id, ticket_id, sender, message, created_at FROM chat_messages WHERE ticket_id = ? ORDER BY id ASC");
     $stmt->execute([$ticketId]);
     echo json_encode(['messages' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+}
+
+// ==================== JWT Functions ====================
+
+function base64url_encode($data) {
+    return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+}
+
+function jwt_encode($payload) {
+    $header = json_encode(['typ' => 'JWT', 'alg' => 'HS256']);
+    $payload['iat'] = time();
+    $payload['exp'] = time() + JWT_EXPIRY;
+    $segments = [base64url_encode($header), base64url_encode(json_encode($payload))];
+    $signing_input = implode('.', $segments);
+    $signature = hash_hmac('sha256', $signing_input, JWT_SECRET, true);
+    $segments[] = base64url_encode($signature);
+    return implode('.', $segments);
+}
+
+function jwt_decode($token) {
+    $parts = explode('.', $token);
+    if (count($parts) !== 3) return null;
+    $signature = hash_hmac('sha256', $parts[0] . '.' . $parts[1], JWT_SECRET, true);
+    if (!hash_equals(base64url_encode($signature), $parts[2])) return null;
+    $payload = json_decode(base64_decode(strtr($parts[1], '-_', '+/')), true);
+    if (!$payload || !isset($payload['exp']) || $payload['exp'] < time()) return null;
+    return $payload;
+}
+
+function get_auth_user_id() {
+    $header = isset($_SERVER['HTTP_AUTHORIZATION']) ? $_SERVER['HTTP_AUTHORIZATION'] : '';
+    if (!$header || !preg_match('/^Bearer\s+(.+)$/i', $header, $matches)) return null;
+    $payload = jwt_decode($matches[1]);
+    return $payload ? ($payload['user_id'] ?? null) : null;
+}
+
+// ==================== Auth Handlers ====================
+
+function handle_register($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $name = trim($_POST['name'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+
+    // Validation
+    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(400); echo json_encode(['error' => 'Gecerli bir e-posta adresi giriniz']); return; }
+    if (mb_strlen($name) < 2) { http_response_code(400); echo json_encode(['error' => 'Ad en az 2 karakter olmali']); return; }
+    if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+        http_response_code(400); echo json_encode(['error' => 'Sifre en az 8 karakter, 1 buyuk harf, 1 kucuk harf ve 1 rakam icermeli']); return;
+    }
+
+    // Check existing
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    if ($stmt->fetch()) { http_response_code(409); echo json_encode(['error' => 'Bu e-posta adresi zaten kayitli']); return; }
+
+    // Create user
+    $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+    $verify_token = bin2hex(random_bytes(32));
+    $verify_expires = date('Y-m-d H:i:s', time() + 86400); // 24h
+
+    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified, verify_token, verify_expires) VALUES (?, ?, ?, ?, 0, ?, ?)');
+    $stmt->execute([$email, $password_hash, $name, $phone ?: null, $verify_token, $verify_expires]);
+
+    // Send verification email
+    send_verification_email($email, $name, $verify_token);
+
+    echo json_encode(['success' => true, 'message' => 'Kayit basarili! Lutfen e-postanizi kontrol edin ve hesabinizi dogrulayin.']);
+}
+
+function handle_login($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+
+    if (!$email || !$password) { http_response_code(400); echo json_encode(['error' => 'E-posta ve sifre gerekli']); return; }
+
+    $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user || !password_verify($password, $user['password_hash'])) {
+        http_response_code(401); echo json_encode(['error' => 'E-posta veya sifre hatali']); return;
+    }
+
+    if (!$user['email_verified']) {
+        http_response_code(403); echo json_encode(['error' => 'email_not_verified', 'message' => 'Lutfen e-postanizi dogrulayin. Dogrulama linki e-posta adresinize gonderildi.']); return;
+    }
+
+    $token = jwt_encode(['user_id' => $user['id']]);
+    echo json_encode([
+        'message' => 'Giris basarili',
+        'token' => $token,
+        'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]
+    ]);
+}
+
+function handle_profile($pdo) {
+    $user_id = get_auth_user_id();
+    if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+    $stmt = $pdo->prepare('SELECT id, email, name, phone FROM users WHERE id = ?');
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$user) { http_response_code(404); echo json_encode(['error' => 'Kullanici bulunamadi']); return; }
+
+    echo json_encode(['user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]]);
+}
+
+function handle_verify_email($pdo) {
+    $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+    if (!$token) { http_response_code(400); echo json_encode(['error' => 'Dogrulama tokeni gerekli']); return; }
+
+    $stmt = $pdo->prepare('SELECT id, email_verified, verify_expires FROM users WHERE verify_token = ?');
+    $stmt->execute([$token]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) { http_response_code(400); echo json_encode(['error' => 'Gecersiz dogrulama linki']); return; }
+    if ($user['email_verified']) { echo json_encode(['success' => true, 'message' => 'E-postaniz zaten dogrulandi']); return; }
+    if ($user['verify_expires'] && strtotime($user['verify_expires']) < time()) {
+        http_response_code(400); echo json_encode(['error' => 'Dogrulama linkinin suresi dolmus. Lutfen yeni bir link isteyin.']); return;
+    }
+
+    $stmt = $pdo->prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?');
+    $stmt->execute([$user['id']]);
+
+    echo json_encode(['success' => true, 'message' => 'E-postaniz basariyla dogrulandi! Artik giris yapabilirsiniz.']);
+}
+
+function handle_resend_verify($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    $email = trim($_POST['email'] ?? '');
+    if (!$email) { http_response_code(400); echo json_encode(['error' => 'E-posta adresi gerekli']); return; }
+
+    $stmt = $pdo->prepare('SELECT id, name, email_verified, verify_expires FROM users WHERE email = ?');
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$user) { echo json_encode(['success' => true, 'message' => 'Eger bu e-posta kayitliysa dogrulama linki gonderildi.']); return; }
+    if ($user['email_verified']) { echo json_encode(['success' => true, 'message' => 'E-postaniz zaten dogrulandi. Giris yapabilirsiniz.']); return; }
+
+    // Rate limit: 5 min
+    if ($user['verify_expires']) {
+        $last_sent = strtotime($user['verify_expires']) - 86400; // verify_expires = sent_time + 24h
+        if (time() - $last_sent < 300) {
+            http_response_code(429); echo json_encode(['error' => 'Lutfen 5 dakika bekleyip tekrar deneyin.']); return;
+        }
+    }
+
+    $verify_token = bin2hex(random_bytes(32));
+    $verify_expires = date('Y-m-d H:i:s', time() + 86400);
+    $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
+    $stmt->execute([$verify_token, $verify_expires, $user['id']]);
+
+    send_verification_email($email, $user['name'], $verify_token);
+    echo json_encode(['success' => true, 'message' => 'Dogrulama e-postasi tekrar gonderildi.']);
+}
+
+function send_verification_email($email, $name, $token) {
+    $verify_url = "https://parcabizden.com.tr/dogrula?token=" . urlencode($token);
+    $subject = '=?UTF-8?B?' . base64_encode('ParcaBizden - E-posta Doğrulaması') . '?=';
+
+    $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">';
+    $html .= '<div style="max-width:500px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
+    $html .= '<div style="background:#f97316;padding:24px;text-align:center;"><h1 style="margin:0;color:#fff;font-size:22px;">Parca<span style="color:#1e293b;">Bizden</span></h1></div>';
+    $html .= '<div style="padding:32px 24px;text-align:center;">';
+    $html .= '<h2 style="color:#1e293b;margin:0 0 8px;">Merhaba ' . htmlspecialchars($name) . '!</h2>';
+    $html .= '<p style="color:#64748b;font-size:15px;">Hesabinizi aktif etmek icin asagidaki butona tiklayin.</p>';
+    $html .= '<a href="' . $verify_url . '" style="display:inline-block;margin:24px 0;padding:14px 32px;background:#f97316;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">E-postami Dogrula</a>';
+    $html .= '<p style="color:#94a3b8;font-size:13px;">Bu link 24 saat gecerlidir.</p>';
+    $html .= '<p style="color:#94a3b8;font-size:12px;margin-top:16px;">Bu islemi siz yapmadiysan bu e-postayi gormezden gelebilirsiniz.</p>';
+    $html .= '</div></div></body></html>';
+
+    $headers  = "From: ParcaBizden <noreply@parcabizden.com.tr>\r\n";
+    $headers .= "Reply-To: noreply@parcabizden.com.tr\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+    @mail($email, $subject, $html, $headers);
 }
 
 function handle_chat_webhook($pdo) {

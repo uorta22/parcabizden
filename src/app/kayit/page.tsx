@@ -2,12 +2,10 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { ChevronRight, Mail, Lock, User, Phone, UserPlus } from 'lucide-react'
+import { ChevronRight, Mail, Lock, User, Phone, UserPlus, CheckCircle } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function KayitPage() {
-  const router = useRouter()
   const { register } = useAuth()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -15,6 +13,7 @@ export default function KayitPage() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [success, setSuccess] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,12 +37,39 @@ export default function KayitPage() {
     setIsLoading(true)
     try {
       await register(email, password, name, phone || undefined)
-      router.push('/garaj')
+      setSuccess(true)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Kayıt başarısız')
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-screen py-8 md:py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-md mx-auto text-center">
+            <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-8">
+              <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Kayıt Başarılı!</h1>
+              <p className="text-gray-500 mb-2">
+                <span className="font-medium text-gray-700">{email}</span> adresine doğrulama e-postası gönderdik.
+              </p>
+              <p className="text-gray-400 text-sm mb-6">
+                Lütfen e-postanızı kontrol edin ve doğrulama linkine tıklayın. Link 24 saat geçerlidir.
+              </p>
+              <Link
+                href="/giris"
+                className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all"
+              >
+                Giriş Sayfasına Git
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -94,6 +94,16 @@ export async function getProfile(): Promise<User> {
   return res.user
 }
 
+// ==================== Email Verification ====================
+
+export async function verifyEmail(token: string): Promise<{ success?: boolean; message: string }> {
+  return actionPost<{ success?: boolean; message: string }>({ action: 'verify_email', token })
+}
+
+export async function resendVerify(email: string): Promise<{ success?: boolean; message: string }> {
+  return actionPost<{ success?: boolean; message: string }>({ action: 'resend_verify', email })
+}
+
 // ==================== Garage ====================
 
 export async function getGarageVehicles(): Promise<GarageVehicle[]> {

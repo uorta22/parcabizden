@@ -1,22 +1,39 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Car, Phone, MessageCircle, LogIn, User, LogOut, Warehouse, Sparkles } from 'lucide-react'
+import { Menu, X, Car, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { getWhatsAppUrl } from '@/lib/config'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
   const pathname = usePathname()
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleNavClick = (href: string) => {
     if (pathname === href) {
       window.dispatchEvent(new CustomEvent('page-reset'))
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
+  }
+
+  const isActive = (href: string) => {
+    if (href === '/') return pathname === '/'
+    return pathname.startsWith(href)
   }
 
   const navLinks = [
@@ -46,64 +63,81 @@ export default function Header() {
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden lg:flex items-center gap-8">
+          <nav className="hidden lg:flex items-center gap-1">
             {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => handleNavClick(link.href)}
-                className={`transition-colors font-medium ${
+                className={`relative px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                   link.icon
-                    ? 'flex items-center gap-1.5 text-purple-600 hover:text-purple-700'
-                    : 'text-gray-600 hover:text-primary-500'
+                    ? `flex items-center gap-1.5 ${isActive(link.href) ? 'text-purple-700 bg-purple-50' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50/50'}`
+                    : isActive(link.href)
+                      ? 'text-primary-600 bg-primary-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
                 {link.icon && <Sparkles className="w-3.5 h-3.5" />}
                 {link.label}
+                {isActive(link.href) && (
+                  <span className="absolute bottom-0 left-3 right-3 h-0.5 bg-current rounded-full" />
+                )}
               </Link>
             ))}
           </nav>
 
           {/* Right Side Buttons */}
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
             {user ? (
-              <>
-                <Link
-                  href="/garaj"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary-500 text-primary-500 hover:bg-primary-500/10 transition-all"
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-all"
                 >
-                  <Warehouse className="w-4 h-4" />
-                  <span className="text-sm font-medium">Garajım</span>
-                </Link>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-700 text-sm">{user.name}</span>
-                  <button
-                    onClick={logout}
-                    className="flex items-center gap-1 px-3 py-2 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                    title="Çıkış Yap"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              </>
+                  <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                    <User className="w-4 h-4 text-primary-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-700 max-w-[120px] truncate">{user.name}</span>
+                  <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg py-1 animate-fadeIn">
+                    <Link
+                      href="/garaj"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Warehouse className="w-4 h-4 text-gray-400" />
+                      Garajım
+                    </Link>
+                    <div className="h-px bg-gray-100 mx-2" />
+                    <button
+                      onClick={() => { logout(); setIsDropdownOpen(false) }}
+                      className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Çıkış Yap
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
                 <Link
                   href="/giris"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-100 transition-all"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all text-sm font-medium"
                 >
                   <LogIn className="w-4 h-4" />
-                  <span className="text-sm font-medium">Giriş Yap</span>
+                  Giriş Yap
                 </Link>
-                <a
-                  href={getWhatsAppUrl()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white transition-all"
+                <Link
+                  href="/kayit"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition-all text-sm font-medium"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">WhatsApp</span>
-                </a>
+                  <UserPlus className="w-4 h-4" />
+                  Kayıt Ol
+                </Link>
               </>
             )}
           </div>
@@ -119,17 +153,23 @@ export default function Header() {
         </div>
 
         {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="lg:hidden py-4 border-t border-gray-200 animate-fadeIn">
-            <nav className="flex flex-col gap-2">
+        <div
+          className={`lg:hidden overflow-hidden transition-all duration-300 ease-in-out ${
+            isMenuOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="py-4 border-t border-gray-200">
+            <nav className="flex flex-col gap-1">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-4 py-3 rounded-lg transition-all ${
+                  className={`px-4 py-3 rounded-lg transition-all text-sm font-medium ${
                     link.icon
-                      ? 'flex items-center gap-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50'
-                      : 'text-gray-600 hover:text-primary-500 hover:bg-gray-100'
+                      ? `flex items-center gap-2 ${isActive(link.href) ? 'text-purple-700 bg-purple-50' : 'text-purple-600 hover:bg-purple-50'}`
+                      : isActive(link.href)
+                        ? 'text-primary-600 bg-primary-50'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                   onClick={() => { handleNavClick(link.href); setIsMenuOpen(false) }}
                 >
@@ -140,44 +180,54 @@ export default function Header() {
 
               {user ? (
                 <>
+                  <div className="h-px bg-gray-100 mx-2 my-1" />
                   <Link
                     href="/garaj"
-                    className="px-4 py-3 text-primary-500 hover:bg-primary-50 rounded-lg transition-all font-medium"
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all text-sm font-medium ${
+                      isActive('/garaj') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
                     onClick={() => setIsMenuOpen(false)}
                   >
+                    <Warehouse className="w-4 h-4" />
                     Garajım
                   </Link>
+                  <div className="px-4 py-2 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center">
+                      <User className="w-3.5 h-3.5 text-primary-600" />
+                    </div>
+                    <span className="text-sm text-gray-500 truncate">{user.name}</span>
+                  </div>
                   <button
                     onClick={() => { logout(); setIsMenuOpen(false) }}
-                    className="px-4 py-3 text-left text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                    className="flex items-center gap-2 px-4 py-3 text-left text-red-500 hover:bg-red-50 rounded-lg transition-all text-sm"
                   >
+                    <LogOut className="w-4 h-4" />
                     Çıkış Yap
                   </button>
                 </>
               ) : (
-                <div className="flex flex-col gap-2 mt-4 px-4">
+                <div className="flex flex-col gap-2 mt-3 px-4">
                   <Link
                     href="/giris"
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-300 text-gray-700"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     <LogIn className="w-4 h-4" />
-                    <span>Giriş Yap</span>
+                    Giriş Yap
                   </Link>
-                  <a
-                    href={getWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white"
+                  <Link
+                    href="/kayit"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-primary-500 text-white text-sm font-medium"
+                    onClick={() => setIsMenuOpen(false)}
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>WhatsApp ile Ulaşın</span>
-                  </a>
+                    <UserPlus className="w-4 h-4" />
+                    Kayıt Ol
+                  </Link>
                 </div>
               )}
             </nav>
           </div>
-        )}
+        </div>
       </div>
     </header>
   )
