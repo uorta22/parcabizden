@@ -26,7 +26,7 @@ $DB_PASS = 'iR?]gvlh+l[AB_r2';
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -56,6 +56,11 @@ switch ($action) {
     case 'garage_list':   handle_garage_list($pdo); break;
     case 'garage_add':    handle_garage_add($pdo); break;
     case 'garage_remove': handle_garage_remove($pdo); break;
+    case 'garage_update': handle_garage_update($pdo); break;
+    case 'maintenance_list':   handle_maintenance_list($pdo); break;
+    case 'maintenance_add':    handle_maintenance_add($pdo); break;
+    case 'maintenance_update': handle_maintenance_update($pdo); break;
+    case 'maintenance_remove': handle_maintenance_remove($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
@@ -440,11 +445,34 @@ function handle_garage_list($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, nickname, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
+        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, nickname, current_km, km_updated_at, notes, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
         $stmt->execute([$user_id]);
         $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        foreach ($vehicles as &$v) { $v['id'] = (int)$v['id']; }
+        $today = date('Y-m-d');
+        foreach ($vehicles as &$v) {
+            $v['id'] = (int)$v['id'];
+            $v['current_km'] = $v['current_km'] !== null ? (int)$v['current_km'] : null;
+
+            // Count maintenance stats
+            $mstmt = $pdo->prepare('SELECT next_km, next_date FROM vehicle_maintenance WHERE garage_id = ? AND user_id = ?');
+            $mstmt->execute([$v['id'], $user_id]);
+            $maintenances = $mstmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $overdue = 0; $upcoming = 0;
+            foreach ($maintenances as $m) {
+                $km_overdue = ($m['next_km'] !== null && $v['current_km'] !== null && (int)$m['next_km'] <= $v['current_km']);
+                $date_overdue = ($m['next_date'] !== null && $m['next_date'] <= $today);
+                $km_upcoming = ($m['next_km'] !== null && $v['current_km'] !== null && !$km_overdue && ((int)$m['next_km'] - $v['current_km'] <= 1000));
+                $date_upcoming = ($m['next_date'] !== null && !$date_overdue && $m['next_date'] <= date('Y-m-d', strtotime('+30 days')));
+
+                if ($km_overdue || $date_overdue) { $overdue++; }
+                elseif ($km_upcoming || $date_upcoming) { $upcoming++; }
+            }
+            $v['overdue_count'] = $overdue;
+            $v['upcoming_count'] = $upcoming;
+            $v['total_maintenance'] = count($maintenances);
+        }
         echo json_encode(['vehicles' => $vehicles]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -512,6 +540,155 @@ function handle_garage_remove($pdo) {
     } catch (Exception $e) {
         http_response_code(500);
         echo json_encode(['error' => 'Arac silinemedi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_garage_update($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $id = intval($_POST['id'] ?? 0);
+        if (!$id) { http_response_code(400); echo json_encode(['error' => 'id zorunludur']); return; }
+
+        // Ownership check
+        $check = $pdo->prepare('SELECT id FROM garage WHERE id = ? AND user_id = ?');
+        $check->execute([$id, $user_id]);
+        if (!$check->fetch()) { http_response_code(404); echo json_encode(['error' => 'Arac bulunamadi']); return; }
+
+        $updates = []; $params = [];
+        if (isset($_POST['nickname'])) { $updates[] = 'nickname = ?'; $params[] = trim($_POST['nickname']) ?: null; }
+        if (isset($_POST['notes'])) { $updates[] = 'notes = ?'; $params[] = trim($_POST['notes']) ?: null; }
+        if (isset($_POST['current_km']) && $_POST['current_km'] !== '') {
+            $updates[] = 'current_km = ?'; $params[] = intval($_POST['current_km']);
+            $updates[] = 'km_updated_at = NOW()';
+        }
+
+        if (empty($updates)) { echo json_encode(['success' => true]); return; }
+
+        $params[] = $id; $params[] = $user_id;
+        $pdo->prepare('UPDATE garage SET ' . implode(', ', $updates) . ' WHERE id = ? AND user_id = ?')->execute($params);
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Guncelleme hatasi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_maintenance_list($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $garage_id = intval($_POST['garage_id'] ?? 0);
+        if (!$garage_id) { http_response_code(400); echo json_encode(['error' => 'garage_id zorunludur']); return; }
+
+        // Ownership check
+        $check = $pdo->prepare('SELECT id FROM garage WHERE id = ? AND user_id = ?');
+        $check->execute([$garage_id, $user_id]);
+        if (!$check->fetch()) { http_response_code(404); echo json_encode(['error' => 'Arac bulunamadi']); return; }
+
+        $stmt = $pdo->prepare('SELECT id, garage_id, maintenance_type, done_km, done_date, next_km, next_date, notes, created_at FROM vehicle_maintenance WHERE garage_id = ? AND user_id = ? ORDER BY done_date DESC, created_at DESC');
+        $stmt->execute([$garage_id, $user_id]);
+        $records = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($records as &$r) {
+            $r['id'] = (int)$r['id'];
+            $r['garage_id'] = (int)$r['garage_id'];
+            $r['done_km'] = $r['done_km'] !== null ? (int)$r['done_km'] : null;
+            $r['next_km'] = $r['next_km'] !== null ? (int)$r['next_km'] : null;
+        }
+        echo json_encode(['records' => $records]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Bakim listesi alinamadi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_maintenance_add($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $garage_id = intval($_POST['garage_id'] ?? 0);
+        $maintenance_type = trim($_POST['maintenance_type'] ?? '');
+        if (!$garage_id || !$maintenance_type) { http_response_code(400); echo json_encode(['error' => 'garage_id ve maintenance_type zorunludur']); return; }
+
+        // Ownership check
+        $check = $pdo->prepare('SELECT id FROM garage WHERE id = ? AND user_id = ?');
+        $check->execute([$garage_id, $user_id]);
+        if (!$check->fetch()) { http_response_code(404); echo json_encode(['error' => 'Arac bulunamadi']); return; }
+
+        $done_km = isset($_POST['done_km']) && $_POST['done_km'] !== '' ? intval($_POST['done_km']) : null;
+        $done_date = isset($_POST['done_date']) && $_POST['done_date'] !== '' ? $_POST['done_date'] : null;
+        $next_km = isset($_POST['next_km']) && $_POST['next_km'] !== '' ? intval($_POST['next_km']) : null;
+        $next_date = isset($_POST['next_date']) && $_POST['next_date'] !== '' ? $_POST['next_date'] : null;
+        $notes = isset($_POST['notes']) && trim($_POST['notes']) !== '' ? trim($_POST['notes']) : null;
+
+        $stmt = $pdo->prepare('INSERT INTO vehicle_maintenance (garage_id, user_id, maintenance_type, done_km, done_date, next_km, next_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$garage_id, $user_id, $maintenance_type, $done_km, $done_date, $next_km, $next_date, $notes]);
+        $new_id = (int)$pdo->lastInsertId();
+
+        echo json_encode(['success' => true, 'id' => $new_id]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Bakim eklenemedi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_maintenance_update($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $id = intval($_POST['id'] ?? 0);
+        if (!$id) { http_response_code(400); echo json_encode(['error' => 'id zorunludur']); return; }
+
+        // Ownership check
+        $check = $pdo->prepare('SELECT id FROM vehicle_maintenance WHERE id = ? AND user_id = ?');
+        $check->execute([$id, $user_id]);
+        if (!$check->fetch()) { http_response_code(404); echo json_encode(['error' => 'Bakim kaydi bulunamadi']); return; }
+
+        $updates = []; $params = [];
+        if (isset($_POST['maintenance_type'])) { $updates[] = 'maintenance_type = ?'; $params[] = trim($_POST['maintenance_type']); }
+        if (isset($_POST['done_km'])) { $updates[] = 'done_km = ?'; $params[] = $_POST['done_km'] !== '' ? intval($_POST['done_km']) : null; }
+        if (isset($_POST['done_date'])) { $updates[] = 'done_date = ?'; $params[] = $_POST['done_date'] !== '' ? $_POST['done_date'] : null; }
+        if (isset($_POST['next_km'])) { $updates[] = 'next_km = ?'; $params[] = $_POST['next_km'] !== '' ? intval($_POST['next_km']) : null; }
+        if (isset($_POST['next_date'])) { $updates[] = 'next_date = ?'; $params[] = $_POST['next_date'] !== '' ? $_POST['next_date'] : null; }
+        if (isset($_POST['notes'])) { $updates[] = 'notes = ?'; $params[] = trim($_POST['notes']) ?: null; }
+
+        if (empty($updates)) { echo json_encode(['success' => true]); return; }
+
+        $params[] = $id; $params[] = $user_id;
+        $pdo->prepare('UPDATE vehicle_maintenance SET ' . implode(', ', $updates) . ' WHERE id = ? AND user_id = ?')->execute($params);
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Bakim guncellenemedi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_maintenance_remove($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $id = intval($_POST['id'] ?? 0);
+        if (!$id) { http_response_code(400); echo json_encode(['error' => 'id zorunludur']); return; }
+
+        $stmt = $pdo->prepare('DELETE FROM vehicle_maintenance WHERE id = ? AND user_id = ?');
+        $stmt->execute([$id, $user_id]);
+        if ($stmt->rowCount() === 0) { http_response_code(404); echo json_encode(['error' => 'Bakim kaydi bulunamadi']); return; }
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Bakim silinemedi: ' . $e->getMessage()]);
     }
 }
 

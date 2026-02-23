@@ -70,6 +70,24 @@ export interface GarageVehicleNatro {
   generation_slug: string
   generation_name: string
   nickname: string | null
+  current_km: number | null
+  km_updated_at: string | null
+  notes: string | null
+  overdue_count: number
+  upcoming_count: number
+  total_maintenance: number
+  created_at: string
+}
+
+export interface MaintenanceRecord {
+  id: number
+  garage_id: number
+  maintenance_type: string
+  done_km: number | null
+  done_date: string | null
+  next_km: number | null
+  next_date: string | null
+  notes: string | null
   created_at: string
 }
 

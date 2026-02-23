@@ -6,6 +6,7 @@ import type {
   AuthResponse,
   GarageVehicle,
   GarageVehicleNatro,
+  MaintenanceRecord,
   User,
 } from '@/types/api'
 
@@ -141,6 +142,68 @@ export async function garageAdd(data: {
 
 export async function garageRemove(id: number): Promise<{ success: boolean }> {
   return actionPost<{ success: boolean }>({ action: 'garage_remove', id: String(id) })
+}
+
+export async function garageUpdate(data: {
+  id: number
+  nickname?: string
+  current_km?: number
+  notes?: string
+}): Promise<{ success: boolean }> {
+  const params: Record<string, string> = { action: 'garage_update', id: String(data.id) }
+  if (data.nickname !== undefined) params.nickname = data.nickname
+  if (data.current_km !== undefined) params.current_km = String(data.current_km)
+  if (data.notes !== undefined) params.notes = data.notes
+  return actionPost<{ success: boolean }>(params)
+}
+
+export async function maintenanceList(garageId: number): Promise<{ records: MaintenanceRecord[] }> {
+  return actionPost<{ records: MaintenanceRecord[] }>({ action: 'maintenance_list', garage_id: String(garageId) })
+}
+
+export async function maintenanceAdd(data: {
+  garage_id: number
+  maintenance_type: string
+  done_km?: number
+  done_date?: string
+  next_km?: number
+  next_date?: string
+  notes?: string
+}): Promise<{ success: boolean; id: number }> {
+  const params: Record<string, string> = {
+    action: 'maintenance_add',
+    garage_id: String(data.garage_id),
+    maintenance_type: data.maintenance_type,
+  }
+  if (data.done_km !== undefined) params.done_km = String(data.done_km)
+  if (data.done_date) params.done_date = data.done_date
+  if (data.next_km !== undefined) params.next_km = String(data.next_km)
+  if (data.next_date) params.next_date = data.next_date
+  if (data.notes) params.notes = data.notes
+  return actionPost<{ success: boolean; id: number }>(params)
+}
+
+export async function maintenanceUpdate(data: {
+  id: number
+  maintenance_type?: string
+  done_km?: number | null
+  done_date?: string | null
+  next_km?: number | null
+  next_date?: string | null
+  notes?: string | null
+}): Promise<{ success: boolean }> {
+  const params: Record<string, string> = { action: 'maintenance_update', id: String(data.id) }
+  if (data.maintenance_type !== undefined) params.maintenance_type = data.maintenance_type
+  if (data.done_km !== undefined) params.done_km = data.done_km !== null ? String(data.done_km) : ''
+  if (data.done_date !== undefined) params.done_date = data.done_date ?? ''
+  if (data.next_km !== undefined) params.next_km = data.next_km !== null ? String(data.next_km) : ''
+  if (data.next_date !== undefined) params.next_date = data.next_date ?? ''
+  if (data.notes !== undefined) params.notes = data.notes ?? ''
+  return actionPost<{ success: boolean }>(params)
+}
+
+export async function maintenanceRemove(id: number): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'maintenance_remove', id: String(id) })
 }
 
 // ==================== Vehicle Parts API (action-based) ====================
