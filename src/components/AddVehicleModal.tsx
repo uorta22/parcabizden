@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { X, Plus, ChevronDown, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { X, Plus, Search, Loader2, ChevronRight, Car } from 'lucide-react'
 import { fetchGenerations } from '@/lib/api'
 
 interface NatroBrand {
@@ -31,17 +31,12 @@ interface AddVehicleModalProps {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
-async function actionFetch<T>(params: Record<string, string>): Promise<T> {
-  const query = new URLSearchParams(params).toString()
-  const res = await fetch(`${API_BASE}/?${query}`)
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  const data = await res.json()
-  if (data.error) throw new Error(data.error)
-  return data
-}
+// Brand cache — load once, reuse across modal opens
+let brandCache: NatroBrand[] | null = null
 
 export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleModalProps) {
-  const [brands, setBrands] = useState<NatroBrand[]>([])
+  const [step, setStep] = useState<'brand' | 'generation' | 'nickname'>('brand')
+  const [brands, setBrands] = useState<NatroBrand[]>(brandCache || [])
   const [generations, setGenerations] = useState<NatroGeneration[]>([])
 
   const [brandSlug, setBrandSlug] = useState('')
@@ -50,77 +45,100 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
   const [generationName, setGenerationName] = useState('')
   const [nickname, setNickname] = useState('')
 
+  const [search, setSearch] = useState('')
   const [loadingBrands, setLoadingBrands] = useState(false)
   const [loadingGenerations, setLoadingGenerations] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  // Handle Escape key to close modal
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) onClose()
-    }
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [isOpen, onClose])
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  // Load brands when modal opens
+  // Load brands once
   useEffect(() => {
     if (!isOpen) return
     if (brands.length > 0) return
     setLoadingBrands(true)
-    actionFetch<{ brands: NatroBrand[] }>({ action: 'brands' })
-      .then((res) => setBrands(res.brands))
+    fetch(`${API_BASE}/?action=brands`)
+      .then(r => r.json())
+      .then(data => {
+        const b = data.brands || []
+        brandCache = b
+        setBrands(b)
+      })
       .catch(() => {})
       .finally(() => setLoadingBrands(false))
   }, [isOpen, brands.length])
 
-  // Load generations when brand changes
+  // Focus search on step change
   useEffect(() => {
-    if (!brandSlug) { setGenerations([]); return }
-    setLoadingGenerations(true)
-    fetchGenerations(brandSlug)
-      .then((res) => setGenerations(res.generations))
-      .catch(() => setGenerations([]))
-      .finally(() => setLoadingGenerations(false))
-  }, [brandSlug])
+    if (isOpen && searchRef.current) {
+      setTimeout(() => searchRef.current?.focus(), 100)
+    }
+  }, [isOpen, step])
+
+  // Escape to close or go back
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (!isOpen) return
+      if (e.key === 'Escape') {
+        if (step === 'nickname') setStep('generation')
+        else if (step === 'generation') { setStep('brand'); setSearch('') }
+        else onClose()
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [isOpen, step, onClose])
+
+  const filteredBrands = useMemo(() => {
+    if (!search.trim()) return brands
+    const q = search.toLowerCase().replace(/\s+/g, '')
+    return brands.filter(b =>
+      b.brand_name.toLowerCase().replace(/\s+/g, '').includes(q) ||
+      b.brand_slug.includes(q)
+    )
+  }, [brands, search])
+
+  const filteredGenerations = useMemo(() => {
+    if (!search.trim()) return generations
+    const q = search.toLowerCase().replace(/\s+/g, '')
+    return generations.filter(g =>
+      g.generation_name.toLowerCase().replace(/\s+/g, '').includes(q) ||
+      g.generation_slug.includes(q)
+    )
+  }, [generations, search])
 
   if (!isOpen) return null
 
-  const handleBrandChange = (slug: string) => {
-    const found = brands.find((b) => b.brand_slug === slug)
-    setBrandSlug(slug)
-    setBrandName(found ? found.brand_name : '')
+  const handleBrandSelect = (brand: NatroBrand) => {
+    setBrandSlug(brand.brand_slug)
+    setBrandName(brand.brand_name)
     setGenerationSlug('')
     setGenerationName('')
-    setError('')
+    setSearch('')
+    setStep('generation')
+    setLoadingGenerations(true)
+    fetchGenerations(brand.brand_slug)
+      .then(res => setGenerations(res.generations))
+      .catch(() => setGenerations([]))
+      .finally(() => setLoadingGenerations(false))
   }
 
-  const handleGenerationChange = (slug: string) => {
-    const found = generations.find((g) => g.generation_slug === slug)
-    setGenerationSlug(slug)
-    setGenerationName(found ? found.generation_name : '')
-    setError('')
+  const handleGenerationSelect = (gen: NatroGeneration) => {
+    setGenerationSlug(gen.generation_slug)
+    setGenerationName(gen.generation_name)
+    setSearch('')
+    setStep('nickname')
   }
 
-  const resetForm = () => {
-    setBrandSlug('')
-    setBrandName('')
-    setGenerationSlug('')
-    setGenerationName('')
-    setNickname('')
-    setError('')
+  const handleBack = () => {
+    if (step === 'nickname') setStep('generation')
+    else if (step === 'generation') { setStep('brand'); setSearch('') }
+    else onClose()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSubmit = async () => {
     setError('')
-
-    if (!brandSlug || !generationSlug) {
-      setError('Marka ve nesil seçimi zorunludur')
-      return
-    }
-
     setIsSubmitting(true)
     try {
       await onAdd({
@@ -130,7 +148,11 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
         generation_name: generationName,
         nickname: nickname.trim() || undefined,
       })
-      resetForm()
+      // Reset
+      setBrandSlug(''); setBrandName('')
+      setGenerationSlug(''); setGenerationName('')
+      setNickname(''); setSearch('')
+      setStep('brand'); setError('')
       onClose()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Araç eklenemedi')
@@ -139,125 +161,179 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
     }
   }
 
+  const handleClose = () => {
+    setSearch(''); setStep('brand'); setError('')
+    setBrandSlug(''); setBrandName('')
+    setGenerationSlug(''); setGenerationName('')
+    setNickname('')
+    onClose()
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} />
       <div
-        className="relative bg-white border border-gray-200 rounded-2xl p-6 md:p-8 w-full max-w-md shadow-xl"
+        className="relative bg-white w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl flex flex-col"
+        style={{ maxHeight: '85vh' }}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="add-vehicle-modal-title"
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          aria-label="Modalı kapat"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        {/* Header */}
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 shrink-0">
+          {step !== 'brand' && (
+            <button onClick={handleBack} className="p-1 -ml-1 text-gray-400 hover:text-gray-700 transition-colors">
+              <ChevronRight className="w-5 h-5 rotate-180" />
+            </button>
+          )}
+          <div className="flex-1 min-w-0">
+            <h2 className="text-lg font-bold text-gray-900">
+              {step === 'brand' && 'Marka Seçin'}
+              {step === 'generation' && brandName}
+              {step === 'nickname' && 'Araç Ekle'}
+            </h2>
+            {step === 'generation' && (
+              <p className="text-xs text-gray-400 truncate">Model seçin</p>
+            )}
+          </div>
+          <button
+            onClick={handleClose}
+            className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-        <h2 id="add-vehicle-modal-title" className="text-xl font-bold text-gray-900 mb-6">
-          Araç Ekle
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {error}
+        {/* Search — brand & generation steps */}
+        {(step === 'brand' || step === 'generation') && (
+          <div className="px-4 pt-3 pb-2 shrink-0">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                ref={searchRef}
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder={step === 'brand' ? 'Marka ara...' : 'Model ara...'}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:bg-white transition-all"
+              />
             </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto overscroll-contain px-2 pb-2">
+          {/* Brand List */}
+          {step === 'brand' && (
+            loadingBrands ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
+              </div>
+            ) : filteredBrands.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 text-sm">
+                {search ? 'Sonuç bulunamadı' : 'Marka yüklenemedi'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5 p-1">
+                {filteredBrands.map(b => (
+                  <button
+                    key={b.brand_slug}
+                    onClick={() => handleBrandSelect(b)}
+                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left hover:bg-primary-50 transition-colors group"
+                  >
+                    <div className="w-8 h-8 rounded-md bg-gray-100 group-hover:bg-primary-100 flex items-center justify-center shrink-0 transition-colors">
+                      <span className="text-xs font-bold text-gray-500 group-hover:text-primary-600 transition-colors">
+                        {b.brand_name.charAt(0)}
+                      </span>
+                    </div>
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary-600 truncate transition-colors">
+                      {b.brand_name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )
           )}
 
-          {/* Marka */}
-          <div className="relative">
-            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="brand-select">
-              Marka
-            </label>
-            <select
-              id="brand-select"
-              value={brandSlug}
-              onChange={(e) => handleBrandChange(e.target.value)}
-              disabled={loadingBrands}
-              className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
-            >
-              <option value="">
-                {loadingBrands ? 'Yükleniyor...' : 'Marka Seçin'}
-              </option>
-              {brands.map((b) => (
-                <option key={b.brand_slug} value={b.brand_slug}>
-                  {b.brand_name}
-                </option>
-              ))}
-            </select>
-            {loadingBrands ? (
-              <Loader2 className="absolute right-3 top-[42px] w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
+          {/* Generation List */}
+          {step === 'generation' && (
+            loadingGenerations ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
+              </div>
+            ) : filteredGenerations.length === 0 ? (
+              <div className="text-center py-12 text-gray-400 text-sm">
+                {search ? 'Sonuç bulunamadı' : 'Model bulunamadı'}
+              </div>
             ) : (
-              <ChevronDown className="absolute right-3 top-[42px] w-4 h-4 text-gray-400 pointer-events-none" />
-            )}
-          </div>
+              <div className="flex flex-col gap-0.5 p-1">
+                {filteredGenerations.map(g => (
+                  <button
+                    key={g.generation_slug}
+                    onClick={() => handleGenerationSelect(g)}
+                    className="flex items-center gap-3 px-3 py-3 rounded-lg text-left hover:bg-primary-50 transition-colors group"
+                  >
+                    <Car className="w-4 h-4 text-gray-400 group-hover:text-primary-500 shrink-0 transition-colors" />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-primary-600 transition-colors">
+                      {g.generation_name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )
+          )}
 
-          {/* Nesil / Generation */}
-          <div className="relative">
-            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="gen-select">
-              Model / Nesil
-            </label>
-            <select
-              id="gen-select"
-              value={generationSlug}
-              onChange={(e) => handleGenerationChange(e.target.value)}
-              disabled={!brandSlug || loadingGenerations}
-              className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
-            >
-              <option value="">
-                {loadingGenerations
-                  ? 'Yükleniyor...'
-                  : brandSlug
-                  ? 'Nesil Seçin'
-                  : 'Önce Marka Seçin'}
-              </option>
-              {generations.map((g) => (
-                <option key={g.generation_slug} value={g.generation_slug}>
-                  {g.generation_name}
-                  {g.part_count > 0 ? ` (${g.part_count.toLocaleString('tr-TR')} parça)` : ''}
-                </option>
-              ))}
-            </select>
-            {loadingGenerations ? (
-              <Loader2 className="absolute right-3 top-[42px] w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
-            ) : (
-              <ChevronDown className="absolute right-3 top-[42px] w-4 h-4 text-gray-400 pointer-events-none" />
-            )}
-          </div>
+          {/* Nickname + Submit */}
+          {step === 'nickname' && (
+            <div className="p-3 space-y-4">
+              {error && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                  {error}
+                </div>
+              )}
 
-          {/* Takma Ad */}
-          <div>
-            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="nickname-input">
-              Takma Ad{' '}
-              <span className="text-gray-400 font-normal">(opsiyonel)</span>
-            </label>
-            <input
-              id="nickname-input"
-              type="text"
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              placeholder="Örn: Ailemin arabası"
-              maxLength={100}
-              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
-            />
-          </div>
+              {/* Summary */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                    <Car className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-900">{brandName}</p>
+                    <p className="text-sm text-gray-500">{generationName}</p>
+                  </div>
+                </div>
+              </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !brandSlug || !generationSlug}
-            className="flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all mt-2"
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              <Plus className="w-5 h-5" />
-            )}
-            {isSubmitting ? 'Ekleniyor...' : 'Garaja Ekle'}
-          </button>
-        </form>
+              <div>
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  Takma Ad <span className="text-gray-400 font-normal">(opsiyonel)</span>
+                </label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={e => setNickname(e.target.value)}
+                  placeholder="Örn: Ailemin arabası"
+                  maxLength={100}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-500 transition-colors"
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSubmit() } }}
+                />
+              </div>
+
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-300 text-white font-semibold rounded-lg transition-all"
+              >
+                {isSubmitting ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Plus className="w-5 h-5" />
+                )}
+                {isSubmitting ? 'Ekleniyor...' : 'Garaja Ekle'}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
