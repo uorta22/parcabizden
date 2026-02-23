@@ -6,19 +6,19 @@ import { ChevronRight, Plus, Car, LogIn } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import GarageCard from '@/components/GarageCard'
 import AddVehicleModal from '@/components/AddVehicleModal'
-import type { GarageVehicle } from '@/types/api'
-import * as api from '@/lib/api'
+import type { GarageVehicleNatro } from '@/types/api'
+import { garageList, garageAdd, garageRemove } from '@/lib/api'
 
 export default function GarajPage() {
   const { user, isLoading: authLoading } = useAuth()
-  const [vehicles, setVehicles] = useState<GarageVehicle[]>([])
+  const [vehicles, setVehicles] = useState<GarageVehicleNatro[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
 
   useEffect(() => {
     if (user) {
-      api.getGarageVehicles()
-        .then(setVehicles)
+      garageList()
+        .then((res) => setVehicles(res.vehicles))
         .catch(() => {})
         .finally(() => setIsLoading(false))
     } else {
@@ -26,16 +26,22 @@ export default function GarajPage() {
     }
   }, [user])
 
-  const handleAddVehicle = async (data: { brand_id: number; model_id: number; segment_id?: number; year: number; nickname?: string }) => {
-    await api.addGarageVehicle(data)
-    const updated = await api.getGarageVehicles()
-    setVehicles(updated)
+  const handleAddVehicle = async (data: {
+    brand_slug: string
+    brand_name: string
+    generation_slug: string
+    generation_name: string
+    nickname?: string
+  }) => {
+    await garageAdd(data)
+    const updated = await garageList()
+    setVehicles(updated.vehicles)
   }
 
   const handleRemoveVehicle = async (id: number) => {
     if (!confirm('Bu aracı garajdan silmek istediğinize emin misiniz?')) return
-    await api.removeGarageVehicle(id)
-    setVehicles(vehicles.filter(v => v.id !== id))
+    await garageRemove(id)
+    setVehicles((prev) => prev.filter((v) => v.id !== id))
   }
 
   if (authLoading) {

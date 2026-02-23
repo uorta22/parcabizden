@@ -5,6 +5,7 @@ import type {
   ApiResponse,
   AuthResponse,
   GarageVehicle,
+  GarageVehicleNatro,
   User,
 } from '@/types/api'
 
@@ -114,30 +115,32 @@ export async function resetPassword(token: string, password: string): Promise<{ 
   return actionPost<{ success?: boolean; message: string }>({ action: 'reset_password', token, password })
 }
 
-// ==================== Garage ====================
+// ==================== Garage (Natro backend) ====================
 
-export async function getGarageVehicles(): Promise<GarageVehicle[]> {
-  const res = await fetchApi<ApiResponse<GarageVehicle[]>>('/garage/list')
-  return res.data
+export async function garageList(): Promise<{ vehicles: GarageVehicleNatro[] }> {
+  return actionPost<{ vehicles: GarageVehicleNatro[] }>({ action: 'garage_list' })
 }
 
-export async function addGarageVehicle(data: {
-  brand_id: number
-  model_id: number
-  segment_id?: number
-  year: number
+export async function garageAdd(data: {
+  brand_slug: string
+  brand_name: string
+  generation_slug: string
+  generation_name: string
   nickname?: string
-}): Promise<{ message: string }> {
-  return fetchApi('/garage/add', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  })
+}): Promise<{ success: boolean; id?: number }> {
+  const params: Record<string, string> = {
+    action: 'garage_add',
+    brand_slug: data.brand_slug,
+    brand_name: data.brand_name,
+    generation_slug: data.generation_slug,
+    generation_name: data.generation_name,
+  }
+  if (data.nickname) params.nickname = data.nickname
+  return actionPost<{ success: boolean; id?: number }>(params)
 }
 
-export async function removeGarageVehicle(id: number): Promise<{ message: string }> {
-  return fetchApi(`/garage/remove?id=${id}`, {
-    method: 'DELETE',
-  })
+export async function garageRemove(id: number): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'garage_remove', id: String(id) })
 }
 
 // ==================== Vehicle Parts API (action-based) ====================

@@ -63,6 +63,16 @@ export interface GarageVehicle {
   engine_type: string | null
 }
 
+export interface GarageVehicleNatro {
+  id: number
+  brand_slug: string
+  brand_name: string
+  generation_slug: string
+  generation_name: string
+  nickname: string | null
+  created_at: string
+}
+
 export interface Pagination {
   page: number
   limit: number

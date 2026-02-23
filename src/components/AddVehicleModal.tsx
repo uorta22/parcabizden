@@ -2,46 +2,63 @@
 
 import { useState, useEffect } from 'react'
 import { X, Plus, ChevronDown, Loader2 } from 'lucide-react'
-import * as api from '@/lib/api'
-import type { Brand, Model, Segment } from '@/types/api'
+import { fetchGenerations } from '@/lib/api'
+
+interface NatroBrand {
+  brand_slug: string
+  brand_name: string
+  gen_count: number
+  part_count: number
+}
+
+interface NatroGeneration {
+  generation_slug: string
+  generation_name: string
+  part_count: number
+}
 
 interface AddVehicleModalProps {
   isOpen: boolean
   onClose: () => void
   onAdd: (data: {
-    brand_id: number
-    model_id: number
-    segment_id?: number
-    year: number
+    brand_slug: string
+    brand_name: string
+    generation_slug: string
+    generation_name: string
     nickname?: string
   }) => Promise<void>
 }
 
-export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleModalProps) {
-  const [brands, setBrands] = useState<Brand[]>([])
-  const [models, setModels] = useState<Model[]>([])
-  const [segments, setSegments] = useState<Segment[]>([])
-  const [years, setYears] = useState<number[]>([])
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
-  const [brandId, setBrandId] = useState(0)
-  const [modelId, setModelId] = useState(0)
-  const [segmentId, setSegmentId] = useState(0)
-  const [year, setYear] = useState(0)
+async function actionFetch<T>(params: Record<string, string>): Promise<T> {
+  const query = new URLSearchParams(params).toString()
+  const res = await fetch(`${API_BASE}/?${query}`)
+  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  const data = await res.json()
+  if (data.error) throw new Error(data.error)
+  return data
+}
+
+export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleModalProps) {
+  const [brands, setBrands] = useState<NatroBrand[]>([])
+  const [generations, setGenerations] = useState<NatroGeneration[]>([])
+
+  const [brandSlug, setBrandSlug] = useState('')
+  const [brandName, setBrandName] = useState('')
+  const [generationSlug, setGenerationSlug] = useState('')
+  const [generationName, setGenerationName] = useState('')
   const [nickname, setNickname] = useState('')
 
   const [loadingBrands, setLoadingBrands] = useState(false)
-  const [loadingModels, setLoadingModels] = useState(false)
-  const [loadingSegments, setLoadingSegments] = useState(false)
-  const [loadingYears, setLoadingYears] = useState(false)
+  const [loadingGenerations, setLoadingGenerations] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
   // Handle Escape key to close modal
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        onClose()
-      }
+      if (e.key === 'Escape' && isOpen) onClose()
     }
     document.addEventListener('keydown', handleEscape)
     return () => document.removeEventListener('keydown', handleEscape)
@@ -52,93 +69,69 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
     if (!isOpen) return
     if (brands.length > 0) return
     setLoadingBrands(true)
-    api.getBrands()
-      .then(setBrands)
+    actionFetch<{ brands: NatroBrand[] }>({ action: 'brands' })
+      .then((res) => setBrands(res.brands))
       .catch(() => {})
       .finally(() => setLoadingBrands(false))
   }, [isOpen, brands.length])
 
-  // Load models when brand changes
+  // Load generations when brand changes
   useEffect(() => {
-    if (!brandId) { setModels([]); return }
-    setLoadingModels(true)
-    api.getModels(brandId)
-      .then(setModels)
-      .catch(() => setModels([]))
-      .finally(() => setLoadingModels(false))
-  }, [brandId])
-
-  // Load segments when model changes
-  useEffect(() => {
-    if (!modelId) { setSegments([]); return }
-    setLoadingSegments(true)
-    api.getSegments(modelId)
-      .then(setSegments)
-      .catch(() => setSegments([]))
-      .finally(() => setLoadingSegments(false))
-  }, [modelId])
-
-  // Load years when segment changes
-  useEffect(() => {
-    if (!segmentId) { setYears([]); return }
-    setLoadingYears(true)
-    api.getYears(segmentId)
-      .then(setYears)
-      .catch(() => setYears([]))
-      .finally(() => setLoadingYears(false))
-  }, [segmentId])
+    if (!brandSlug) { setGenerations([]); return }
+    setLoadingGenerations(true)
+    fetchGenerations(brandSlug)
+      .then((res) => setGenerations(res.generations))
+      .catch(() => setGenerations([]))
+      .finally(() => setLoadingGenerations(false))
+  }, [brandSlug])
 
   if (!isOpen) return null
 
-  const handleBrandChange = (value: number) => {
-    setBrandId(value)
-    setModelId(0)
-    setSegmentId(0)
-    setYear(0)
+  const handleBrandChange = (slug: string) => {
+    const found = brands.find((b) => b.brand_slug === slug)
+    setBrandSlug(slug)
+    setBrandName(found ? found.brand_name : '')
+    setGenerationSlug('')
+    setGenerationName('')
+    setError('')
   }
 
-  const handleModelChange = (value: number) => {
-    setModelId(value)
-    setSegmentId(0)
-    setYear(0)
+  const handleGenerationChange = (slug: string) => {
+    const found = generations.find((g) => g.generation_slug === slug)
+    setGenerationSlug(slug)
+    setGenerationName(found ? found.generation_name : '')
+    setError('')
   }
 
-  const handleSegmentChange = (value: number) => {
-    setSegmentId(value)
-    setYear(0)
-  }
-
-  const formatSegmentLabel = (seg: Segment) => {
-    const parts = [seg.name]
-    if (seg.engine_type) parts.push(seg.engine_type)
-    if (seg.body_type) parts.push(seg.body_type)
-    return parts.join(' - ')
+  const resetForm = () => {
+    setBrandSlug('')
+    setBrandName('')
+    setGenerationSlug('')
+    setGenerationName('')
+    setNickname('')
+    setError('')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
 
-    if (!brandId || !modelId || !year) {
-      setError('Marka, model ve yıl seçimi gerekli')
+    if (!brandSlug || !generationSlug) {
+      setError('Marka ve nesil seçimi zorunludur')
       return
     }
 
     setIsSubmitting(true)
     try {
       await onAdd({
-        brand_id: brandId,
-        model_id: modelId,
-        segment_id: segmentId || undefined,
-        year,
-        nickname: nickname || undefined,
+        brand_slug: brandSlug,
+        brand_name: brandName,
+        generation_slug: generationSlug,
+        generation_name: generationName,
+        nickname: nickname.trim() || undefined,
       })
+      resetForm()
       onClose()
-      setBrandId(0)
-      setModelId(0)
-      setSegmentId(0)
-      setYear(0)
-      setNickname('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Araç eklenemedi')
     } finally {
@@ -148,132 +141,121 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-dark-800 border border-dark-700 rounded-2xl p-6 md:p-8 w-full max-w-md animate-fadeIn" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="relative bg-white border border-gray-200 rounded-2xl p-6 md:p-8 w-full max-w-md shadow-xl"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-vehicle-modal-title"
+      >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           aria-label="Modalı kapat"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <h2 id="modal-title" className="text-xl font-bold text-white mb-6">Araç Ekle</h2>
+        <h2 id="add-vehicle-modal-title" className="text-xl font-bold text-gray-900 mb-6">
+          Araç Ekle
+        </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-red-400 text-sm">
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
               {error}
             </div>
           )}
 
           {/* Marka */}
           <div className="relative">
-            <label className="block text-gray-300 text-sm font-medium mb-2">Marka</label>
+            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="brand-select">
+              Marka
+            </label>
             <select
-              value={brandId}
-              onChange={(e) => handleBrandChange(Number(e.target.value))}
+              id="brand-select"
+              value={brandSlug}
+              onChange={(e) => handleBrandChange(e.target.value)}
               disabled={loadingBrands}
-              className="w-full appearance-none bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500 transition-colors disabled:opacity-40"
+              className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
             >
-              <option value={0}>{loadingBrands ? 'Yükleniyor...' : 'Marka Seçin'}</option>
+              <option value="">
+                {loadingBrands ? 'Yükleniyor...' : 'Marka Seçin'}
+              </option>
               {brands.map((b) => (
-                <option key={b.id} value={b.id}>{b.name}</option>
+                <option key={b.brand_slug} value={b.brand_slug}>
+                  {b.brand_name}
+                </option>
               ))}
             </select>
             {loadingBrands ? (
-              <Loader2 className="absolute right-3 bottom-3.5 w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
+              <Loader2 className="absolute right-3 top-[42px] w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
             ) : (
-              <ChevronDown className="absolute right-3 bottom-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-[42px] w-4 h-4 text-gray-400 pointer-events-none" />
             )}
           </div>
 
-          {/* Model */}
+          {/* Nesil / Generation */}
           <div className="relative">
-            <label className="block text-gray-300 text-sm font-medium mb-2">Model</label>
+            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="gen-select">
+              Model / Nesil
+            </label>
             <select
-              value={modelId}
-              onChange={(e) => handleModelChange(Number(e.target.value))}
-              disabled={!brandId || loadingModels}
-              className="w-full appearance-none bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500 transition-colors disabled:opacity-40"
+              id="gen-select"
+              value={generationSlug}
+              onChange={(e) => handleGenerationChange(e.target.value)}
+              disabled={!brandSlug || loadingGenerations}
+              className="w-full appearance-none bg-white border border-gray-300 rounded-lg px-4 py-3 text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors disabled:opacity-50 disabled:cursor-not-allowed pr-10"
             >
-              <option value={0}>{loadingModels ? 'Yükleniyor...' : 'Model Seçin'}</option>
-              {models.map((m) => (
-                <option key={m.id} value={m.id}>{m.name}</option>
+              <option value="">
+                {loadingGenerations
+                  ? 'Yükleniyor...'
+                  : brandSlug
+                  ? 'Nesil Seçin'
+                  : 'Önce Marka Seçin'}
+              </option>
+              {generations.map((g) => (
+                <option key={g.generation_slug} value={g.generation_slug}>
+                  {g.generation_name}
+                  {g.part_count > 0 ? ` (${g.part_count.toLocaleString('tr-TR')} parça)` : ''}
+                </option>
               ))}
             </select>
-            {loadingModels ? (
-              <Loader2 className="absolute right-3 bottom-3.5 w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
+            {loadingGenerations ? (
+              <Loader2 className="absolute right-3 top-[42px] w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
             ) : (
-              <ChevronDown className="absolute right-3 bottom-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
-            )}
-          </div>
-
-          {/* Segment (Motor / Kasa Tipi) */}
-          <div className="relative">
-            <label className="block text-gray-300 text-sm font-medium mb-2">Motor / Kasa Tipi</label>
-            <select
-              value={segmentId}
-              onChange={(e) => handleSegmentChange(Number(e.target.value))}
-              disabled={!modelId || loadingSegments}
-              className="w-full appearance-none bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500 transition-colors disabled:opacity-40"
-            >
-              <option value={0}>{loadingSegments ? 'Yükleniyor...' : 'Motor / Kasa Tipi Seçin'}</option>
-              {segments.map((s) => (
-                <option key={s.id} value={s.id}>{formatSegmentLabel(s)}</option>
-              ))}
-            </select>
-            {loadingSegments ? (
-              <Loader2 className="absolute right-3 bottom-3.5 w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
-            ) : (
-              <ChevronDown className="absolute right-3 bottom-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
-            )}
-          </div>
-
-          {/* Yıl */}
-          <div className="relative">
-            <label className="block text-gray-300 text-sm font-medium mb-2">Yıl</label>
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              disabled={!segmentId || loadingYears}
-              className="w-full appearance-none bg-dark-900 border border-dark-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-primary-500 transition-colors disabled:opacity-40"
-            >
-              <option value={0}>{loadingYears ? 'Yükleniyor...' : 'Yıl Seçin'}</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            {loadingYears ? (
-              <Loader2 className="absolute right-3 bottom-3.5 w-4 h-4 text-primary-500 animate-spin pointer-events-none" />
-            ) : (
-              <ChevronDown className="absolute right-3 bottom-3.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-[42px] w-4 h-4 text-gray-400 pointer-events-none" />
             )}
           </div>
 
           {/* Takma Ad */}
           <div>
-            <label className="block text-gray-300 text-sm font-medium mb-2">Takma Ad (Opsiyonel)</label>
+            <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="nickname-input">
+              Takma Ad{' '}
+              <span className="text-gray-400 font-normal">(opsiyonel)</span>
+            </label>
             <input
+              id="nickname-input"
               type="text"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="Örn: Ailemin arabası"
-              className="w-full px-4 py-3 bg-dark-900 border border-dark-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+              maxLength={100}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
             />
           </div>
 
           <button
             type="submit"
-            disabled={isSubmitting}
-            className="flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-500/50 text-dark-900 font-semibold rounded-lg transition-all mt-2"
+            disabled={isSubmitting || !brandSlug || !generationSlug}
+            className="flex items-center justify-center gap-2 w-full px-6 py-3.5 bg-primary-500 hover:bg-primary-600 disabled:bg-primary-300 disabled:cursor-not-allowed text-white font-semibold rounded-lg transition-all mt-2"
           >
             {isSubmitting ? (
-              <div className="w-5 h-5 border-2 border-dark-900 border-t-transparent rounded-full animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <Plus className="w-5 h-5" />
             )}
-            Garaja Ekle
+            {isSubmitting ? 'Ekleniyor...' : 'Garaja Ekle'}
           </button>
         </form>
       </div>

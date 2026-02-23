@@ -26,7 +26,7 @@ $DB_PASS = 'iR?]gvlh+l[AB_r2';
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -53,6 +53,9 @@ switch ($action) {
     case 'chat':          handle_chat($pdo); break;
     case 'chat_messages': handle_chat_messages($pdo); break;
     case 'chat_webhook':  handle_chat_webhook($pdo); break;
+    case 'garage_list':   handle_garage_list($pdo); break;
+    case 'garage_add':    handle_garage_add($pdo); break;
+    case 'garage_remove': handle_garage_remove($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
@@ -428,6 +431,88 @@ function get_auth_user_id() {
     if (!$header || !preg_match('/^Bearer\s+(.+)$/i', $header, $matches)) return null;
     $payload = jwt_decode($matches[1]);
     return $payload ? ($payload['user_id'] ?? null) : null;
+}
+
+// ==================== Garage Handlers ====================
+
+function handle_garage_list($pdo) {
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, nickname, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
+        $stmt->execute([$user_id]);
+        $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($vehicles as &$v) { $v['id'] = (int)$v['id']; }
+        echo json_encode(['vehicles' => $vehicles]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Garaj listesi alinamadi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_garage_add($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $brand_slug      = trim($_POST['brand_slug'] ?? '');
+        $brand_name      = trim($_POST['brand_name'] ?? '');
+        $generation_slug = trim($_POST['generation_slug'] ?? '');
+        $generation_name = trim($_POST['generation_name'] ?? '');
+        $nickname        = trim($_POST['nickname'] ?? '');
+
+        if (!$brand_slug || !$brand_name || !$generation_slug || !$generation_name) {
+            http_response_code(400);
+            echo json_encode(['error' => 'brand_slug, brand_name, generation_slug ve generation_name zorunludur']);
+            return;
+        }
+
+        // Prevent duplicate: same brand+generation for same user
+        $check = $pdo->prepare('SELECT id FROM garage WHERE user_id = ? AND brand_slug = ? AND generation_slug = ?');
+        $check->execute([$user_id, $brand_slug, $generation_slug]);
+        if ($check->fetch()) {
+            http_response_code(409);
+            echo json_encode(['error' => 'Bu arac zaten garajinizda kayitli']);
+            return;
+        }
+
+        $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, nickname) VALUES (?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $nickname ?: null]);
+        $new_id = (int)$pdo->lastInsertId();
+
+        echo json_encode(['success' => true, 'id' => $new_id]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Arac eklenemedi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_garage_remove($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+
+        $id = intval($_POST['id'] ?? 0);
+        if (!$id) { http_response_code(400); echo json_encode(['error' => 'id zorunludur']); return; }
+
+        $stmt = $pdo->prepare('DELETE FROM garage WHERE id = ? AND user_id = ?');
+        $stmt->execute([$id, $user_id]);
+
+        if ($stmt->rowCount() === 0) {
+            http_response_code(404);
+            echo json_encode(['error' => 'Arac bulunamadi veya bu isleme yetkiniz yok']);
+            return;
+        }
+
+        echo json_encode(['success' => true]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Arac silinemedi: ' . $e->getMessage()]);
+    }
 }
 
 // ==================== Auth Handlers ====================
