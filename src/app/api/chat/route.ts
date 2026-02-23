@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
     message?: string
     name?: string
     vehicle?: string
+    phone?: string
+    vin?: string
     pageUrl?: string
   }
 
@@ -56,7 +58,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const { ticketId, message, name, vehicle, pageUrl } = body
+  const { ticketId, message, name, vehicle, phone, vin, pageUrl } = body
 
   if (!ticketId || !message?.trim()) {
     return NextResponse.json(
@@ -80,6 +82,8 @@ export async function POST(req: NextRequest) {
     params.set('message', message.trim())
     if (name) params.set('name', name)
     if (vehicle) params.set('vehicle', vehicle)
+    if (phone) params.set('phone', phone)
+    if (vin) params.set('vin', vin)
     if (pageUrl) params.set('page_url', pageUrl)
 
     const backendRes = await fetch(`${API_BASE}/?action=chat`, {

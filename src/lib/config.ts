@@ -46,6 +46,9 @@ export const siteConfig = {
   // Chat widget
   chat: {
     enabled: process.env.NEXT_PUBLIC_CHAT_ENABLED !== 'false',
+    workingHoursStart: 9,
+    workingHoursEnd: 19,
+    workingDays: [1, 2, 3, 4, 5, 6] as readonly number[], // Mon-Sat
   },
 
   // Sosyal medya
