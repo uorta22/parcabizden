@@ -1,4 +1,15 @@
 <?php
+// Global error handler — tüm hataları JSON olarak döndür
+set_error_handler(function($severity, $message, $file, $line) {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+set_exception_handler(function($e) {
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'PHP Hata: ' . $e->getMessage() . ' (satir ' . $e->getLine() . ')']);
+    exit;
+});
+
 header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -15,7 +26,7 @@ $DB_PASS = 'iR?]gvlh+l[AB_r2';
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -46,7 +57,9 @@ switch ($action) {
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
     case 'verify_email':  handle_verify_email($pdo); break;
-    case 'resend_verify': handle_resend_verify($pdo); break;
+    case 'resend_verify':   handle_resend_verify($pdo); break;
+    case 'forgot_password': handle_forgot_password($pdo); break;
+    case 'reset_password':  handle_reset_password($pdo); break;
     default: echo json_encode(['error' => 'Invalid action']);
 }
 
@@ -564,6 +577,94 @@ function handle_resend_verify($pdo) {
         http_response_code(500);
         echo json_encode(['error' => 'Resend hatasi: ' . $e->getMessage()]);
     }
+}
+
+function handle_forgot_password($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $email = trim($_POST['email'] ?? '');
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(400); echo json_encode(['error' => 'Gecerli bir e-posta adresi giriniz']); return; }
+
+        $stmt = $pdo->prepare('SELECT id, name, verify_expires FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Always return success to prevent email enumeration
+        if (!$user) { echo json_encode(['success' => true, 'message' => 'Eger bu e-posta kayitliysa sifre sifirlama linki gonderildi.']); return; }
+
+        // Rate limit: 5 min
+        if ($user['verify_expires']) {
+            $last_sent = strtotime($user['verify_expires']) - 86400;
+            if (time() - $last_sent < 300) {
+                http_response_code(429); echo json_encode(['error' => 'Lutfen 5 dakika bekleyip tekrar deneyin.']); return;
+            }
+        }
+
+        $reset_token = bin2hex(random_bytes(32));
+        $reset_expires = date('Y-m-d H:i:s', time() + 3600); // 1 saat
+        $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
+        $stmt->execute([$reset_token, $reset_expires, $user['id']]);
+
+        send_reset_email($email, $user['name'], $reset_token);
+        echo json_encode(['success' => true, 'message' => 'Sifre sifirlama linki e-posta adresinize gonderildi.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Sifre sifirlama hatasi: ' . $e->getMessage()]);
+    }
+}
+
+function handle_reset_password($pdo) {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    try {
+        $token = trim($_POST['token'] ?? '');
+        $password = $_POST['password'] ?? '';
+
+        if (!$token) { http_response_code(400); echo json_encode(['error' => 'Sifirlama tokeni gerekli']); return; }
+        if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            http_response_code(400); echo json_encode(['error' => 'Sifre en az 8 karakter, 1 buyuk harf, 1 kucuk harf ve 1 rakam icermeli']); return;
+        }
+
+        $stmt = $pdo->prepare('SELECT id, verify_expires FROM users WHERE verify_token = ?');
+        $stmt->execute([$token]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$user) { http_response_code(400); echo json_encode(['error' => 'Gecersiz veya suresi dolmus sifirlama linki']); return; }
+        if ($user['verify_expires'] && strtotime($user['verify_expires']) < time()) {
+            http_response_code(400); echo json_encode(['error' => 'Sifirlama linkinin suresi dolmus. Lutfen yeni bir link isteyin.']); return;
+        }
+
+        $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        $stmt = $pdo->prepare('UPDATE users SET password_hash = ?, verify_token = NULL, verify_expires = NULL, email_verified = 1 WHERE id = ?');
+        $stmt->execute([$password_hash, $user['id']]);
+
+        echo json_encode(['success' => true, 'message' => 'Sifreniz basariyla degistirildi! Artik giris yapabilirsiniz.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Sifre degistirme hatasi: ' . $e->getMessage()]);
+    }
+}
+
+function send_reset_email($email, $name, $token) {
+    $reset_url = "https://parcabizden.com.tr/sifre-sifirla?token=" . urlencode($token);
+    $subject = '=?UTF-8?B?' . base64_encode('ParcaBizden - Şifre Sıfırlama') . '?=';
+
+    $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">';
+    $html .= '<div style="max-width:500px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
+    $html .= '<div style="background:#f97316;padding:24px;text-align:center;"><h1 style="margin:0;color:#fff;font-size:22px;">Parca<span style="color:#1e293b;">Bizden</span></h1></div>';
+    $html .= '<div style="padding:32px 24px;text-align:center;">';
+    $html .= '<h2 style="color:#1e293b;margin:0 0 8px;">Merhaba ' . htmlspecialchars($name) . '!</h2>';
+    $html .= '<p style="color:#64748b;font-size:15px;">Sifrenizi sifirlamak icin asagidaki butona tiklayin.</p>';
+    $html .= '<a href="' . $reset_url . '" style="display:inline-block;margin:24px 0;padding:14px 32px;background:#f97316;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Sifremi Sifirla</a>';
+    $html .= '<p style="color:#94a3b8;font-size:13px;">Bu link 1 saat gecerlidir.</p>';
+    $html .= '<p style="color:#94a3b8;font-size:12px;margin-top:16px;">Bu islemi siz yapmadiysan bu e-postayi gormezden gelebilirsiniz.</p>';
+    $html .= '</div></div></body></html>';
+
+    $headers  = "From: ParcaBizden <noreply@parcabizden.com.tr>\r\n";
+    $headers .= "Reply-To: noreply@parcabizden.com.tr\r\n";
+    $headers .= "MIME-Version: 1.0\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+    @mail($email, $subject, $html, $headers);
 }
 
 function send_verification_email($email, $name, $token) {

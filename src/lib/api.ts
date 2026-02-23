@@ -104,6 +104,16 @@ export async function resendVerify(email: string): Promise<{ success?: boolean; 
   return actionPost<{ success?: boolean; message: string }>({ action: 'resend_verify', email })
 }
 
+// ==================== Password Reset ====================
+
+export async function forgotPassword(email: string): Promise<{ success?: boolean; message: string }> {
+  return actionPost<{ success?: boolean; message: string }>({ action: 'forgot_password', email })
+}
+
+export async function resetPassword(token: string, password: string): Promise<{ success?: boolean; message: string }> {
+  return actionPost<{ success?: boolean; message: string }>({ action: 'reset_password', token, password })
+}
+
 // ==================== Garage ====================
 
 export async function getGarageVehicles(): Promise<GarageVehicle[]> {

@@ -128,6 +128,12 @@ export default function GirisPage() {
                 </div>
               </div>
 
+              <div className="text-right">
+                <Link href="/sifremi-unuttum" className="text-sm text-primary-500 hover:text-primary-400 transition-colors">
+                  Şifremi Unuttum
+                </Link>
+              </div>
+
               <button
                 type="submit"
                 disabled={isLoading}
