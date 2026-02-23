@@ -186,9 +186,11 @@ async function actionPost<T>(params: Record<string, string>): Promise<T> {
     headers,
     body: new URLSearchParams(params).toString(),
   })
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  const data = await res.json()
-  if (data.error) throw new Error(data.error)
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new Error((data && data.error) || `API error: ${res.status}`)
+  }
+  if (data && data.error) throw new Error(data.error)
   return data
 }
 

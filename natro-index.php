@@ -421,35 +421,41 @@ function get_auth_user_id() {
 
 function handle_register($pdo) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
-    $name = trim($_POST['name'] ?? '');
-    $phone = trim($_POST['phone'] ?? '');
 
-    // Validation
-    if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(400); echo json_encode(['error' => 'Gecerli bir e-posta adresi giriniz']); return; }
-    if (mb_strlen($name) < 2) { http_response_code(400); echo json_encode(['error' => 'Ad en az 2 karakter olmali']); return; }
-    if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
-        http_response_code(400); echo json_encode(['error' => 'Sifre en az 8 karakter, 1 buyuk harf, 1 kucuk harf ve 1 rakam icermeli']); return;
+    try {
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $name = trim($_POST['name'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+
+        // Validation
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(400); echo json_encode(['error' => 'Gecerli bir e-posta adresi giriniz']); return; }
+        if (mb_strlen($name) < 2) { http_response_code(400); echo json_encode(['error' => 'Ad en az 2 karakter olmali']); return; }
+        if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+            http_response_code(400); echo json_encode(['error' => 'Sifre en az 8 karakter, 1 buyuk harf, 1 kucuk harf ve 1 rakam icermeli']); return;
+        }
+
+        // Check existing
+        $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        if ($stmt->fetch()) { http_response_code(409); echo json_encode(['error' => 'Bu e-posta adresi zaten kayitli']); return; }
+
+        // Create user
+        $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
+        $verify_token = bin2hex(random_bytes(32));
+        $verify_expires = date('Y-m-d H:i:s', time() + 86400); // 24h
+
+        $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified, verify_token, verify_expires) VALUES (?, ?, ?, ?, 0, ?, ?)');
+        $stmt->execute([$email, $password_hash, $name, $phone ?: null, $verify_token, $verify_expires]);
+
+        // Send verification email
+        send_verification_email($email, $name, $verify_token);
+
+        echo json_encode(['success' => true, 'message' => 'Kayit basarili! Lutfen e-postanizi kontrol edin ve hesabinizi dogrulayin.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Kayit hatasi: ' . $e->getMessage()]);
     }
-
-    // Check existing
-    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
-    $stmt->execute([$email]);
-    if ($stmt->fetch()) { http_response_code(409); echo json_encode(['error' => 'Bu e-posta adresi zaten kayitli']); return; }
-
-    // Create user
-    $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-    $verify_token = bin2hex(random_bytes(32));
-    $verify_expires = date('Y-m-d H:i:s', time() + 86400); // 24h
-
-    $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified, verify_token, verify_expires) VALUES (?, ?, ?, ?, 0, ?, ?)');
-    $stmt->execute([$email, $password_hash, $name, $phone ?: null, $verify_token, $verify_expires]);
-
-    // Send verification email
-    send_verification_email($email, $name, $verify_token);
-
-    echo json_encode(['success' => true, 'message' => 'Kayit basarili! Lutfen e-postanizi kontrol edin ve hesabinizi dogrulayin.']);
 }
 
 function handle_login($pdo) {
