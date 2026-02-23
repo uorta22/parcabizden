@@ -460,90 +460,110 @@ function handle_register($pdo) {
 
 function handle_login($pdo) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
-    $email = trim($_POST['email'] ?? '');
-    $password = $_POST['password'] ?? '';
+    try {
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
 
-    if (!$email || !$password) { http_response_code(400); echo json_encode(['error' => 'E-posta ve sifre gerekli']); return; }
+        if (!$email || !$password) { http_response_code(400); echo json_encode(['error' => 'E-posta ve sifre gerekli']); return; }
 
-    $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified FROM users WHERE email = ?');
-    $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user || !password_verify($password, $user['password_hash'])) {
-        http_response_code(401); echo json_encode(['error' => 'E-posta veya sifre hatali']); return;
+        if (!$user || !password_verify($password, $user['password_hash'])) {
+            http_response_code(401); echo json_encode(['error' => 'E-posta veya sifre hatali']); return;
+        }
+
+        if (!$user['email_verified']) {
+            http_response_code(403); echo json_encode(['error' => 'email_not_verified', 'message' => 'Lutfen e-postanizi dogrulayin. Dogrulama linki e-posta adresinize gonderildi.']); return;
+        }
+
+        $token = jwt_encode(['user_id' => $user['id']]);
+        echo json_encode([
+            'message' => 'Giris basarili',
+            'token' => $token,
+            'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]
+        ]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Login hatasi: ' . $e->getMessage()]);
     }
-
-    if (!$user['email_verified']) {
-        http_response_code(403); echo json_encode(['error' => 'email_not_verified', 'message' => 'Lutfen e-postanizi dogrulayin. Dogrulama linki e-posta adresinize gonderildi.']); return;
-    }
-
-    $token = jwt_encode(['user_id' => $user['id']]);
-    echo json_encode([
-        'message' => 'Giris basarili',
-        'token' => $token,
-        'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]
-    ]);
 }
 
 function handle_profile($pdo) {
-    $user_id = get_auth_user_id();
-    if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
+    try {
+        $user_id = get_auth_user_id();
+        if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-    $stmt = $pdo->prepare('SELECT id, email, name, phone FROM users WHERE id = ?');
-    $stmt->execute([$user_id]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$user) { http_response_code(404); echo json_encode(['error' => 'Kullanici bulunamadi']); return; }
+        $stmt = $pdo->prepare('SELECT id, email, name, phone FROM users WHERE id = ?');
+        $stmt->execute([$user_id]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$user) { http_response_code(404); echo json_encode(['error' => 'Kullanici bulunamadi']); return; }
 
-    echo json_encode(['user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]]);
+        echo json_encode(['user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]]);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Profil hatasi: ' . $e->getMessage()]);
+    }
 }
 
 function handle_verify_email($pdo) {
-    $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
-    if (!$token) { http_response_code(400); echo json_encode(['error' => 'Dogrulama tokeni gerekli']); return; }
+    try {
+        $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
+        if (!$token) { http_response_code(400); echo json_encode(['error' => 'Dogrulama tokeni gerekli']); return; }
 
-    $stmt = $pdo->prepare('SELECT id, email_verified, verify_expires FROM users WHERE verify_token = ?');
-    $stmt->execute([$token]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare('SELECT id, email_verified, verify_expires FROM users WHERE verify_token = ?');
+        $stmt->execute([$token]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user) { http_response_code(400); echo json_encode(['error' => 'Gecersiz dogrulama linki']); return; }
-    if ($user['email_verified']) { echo json_encode(['success' => true, 'message' => 'E-postaniz zaten dogrulandi']); return; }
-    if ($user['verify_expires'] && strtotime($user['verify_expires']) < time()) {
-        http_response_code(400); echo json_encode(['error' => 'Dogrulama linkinin suresi dolmus. Lutfen yeni bir link isteyin.']); return;
+        if (!$user) { http_response_code(400); echo json_encode(['error' => 'Gecersiz dogrulama linki']); return; }
+        if ($user['email_verified']) { echo json_encode(['success' => true, 'message' => 'E-postaniz zaten dogrulandi']); return; }
+        if ($user['verify_expires'] && strtotime($user['verify_expires']) < time()) {
+            http_response_code(400); echo json_encode(['error' => 'Dogrulama linkinin suresi dolmus. Lutfen yeni bir link isteyin.']); return;
+        }
+
+        $stmt = $pdo->prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?');
+        $stmt->execute([$user['id']]);
+
+        echo json_encode(['success' => true, 'message' => 'E-postaniz basariyla dogrulandi! Artik giris yapabilirsiniz.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Dogrulama hatasi: ' . $e->getMessage()]);
     }
-
-    $stmt = $pdo->prepare('UPDATE users SET email_verified = 1, verify_token = NULL, verify_expires = NULL WHERE id = ?');
-    $stmt->execute([$user['id']]);
-
-    echo json_encode(['success' => true, 'message' => 'E-postaniz basariyla dogrulandi! Artik giris yapabilirsiniz.']);
 }
 
 function handle_resend_verify($pdo) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
-    $email = trim($_POST['email'] ?? '');
-    if (!$email) { http_response_code(400); echo json_encode(['error' => 'E-posta adresi gerekli']); return; }
+    try {
+        $email = trim($_POST['email'] ?? '');
+        if (!$email) { http_response_code(400); echo json_encode(['error' => 'E-posta adresi gerekli']); return; }
 
-    $stmt = $pdo->prepare('SELECT id, name, email_verified, verify_expires FROM users WHERE email = ?');
-    $stmt->execute([$email]);
-    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare('SELECT id, name, email_verified, verify_expires FROM users WHERE email = ?');
+        $stmt->execute([$email]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user) { echo json_encode(['success' => true, 'message' => 'Eger bu e-posta kayitliysa dogrulama linki gonderildi.']); return; }
-    if ($user['email_verified']) { echo json_encode(['success' => true, 'message' => 'E-postaniz zaten dogrulandi. Giris yapabilirsiniz.']); return; }
+        if (!$user) { echo json_encode(['success' => true, 'message' => 'Eger bu e-posta kayitliysa dogrulama linki gonderildi.']); return; }
+        if ($user['email_verified']) { echo json_encode(['success' => true, 'message' => 'E-postaniz zaten dogrulandi. Giris yapabilirsiniz.']); return; }
 
-    // Rate limit: 5 min
-    if ($user['verify_expires']) {
-        $last_sent = strtotime($user['verify_expires']) - 86400; // verify_expires = sent_time + 24h
-        if (time() - $last_sent < 300) {
-            http_response_code(429); echo json_encode(['error' => 'Lutfen 5 dakika bekleyip tekrar deneyin.']); return;
+        // Rate limit: 5 min
+        if ($user['verify_expires']) {
+            $last_sent = strtotime($user['verify_expires']) - 86400; // verify_expires = sent_time + 24h
+            if (time() - $last_sent < 300) {
+                http_response_code(429); echo json_encode(['error' => 'Lutfen 5 dakika bekleyip tekrar deneyin.']); return;
+            }
         }
+
+        $verify_token = bin2hex(random_bytes(32));
+        $verify_expires = date('Y-m-d H:i:s', time() + 86400);
+        $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
+        $stmt->execute([$verify_token, $verify_expires, $user['id']]);
+
+        send_verification_email($email, $user['name'], $verify_token);
+        echo json_encode(['success' => true, 'message' => 'Dogrulama e-postasi tekrar gonderildi.']);
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Resend hatasi: ' . $e->getMessage()]);
     }
-
-    $verify_token = bin2hex(random_bytes(32));
-    $verify_expires = date('Y-m-d H:i:s', time() + 86400);
-    $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
-    $stmt->execute([$verify_token, $verify_expires, $user['id']]);
-
-    send_verification_email($email, $user['name'], $verify_token);
-    echo json_encode(['success' => true, 'message' => 'Dogrulama e-postasi tekrar gonderildi.']);
 }
 
 function send_verification_email($email, $name, $token) {
