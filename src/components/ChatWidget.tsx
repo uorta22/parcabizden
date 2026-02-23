@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { MessageCircle, X, Send, ChevronDown, Loader2 } from 'lucide-react'
+import { MessageCircle, X, Send, ChevronDown, Loader2, RotateCcw } from 'lucide-react'
 import { siteConfig } from '@/lib/config'
 import { validateVIN } from '@/lib/vehicle'
 
@@ -73,6 +73,12 @@ function saveSession(s: ChatSession) {
   } catch { /* ignore */ }
 }
 
+function clearSession() {
+  try {
+    sessionStorage.removeItem(STORAGE_KEY)
+  } catch { /* ignore */ }
+}
+
 function isOnline(): boolean {
   const now = new Date()
   const day = now.getDay() // 0=Sun
@@ -94,6 +100,11 @@ export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
   const [session, setSession] = useState<ChatSession>(loadSession)
 
+  const resetChat = useCallback(() => {
+    clearSession()
+    setSession(defaultSession())
+  }, [])
+
   if (!siteConfig.chat.enabled) return null
 
   return (
@@ -101,7 +112,7 @@ export default function ChatWidget() {
       {isOpen && (
         session.step === 'form'
           ? <InfoForm session={session} setSession={setSession} />
-          : <LiveChat session={session} setSession={setSession} onClose={() => setIsOpen(false)} />
+          : <LiveChat session={session} setSession={setSession} onClose={() => setIsOpen(false)} onReset={resetChat} />
       )}
 
       {/* Floating toggle button */}
@@ -360,10 +371,12 @@ function LiveChat({
   session,
   setSession,
   onClose,
+  onReset,
 }: {
   session: ChatSession
   setSession: React.Dispatch<React.SetStateAction<ChatSession>>
   onClose: () => void
+  onReset: () => void
 }) {
   const [inputText, setInputText] = useState('')
   const [sending, setSending] = useState(false)
@@ -539,13 +552,23 @@ function LiveChat({
             </div>
           </div>
         </div>
-        <button
-          onClick={onClose}
-          className="p-1 hover:bg-green-700 rounded-lg transition-colors sm:hidden"
-          aria-label="Chat'i kapat"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onReset}
+            className="p-1.5 hover:bg-green-700 rounded-lg transition-colors"
+            aria-label="Yeni sohbet"
+            title="Yeni sohbet"
+          >
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-1.5 hover:bg-green-700 rounded-lg transition-colors sm:hidden"
+            aria-label="Chat'i kapat"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* Messages */}
