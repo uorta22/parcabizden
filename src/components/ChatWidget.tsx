@@ -416,13 +416,13 @@ function LiveChat({
         }>
         if (!msgs || msgs.length === 0) return
 
-        // Find new admin messages we haven't seen
+        // Only pick up admin messages (customer + system are handled locally)
         const existingIds = new Set(session.messages.map(m => m.id))
         const newMsgs: ChatMessage[] = msgs
-          .filter(m => !existingIds.has(`server-${m.id}`) && (m.sender === 'admin' || m.sender === 'system'))
+          .filter(m => m.sender === 'admin' && !existingIds.has(`server-${m.id}`))
           .map(m => ({
             id: `server-${m.id}`,
-            sender: (m.sender === 'admin' ? 'admin' : 'system') as ChatMessage['sender'],
+            sender: 'admin' as const,
             text: m.message,
             timestamp: new Date(m.created_at).getTime(),
           }))
