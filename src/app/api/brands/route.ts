@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const EXTERNAL_API = 'https://api.parcabizden.com.tr'
 
 export async function GET() {
   try {
     const res = await fetch(`${EXTERNAL_API}/?action=brands`, {
-      next: { revalidate: 3600 },
+      next: { revalidate: 60 },
     })
 
     if (!res.ok) throw new Error(`API error: ${res.status}`)
