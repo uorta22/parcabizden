@@ -644,50 +644,128 @@ function handle_reset_password($pdo) {
     }
 }
 
-function send_reset_email($email, $name, $token) {
-    $reset_url = "https://parcabizden.com.tr/sifre-sifirla?token=" . urlencode($token);
-    $subject = '=?UTF-8?B?' . base64_encode('ParcaBizden - Şifre Sıfırlama') . '?=';
+// ==================== E-posta Gönderimi (SMTP) ====================
 
+function smtp_send($to, $subject_text, $html_body) {
+    $from_email = 'noreply@parcabizden.com.tr';
+    $from_name  = 'ParcaBizden';
+    $subject = '=?UTF-8?B?' . base64_encode($subject_text) . '?=';
+
+    // Boundary for MIME
+    $boundary = md5(uniqid(time()));
+    $body  = "MIME-Version: 1.0\r\n";
+    $body .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
+    $body .= chunk_split(base64_encode($html_body));
+
+    // Try multiple SMTP methods
+    // Method 1: PHP mail() if available
+    if (function_exists('mail')) {
+        $headers  = "From: $from_name <$from_email>\r\n";
+        $headers .= "Reply-To: $from_email\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $result = @mail($to, $subject, $html_body, $headers);
+        if ($result) return true;
+    }
+
+    // Method 2: Direct SMTP via fsockopen (localhost:25)
+    $smtp_hosts = ['localhost', '127.0.0.1', 'mail.parcabizden.com.tr'];
+    $smtp_ports = [25, 587];
+    $hostname = 'parcabizden.com.tr';
+
+    foreach ($smtp_hosts as $host) {
+        foreach ($smtp_ports as $port) {
+            $sock = @fsockopen($host, $port, $errno, $errstr, 5);
+            if (!$sock) continue;
+
+            $resp = @fgets($sock, 512);
+            if (!$resp || substr($resp, 0, 3) !== '220') { @fclose($sock); continue; }
+
+            $commands = [
+                "EHLO $hostname\r\n",
+                "MAIL FROM:<$from_email>\r\n",
+                "RCPT TO:<$to>\r\n",
+                "DATA\r\n",
+            ];
+
+            $ok = true;
+            foreach ($commands as $cmd) {
+                @fwrite($sock, $cmd);
+                $resp = @fgets($sock, 512);
+                // EHLO may have multi-line response
+                if (strpos($cmd, 'EHLO') === 0) {
+                    while ($resp && substr($resp, 3, 1) === '-') { $resp = @fgets($sock, 512); }
+                }
+                $code = (int)substr($resp, 0, 3);
+                if ($code < 200 || $code >= 400) { $ok = false; break; }
+            }
+
+            if ($ok) {
+                $msg  = "From: $from_name <$from_email>\r\n";
+                $msg .= "To: $to\r\n";
+                $msg .= "Subject: $subject\r\n";
+                $msg .= "MIME-Version: 1.0\r\n";
+                $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
+                $msg .= "Content-Transfer-Encoding: base64\r\n";
+                $msg .= "\r\n";
+                $msg .= chunk_split(base64_encode($html_body));
+                $msg .= "\r\n.\r\n";
+
+                @fwrite($sock, $msg);
+                $resp = @fgets($sock, 512);
+                @fwrite($sock, "QUIT\r\n");
+                @fclose($sock);
+
+                $code = (int)substr($resp, 0, 3);
+                if ($code >= 200 && $code < 300) return true;
+            } else {
+                @fwrite($sock, "QUIT\r\n");
+                @fclose($sock);
+            }
+        }
+    }
+
+    // Method 3: Log to file as fallback
+    @file_put_contents(__DIR__ . '/email_queue.log',
+        date('Y-m-d H:i:s') . " | TO: $to | SUBJECT: $subject_text\n", FILE_APPEND);
+    return false;
+}
+
+function build_email_html($title, $greeting, $body_text, $button_url, $button_text, $note) {
     $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">';
     $html .= '<div style="max-width:500px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
     $html .= '<div style="background:#f97316;padding:24px;text-align:center;"><h1 style="margin:0;color:#fff;font-size:22px;">Parca<span style="color:#1e293b;">Bizden</span></h1></div>';
     $html .= '<div style="padding:32px 24px;text-align:center;">';
-    $html .= '<h2 style="color:#1e293b;margin:0 0 8px;">Merhaba ' . htmlspecialchars($name) . '!</h2>';
-    $html .= '<p style="color:#64748b;font-size:15px;">Sifrenizi sifirlamak icin asagidaki butona tiklayin.</p>';
-    $html .= '<a href="' . $reset_url . '" style="display:inline-block;margin:24px 0;padding:14px 32px;background:#f97316;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">Sifremi Sifirla</a>';
-    $html .= '<p style="color:#94a3b8;font-size:13px;">Bu link 1 saat gecerlidir.</p>';
+    $html .= '<h2 style="color:#1e293b;margin:0 0 8px;">' . htmlspecialchars($greeting) . '</h2>';
+    $html .= '<p style="color:#64748b;font-size:15px;">' . htmlspecialchars($body_text) . '</p>';
+    $html .= '<a href="' . $button_url . '" style="display:inline-block;margin:24px 0;padding:14px 32px;background:#f97316;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">' . htmlspecialchars($button_text) . '</a>';
+    $html .= '<p style="color:#94a3b8;font-size:13px;">' . htmlspecialchars($note) . '</p>';
     $html .= '<p style="color:#94a3b8;font-size:12px;margin-top:16px;">Bu islemi siz yapmadiysan bu e-postayi gormezden gelebilirsiniz.</p>';
     $html .= '</div></div></body></html>';
-
-    $headers  = "From: ParcaBizden <noreply@parcabizden.com.tr>\r\n";
-    $headers .= "Reply-To: noreply@parcabizden.com.tr\r\n";
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-
-    @mail($email, $subject, $html, $headers);
+    return $html;
 }
 
 function send_verification_email($email, $name, $token) {
-    $verify_url = "https://parcabizden.com.tr/dogrula?token=" . urlencode($token);
-    $subject = '=?UTF-8?B?' . base64_encode('ParcaBizden - E-posta Doğrulaması') . '?=';
+    $url = "https://parcabizden.com.tr/dogrula?token=" . urlencode($token);
+    $html = build_email_html(
+        'E-posta Dogrulamasi',
+        "Merhaba $name!",
+        'Hesabinizi aktif etmek icin asagidaki butona tiklayin.',
+        $url, 'E-postami Dogrula', 'Bu link 24 saat gecerlidir.'
+    );
+    smtp_send($email, 'ParcaBizden - E-posta Dogrulamasi', $html);
+}
 
-    $html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:0;background:#f4f4f5;font-family:Arial,sans-serif;">';
-    $html .= '<div style="max-width:500px;margin:40px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);">';
-    $html .= '<div style="background:#f97316;padding:24px;text-align:center;"><h1 style="margin:0;color:#fff;font-size:22px;">Parca<span style="color:#1e293b;">Bizden</span></h1></div>';
-    $html .= '<div style="padding:32px 24px;text-align:center;">';
-    $html .= '<h2 style="color:#1e293b;margin:0 0 8px;">Merhaba ' . htmlspecialchars($name) . '!</h2>';
-    $html .= '<p style="color:#64748b;font-size:15px;">Hesabinizi aktif etmek icin asagidaki butona tiklayin.</p>';
-    $html .= '<a href="' . $verify_url . '" style="display:inline-block;margin:24px 0;padding:14px 32px;background:#f97316;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;font-size:16px;">E-postami Dogrula</a>';
-    $html .= '<p style="color:#94a3b8;font-size:13px;">Bu link 24 saat gecerlidir.</p>';
-    $html .= '<p style="color:#94a3b8;font-size:12px;margin-top:16px;">Bu islemi siz yapmadiysan bu e-postayi gormezden gelebilirsiniz.</p>';
-    $html .= '</div></div></body></html>';
-
-    $headers  = "From: ParcaBizden <noreply@parcabizden.com.tr>\r\n";
-    $headers .= "Reply-To: noreply@parcabizden.com.tr\r\n";
-    $headers .= "MIME-Version: 1.0\r\n";
-    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-
-    @mail($email, $subject, $html, $headers);
+function send_reset_email($email, $name, $token) {
+    $url = "https://parcabizden.com.tr/sifre-sifirla?token=" . urlencode($token);
+    $html = build_email_html(
+        'Sifre Sifirlama',
+        "Merhaba $name!",
+        'Sifrenizi sifirlamak icin asagidaki butona tiklayin.',
+        $url, 'Sifremi Sifirla', 'Bu link 1 saat gecerlidir.'
+    );
+    smtp_send($email, 'ParcaBizden - Sifre Sifirlama', $html);
 }
 
 function handle_chat_webhook($pdo) {
