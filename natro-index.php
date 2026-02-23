@@ -644,91 +644,125 @@ function handle_reset_password($pdo) {
     }
 }
 
-// ==================== E-posta Gönderimi (SMTP) ====================
+// ==================== E-posta Gönderimi (SMTP AUTH) ====================
+// Natro cPanel'den noreply@parcabizden.com.tr e-posta hesabı oluşturun
+define('SMTP_HOST', 'mail.parcabizden.com.tr');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'noreply@parcabizden.com.tr');
+define('SMTP_PASS', 'BURAYA_NATRO_EPOSTA_SIFRESI'); // Natro'dan oluşturduğunuz e-posta şifresi
+define('SMTP_FROM_NAME', 'ParcaBizden');
 
 function smtp_send($to, $subject_text, $html_body) {
-    $from_email = 'noreply@parcabizden.com.tr';
-    $from_name  = 'ParcaBizden';
+    $from = SMTP_USER;
     $subject = '=?UTF-8?B?' . base64_encode($subject_text) . '?=';
 
-    // Boundary for MIME
-    $boundary = md5(uniqid(time()));
-    $body  = "MIME-Version: 1.0\r\n";
-    $body .= "Content-Type: text/html; charset=UTF-8\r\n";
-    $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
-    $body .= chunk_split(base64_encode($html_body));
+    // Build full email message
+    $msg  = "From: " . SMTP_FROM_NAME . " <$from>\r\n";
+    $msg .= "To: $to\r\n";
+    $msg .= "Subject: $subject\r\n";
+    $msg .= "MIME-Version: 1.0\r\n";
+    $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
+    $msg .= "Content-Transfer-Encoding: base64\r\n";
+    $msg .= "\r\n";
+    $msg .= chunk_split(base64_encode($html_body));
 
-    // Try multiple SMTP methods
-    // Method 1: PHP mail() if available
-    if (function_exists('mail')) {
-        $headers  = "From: $from_name <$from_email>\r\n";
-        $headers .= "Reply-To: $from_email\r\n";
-        $headers .= "MIME-Version: 1.0\r\n";
-        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $result = @mail($to, $subject, $html_body, $headers);
-        if ($result) return true;
+    // Connect to SMTP
+    $sock = @fsockopen(SMTP_HOST, SMTP_PORT, $errno, $errstr, 10);
+    if (!$sock) {
+        // Try SSL on 465
+        $sock = @fsockopen('ssl://' . SMTP_HOST, 465, $errno, $errstr, 10);
+    }
+    if (!$sock) {
+        @file_put_contents(__DIR__ . '/email_debug.log',
+            date('Y-m-d H:i:s') . " CONNECT FAIL: $errstr ($errno)\n", FILE_APPEND);
+        return false;
     }
 
-    // Method 2: Direct SMTP via fsockopen (localhost:25)
-    $smtp_hosts = ['localhost', '127.0.0.1', 'mail.parcabizden.com.tr'];
-    $smtp_ports = [25, 587];
-    $hostname = 'parcabizden.com.tr';
+    $log = '';
+    $read = function() use ($sock, &$log) {
+        $r = ''; $t = 0;
+        while ($t < 10) {
+            $line = @fgets($sock, 512);
+            if ($line === false) break;
+            $r .= $line;
+            if (isset($line[3]) && $line[3] === ' ') break; // last line of multi-line
+            $t++;
+        }
+        $log .= "S: $r";
+        return $r;
+    };
+    $write = function($cmd) use ($sock, &$log) {
+        // Don't log password
+        if (stripos($cmd, 'AUTH') !== false || strlen($cmd) > 50) {
+            $log .= "C: [hidden]\n";
+        } else {
+            $log .= "C: $cmd";
+        }
+        @fwrite($sock, $cmd);
+    };
 
-    foreach ($smtp_hosts as $host) {
-        foreach ($smtp_ports as $port) {
-            $sock = @fsockopen($host, $port, $errno, $errstr, 5);
-            if (!$sock) continue;
+    $resp = $read();
+    if (substr($resp, 0, 3) !== '220') { @fclose($sock); return false; }
 
-            $resp = @fgets($sock, 512);
-            if (!$resp || substr($resp, 0, 3) !== '220') { @fclose($sock); continue; }
+    // EHLO
+    $write("EHLO parcabizden.com.tr\r\n");
+    $ehlo_resp = $read();
 
-            $commands = [
-                "EHLO $hostname\r\n",
-                "MAIL FROM:<$from_email>\r\n",
-                "RCPT TO:<$to>\r\n",
-                "DATA\r\n",
-            ];
-
-            $ok = true;
-            foreach ($commands as $cmd) {
-                @fwrite($sock, $cmd);
-                $resp = @fgets($sock, 512);
-                // EHLO may have multi-line response
-                if (strpos($cmd, 'EHLO') === 0) {
-                    while ($resp && substr($resp, 3, 1) === '-') { $resp = @fgets($sock, 512); }
-                }
-                $code = (int)substr($resp, 0, 3);
-                if ($code < 200 || $code >= 400) { $ok = false; break; }
-            }
-
-            if ($ok) {
-                $msg  = "From: $from_name <$from_email>\r\n";
-                $msg .= "To: $to\r\n";
-                $msg .= "Subject: $subject\r\n";
-                $msg .= "MIME-Version: 1.0\r\n";
-                $msg .= "Content-Type: text/html; charset=UTF-8\r\n";
-                $msg .= "Content-Transfer-Encoding: base64\r\n";
-                $msg .= "\r\n";
-                $msg .= chunk_split(base64_encode($html_body));
-                $msg .= "\r\n.\r\n";
-
-                @fwrite($sock, $msg);
-                $resp = @fgets($sock, 512);
-                @fwrite($sock, "QUIT\r\n");
-                @fclose($sock);
-
-                $code = (int)substr($resp, 0, 3);
-                if ($code >= 200 && $code < 300) return true;
-            } else {
-                @fwrite($sock, "QUIT\r\n");
-                @fclose($sock);
-            }
+    // STARTTLS if available
+    if (stripos($ehlo_resp, 'STARTTLS') !== false && SMTP_PORT == 587) {
+        $write("STARTTLS\r\n");
+        $resp = $read();
+        if (substr($resp, 0, 3) === '220') {
+            stream_socket_enable_crypto($sock, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            // Re-EHLO after TLS
+            $write("EHLO parcabizden.com.tr\r\n");
+            $read();
         }
     }
 
-    // Method 3: Log to file as fallback
-    @file_put_contents(__DIR__ . '/email_queue.log',
-        date('Y-m-d H:i:s') . " | TO: $to | SUBJECT: $subject_text\n", FILE_APPEND);
+    // AUTH LOGIN
+    $write("AUTH LOGIN\r\n");
+    $resp = $read();
+    if (substr($resp, 0, 3) !== '334') {
+        @file_put_contents(__DIR__ . '/email_debug.log',
+            date('Y-m-d H:i:s') . " AUTH NOT SUPPORTED\n$log\n", FILE_APPEND);
+        @fwrite($sock, "QUIT\r\n"); @fclose($sock); return false;
+    }
+    $write(base64_encode(SMTP_USER) . "\r\n");
+    $resp = $read();
+    $write(base64_encode(SMTP_PASS) . "\r\n");
+    $resp = $read();
+    if (substr($resp, 0, 3) !== '235') {
+        @file_put_contents(__DIR__ . '/email_debug.log',
+            date('Y-m-d H:i:s') . " AUTH FAILED\n$log\n", FILE_APPEND);
+        @fwrite($sock, "QUIT\r\n"); @fclose($sock); return false;
+    }
+
+    // MAIL FROM
+    $write("MAIL FROM:<$from>\r\n");
+    $resp = $read();
+    if (substr($resp, 0, 3) !== '250') { @fwrite($sock, "QUIT\r\n"); @fclose($sock); return false; }
+
+    // RCPT TO
+    $write("RCPT TO:<$to>\r\n");
+    $resp = $read();
+    if (substr($resp, 0, 3) !== '250') { @fwrite($sock, "QUIT\r\n"); @fclose($sock); return false; }
+
+    // DATA
+    $write("DATA\r\n");
+    $resp = $read();
+    if (substr($resp, 0, 3) !== '354') { @fwrite($sock, "QUIT\r\n"); @fclose($sock); return false; }
+
+    @fwrite($sock, $msg . "\r\n.\r\n");
+    $resp = $read();
+    $write("QUIT\r\n");
+    @fclose($sock);
+
+    $code = (int)substr($resp, 0, 3);
+    if ($code >= 200 && $code < 300) return true;
+
+    @file_put_contents(__DIR__ . '/email_debug.log',
+        date('Y-m-d H:i:s') . " SEND FAIL code=$code\n$log\n", FILE_APPEND);
     return false;
 }
 
