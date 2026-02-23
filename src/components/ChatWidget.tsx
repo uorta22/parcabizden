@@ -25,7 +25,17 @@ interface ChatSession {
   model: string
   year: number
   messages: ChatMessage[]
+  ticketCreated: boolean // true after first message sent to backend
 }
+
+// ── Quick Options ──
+
+const QUICK_OPTIONS = [
+  { id: 'price', label: 'Parça fiyatı öğrenmek istiyorum' },
+  { id: 'stock', label: 'Stok durumu sormak istiyorum' },
+  { id: 'search', label: 'Parça bulmamda yardım edin' },
+  { id: 'agent', label: 'Temsilciye bağlan' },
+]
 
 // ── Helpers ──
 
@@ -64,6 +74,7 @@ function defaultSession(): ChatSession {
     model: '',
     year: 0,
     messages: [],
+    ticketCreated: false,
   }
 }
 
@@ -219,7 +230,7 @@ function InfoForm({
     const welcomeMsg: ChatMessage = {
       id: 'welcome',
       sender: 'system',
-      text: `Merhaba ${name.trim()}, ${vehicle ? vehicle + ' için ' : ''}nasıl yardımcı olabiliriz?`,
+      text: `Merhaba ${name.trim()}, ${vehicle ? vehicle + ' için ' : ''}size nasıl yardımcı olabiliriz? Aşağıdaki seçeneklerden birini seçin veya mesajınızı yazın.`,
       timestamp: Date.now(),
     }
 
@@ -234,6 +245,7 @@ function InfoForm({
       model: model.trim(),
       year,
       messages: [welcomeMsg],
+      ticketCreated: false,
     }
 
     saveSession(newSession)
@@ -388,6 +400,9 @@ function LiveChat({
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const seenIdsRef = useRef<Set<string>>(new Set())
 
+  // Show quick options only if ticket hasn't been created yet
+  const showQuickOptions = !session.ticketCreated
+
   // Persist session on change
   useEffect(() => {
     saveSession(session)
@@ -415,8 +430,10 @@ function LiveChat({
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Polling for admin messages (every 5s)
+  // Polling for admin messages (every 5s) — only after ticket is created
   useEffect(() => {
+    if (!session.ticketCreated) return
+
     const poll = async () => {
       try {
         const res = await fetch(`/api/chat/messages?ticketId=${encodeURIComponent(session.ticketId)}`)
@@ -453,17 +470,18 @@ function LiveChat({
     }
 
     pollingRef.current = setInterval(poll, 5000)
-    // Initial poll
     poll()
 
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session.ticketId])
+  }, [session.ticketId, session.ticketCreated])
 
   const sendMessage = useCallback(async (text: string) => {
     if (!text.trim() || sending) return
+
+    const isFirstMessage = !session.ticketCreated
 
     const customerMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -475,6 +493,7 @@ function LiveChat({
     setSession(prev => ({
       ...prev,
       messages: [...prev.messages, customerMsg],
+      ticketCreated: true,
     }))
     setInputText('')
     setSending(true)
@@ -496,7 +515,8 @@ function LiveChat({
 
       const data = await res.json()
 
-      if (data.autoReply) {
+      // Only show auto-reply for first message
+      if (isFirstMessage && data.autoReply) {
         const replyMsg: ChatMessage = {
           id: `reply-${Date.now()}`,
           sender: 'system',
@@ -509,20 +529,26 @@ function LiveChat({
         }))
       }
     } catch {
-      const fallbackMsg: ChatMessage = {
-        id: `fallback-${Date.now()}`,
-        sender: 'system',
-        text: 'Talebiniz alındı, en kısa sürede size dönüş yapacağız.',
-        timestamp: Date.now(),
+      if (isFirstMessage) {
+        const fallbackMsg: ChatMessage = {
+          id: `fallback-${Date.now()}`,
+          sender: 'system',
+          text: 'Talebiniz alındı, en kısa sürede size dönüş yapacağız.',
+          timestamp: Date.now(),
+        }
+        setSession(prev => ({
+          ...prev,
+          messages: [...prev.messages, fallbackMsg],
+        }))
       }
-      setSession(prev => ({
-        ...prev,
-        messages: [...prev.messages, fallbackMsg],
-      }))
     } finally {
       setSending(false)
     }
-  }, [session.ticketId, session.name, session.vehicle, session.phone, session.vin, sending, setSession])
+  }, [session.ticketId, session.ticketCreated, session.name, session.vehicle, session.phone, session.vin, sending, setSession])
+
+  const handleQuickOption = (text: string) => {
+    sendMessage(text)
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -597,6 +623,22 @@ function LiveChat({
             </div>
           </div>
         ))}
+
+        {/* Quick option buttons — shown before first message */}
+        {showQuickOptions && (
+          <div className="flex flex-col gap-2 pt-1">
+            {QUICK_OPTIONS.map((opt) => (
+              <button
+                key={opt.id}
+                onClick={() => handleQuickOption(opt.label)}
+                disabled={sending}
+                className="text-left text-sm px-3 py-2 bg-white border border-green-200 text-green-700 rounded-xl hover:bg-green-50 hover:border-green-400 transition-colors disabled:opacity-50"
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Typing indicator */}
         {sending && (
