@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Image from 'next/image'
-import { X, Search, Loader2, ChevronRight, Car, ArrowUpDown, Plus } from 'lucide-react'
+import { X, Search, Loader2, ChevronRight, Car, ArrowUpDown, Plus, Zap } from 'lucide-react'
 import { parseModelYear, cleanModelName } from '@/lib/vehicle'
+import { fetchVehicleSpecs } from '@/lib/api'
+import type { VehicleSpecRow } from '@/types/api'
 
 interface VehicleModel {
   key: string
@@ -29,6 +31,7 @@ interface AddVehicleModalProps {
     generation_name: string
     year?: number
     nickname?: string
+    spec_id?: number
   }) => Promise<void>
 }
 
@@ -64,6 +67,11 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const searchRef = useRef<HTMLInputElement>(null)
+
+  // Modification step
+  const [pendingModel, setPendingModel] = useState<VehicleModel | null>(null)
+  const [modifications, setModifications] = useState<VehicleSpecRow[]>([])
+  const [modsLoading, setModsLoading] = useState(false)
 
   // Load vehicle tree
   useEffect(() => {
@@ -120,7 +128,30 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
   const handleModelSelect = async (model: VehicleModel) => {
     if (!activeBrand || isSubmitting) return
     setError('')
+    setPendingModel(model)
+    setModsLoading(true)
+    setModifications([])
+    try {
+      const genName = cleanModelName(model.name)
+      const year = parseModelYear(model.name)
+      const res = await fetchVehicleSpecs(brandToSlug(activeBrand), genName, year > 0 ? year : undefined)
+      if (res.specs.length > 1) {
+        setModifications(res.specs)
+        setModsLoading(false)
+        return // Show modification picker
+      }
+      // 0 or 1 result → add directly
+      await addVehicle(model, res.specs.length === 1 ? res.specs[0].id : undefined)
+    } catch {
+      // Specs failed → add without spec_id
+      await addVehicle(model, undefined)
+    }
+  }
+
+  const addVehicle = async (model: VehicleModel, specId?: number) => {
+    if (!activeBrand) return
     setIsSubmitting(true)
+    setError('')
     try {
       const year = parseModelYear(model.name)
       await onAdd({
@@ -129,13 +160,24 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
         generation_slug: model.slug,
         generation_name: cleanModelName(model.name),
         year: year > 0 ? year : undefined,
+        spec_id: specId,
       })
       handleClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Araç eklenemedi')
+      setError(err instanceof Error ? err.message : 'Arac eklenemedi')
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleModificationSelect = async (spec: VehicleSpecRow) => {
+    if (!pendingModel) return
+    await addVehicle(pendingModel, spec.id)
+  }
+
+  const handleSkipModification = async () => {
+    if (!pendingModel) return
+    await addVehicle(pendingModel, undefined)
   }
 
   const handleClose = () => {
@@ -145,6 +187,9 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
     setSortOrder('oldest')
     setError('')
     setIsSubmitting(false)
+    setPendingModel(null)
+    setModifications([])
+    setModsLoading(false)
     onClose()
   }
 
@@ -329,7 +374,56 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
 
             {/* ── Right Panel - Models ── */}
             <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
-              {activeBrand && activeBrandData ? (
+              {/* Modification picker overlay */}
+            {pendingModel && (modifications.length > 0 || modsLoading) ? (
+              <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+                <div className="shrink-0 border-b border-gray-200 px-5 pt-4 pb-3">
+                  <button
+                    onClick={() => { setPendingModel(null); setModifications([]); setModsLoading(false) }}
+                    className="text-xs text-primary-500 hover:text-primary-600 mb-2 flex items-center gap-1"
+                  >
+                    &larr; Modele don
+                  </button>
+                  <h3 className="text-gray-900 font-semibold text-[15px]">Motor Varyantini Secin</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">{cleanModelName(pendingModel.name)} icin {modifications.length} varyant bulundu</p>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4">
+                  {modsLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                      <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {modifications.map((spec) => (
+                        <button
+                          key={spec.id}
+                          onClick={() => handleModificationSelect(spec)}
+                          className="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-primary-400 hover:bg-primary-50/50 transition-all group"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600">{spec.modification}</span>
+                            <Zap className="w-4 h-4 text-gray-300 group-hover:text-primary-400" />
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1.5 text-[11px] text-gray-500">
+                            {spec.power_hp && <span>{spec.power_hp} HP</span>}
+                            {spec.torque_nm && <span>{spec.torque_nm} Nm</span>}
+                            {spec.engine_cc && <span>{spec.engine_cc} cc</span>}
+                            {spec.fuel_type && <span>{spec.fuel_type}</span>}
+                            {spec.transmission && <span className="truncate max-w-[140px]">{spec.transmission}</span>}
+                          </div>
+                        </button>
+                      ))}
+                      <button
+                        onClick={handleSkipModification}
+                        className="w-full text-center py-3 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        Motor secmeden devam et &rarr;
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : activeBrand && activeBrandData ? (
                 <>
                   {/* Brand Header */}
                   <div className="shrink-0 border-b border-gray-200">

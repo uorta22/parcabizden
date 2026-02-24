@@ -42,6 +42,7 @@ export default function GarajPage() {
     generation_name: string
     year?: number
     nickname?: string
+    spec_id?: number
   }) => {
     await garageAdd(data)
     const updated = await garageList()

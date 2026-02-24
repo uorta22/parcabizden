@@ -61,6 +61,7 @@ switch ($action) {
     case 'maintenance_add':    handle_maintenance_add($pdo); break;
     case 'maintenance_update': handle_maintenance_update($pdo); break;
     case 'maintenance_remove': handle_maintenance_remove($pdo); break;
+    case 'vehicle_specs': handle_vehicle_specs($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
@@ -404,6 +405,114 @@ function handle_chat_messages($pdo) {
     echo json_encode(['messages' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
 }
 
+// ==================== Vehicle Specs Handler ====================
+
+function handle_vehicle_specs($pdo) {
+    $brand_slug = trim($_GET['brand'] ?? '');
+    if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
+
+    $generation = trim($_GET['generation'] ?? '');
+    $year = isset($_GET['year']) && $_GET['year'] !== '' ? intval($_GET['year']) : null;
+    $model_filter = trim($_GET['model'] ?? '');
+
+    // Brand slug → autodata brand name map
+    $brand_map = [
+        'audi' => 'Audi', 'bmw' => 'BMW', 'volkswagen' => 'Volkswagen',
+        'mercedes-benz' => 'Mercedes-Benz', 'skoda' => 'Skoda', 'seat' => 'SEAT',
+        'porsche' => 'Porsche', 'volvo' => 'Volvo', 'toyota' => 'Toyota',
+        'nissan' => 'Nissan', 'honda' => 'Honda', 'hyundai' => 'Hyundai',
+        'kia' => 'Kia', 'ford' => 'Ford', 'renault' => 'Renault',
+        'peugeot' => 'Peugeot', 'citroen' => 'Citroen', 'fiat' => 'Fiat',
+        'opel' => 'Opel', 'mazda' => 'Mazda', 'subaru' => 'Subaru',
+        'suzuki' => 'Suzuki', 'mitsubishi' => 'Mitsubishi', 'chevrolet' => 'Chevrolet',
+        'dacia' => 'Dacia', 'mini' => 'MINI', 'alfa-romeo' => 'Alfa Romeo',
+        'land-rover' => 'Land Rover', 'jaguar' => 'Jaguar', 'lexus' => 'Lexus',
+        'infiniti' => 'Infiniti', 'cupra' => 'Cupra', 'ds' => 'DS',
+        'genesis' => 'Genesis', 'tesla' => 'Tesla', 'ferrari' => 'Ferrari',
+        'lamborghini' => 'Lamborghini', 'maserati' => 'Maserati',
+        'bentley' => 'Bentley', 'aston-martin' => 'Aston Martin',
+        'rolls-royce' => 'Rolls-Royce', 'bugatti' => 'Bugatti',
+    ];
+
+    $brand_name = isset($brand_map[$brand_slug]) ? $brand_map[$brand_slug] : ucfirst($brand_slug);
+
+    // Build query
+    $where = ['brand = :brand'];
+    $params = [':brand' => $brand_name];
+
+    // Generation fuzzy match: extract platform code from generation string
+    if ($generation) {
+        // Extract platform codes like E90, F30, W205, 312, etc. from parentheses or the string itself
+        $platform_code = null;
+        if (preg_match('/\b([A-Z]\d{1,3}[A-Z]?)\b/i', $generation, $m)) {
+            $platform_code = strtoupper($m[1]);
+        }
+
+        if ($platform_code) {
+            $where[] = 'generation LIKE :gen_pattern';
+            $params[':gen_pattern'] = '%' . $platform_code . '%';
+        } else {
+            // Try direct substring match
+            $where[] = 'generation LIKE :gen_pattern';
+            $params[':gen_pattern'] = '%' . $generation . '%';
+        }
+    }
+
+    if ($model_filter) {
+        $where[] = 'model LIKE :model_pattern';
+        $params[':model_pattern'] = '%' . $model_filter . '%';
+    }
+
+    if ($year) {
+        $where[] = '(year_start <= :year AND (year_end IS NULL OR year_end >= :year2))';
+        $params[':year'] = $year;
+        $params[':year2'] = $year;
+    }
+
+    $sql = 'SELECT id, brand, model, generation, modification, year_start, year_end, body_type, fuel_type, engine_cc, cylinders, power_hp, torque_nm, transmission, drivetrain, top_speed_kmh, accel_0_100, fuel_combined, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, fuel_tank_liters, doors, seats FROM vehicle_specs WHERE ' . implode(' AND ', $where) . ' ORDER BY model, generation, modification LIMIT 200';
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $specs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Cast numeric fields
+        foreach ($specs as &$s) {
+            $s['id'] = (int)$s['id'];
+            $s['year_start'] = $s['year_start'] !== null ? (int)$s['year_start'] : null;
+            $s['year_end'] = $s['year_end'] !== null ? (int)$s['year_end'] : null;
+            $s['engine_cc'] = $s['engine_cc'] !== null ? (int)$s['engine_cc'] : null;
+            $s['cylinders'] = $s['cylinders'] !== null ? (int)$s['cylinders'] : null;
+            $s['power_hp'] = $s['power_hp'] !== null ? (float)$s['power_hp'] : null;
+            $s['torque_nm'] = $s['torque_nm'] !== null ? (float)$s['torque_nm'] : null;
+            $s['top_speed_kmh'] = $s['top_speed_kmh'] !== null ? (float)$s['top_speed_kmh'] : null;
+            $s['accel_0_100'] = $s['accel_0_100'] !== null ? (float)$s['accel_0_100'] : null;
+            $s['fuel_combined'] = $s['fuel_combined'] !== null ? (float)$s['fuel_combined'] : null;
+            $s['length_mm'] = $s['length_mm'] !== null ? (int)$s['length_mm'] : null;
+            $s['width_mm'] = $s['width_mm'] !== null ? (int)$s['width_mm'] : null;
+            $s['height_mm'] = $s['height_mm'] !== null ? (int)$s['height_mm'] : null;
+            $s['wheelbase_mm'] = $s['wheelbase_mm'] !== null ? (int)$s['wheelbase_mm'] : null;
+            $s['weight_kg'] = $s['weight_kg'] !== null ? (float)$s['weight_kg'] : null;
+            $s['trunk_liters'] = $s['trunk_liters'] !== null ? (float)$s['trunk_liters'] : null;
+            $s['fuel_tank_liters'] = $s['fuel_tank_liters'] !== null ? (float)$s['fuel_tank_liters'] : null;
+            $s['doors'] = $s['doors'] !== null ? (int)$s['doors'] : null;
+            $s['seats'] = $s['seats'] !== null ? (int)$s['seats'] : null;
+        }
+
+        // Also fetch distinct models+generations for this brand (for the picker)
+        $models_sql = 'SELECT DISTINCT model, generation, COUNT(*) as mod_count FROM vehicle_specs WHERE brand = :brand GROUP BY model, generation ORDER BY model, generation';
+        $mstmt = $pdo->prepare($models_sql);
+        $mstmt->execute([':brand' => $brand_name]);
+        $models = $mstmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($models as &$m) { $m['mod_count'] = (int)$m['mod_count']; }
+
+        echo json_encode(['specs' => $specs, 'models' => $models, 'brand' => $brand_name]);
+    } catch (PDOException $e) {
+        // Table might not exist yet
+        echo json_encode(['specs' => [], 'models' => [], 'brand' => $brand_name, 'note' => 'vehicle_specs tablosu henuz yuklu degil']);
+    }
+}
+
 // ==================== JWT Functions ====================
 
 function base64url_encode($data) {
@@ -445,7 +554,7 @@ function handle_garage_list($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
+        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, spec_id, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
         $stmt->execute([$user_id]);
         $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -454,6 +563,7 @@ function handle_garage_list($pdo) {
             $v['id'] = (int)$v['id'];
             $v['year'] = $v['year'] !== null ? (int)$v['year'] : null;
             $v['current_km'] = $v['current_km'] !== null ? (int)$v['current_km'] : null;
+            $v['spec_id'] = $v['spec_id'] !== null ? (int)$v['spec_id'] : null;
 
             // Count maintenance stats
             $mstmt = $pdo->prepare('SELECT next_km, next_date FROM vehicle_maintenance WHERE garage_id = ? AND user_id = ?');
@@ -509,8 +619,10 @@ function handle_garage_add($pdo) {
             return;
         }
 
-        $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null]);
+        $spec_id = isset($_POST['spec_id']) && $_POST['spec_id'] !== '' ? intval($_POST['spec_id']) : null;
+
+        $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, spec_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null, $spec_id]);
         $new_id = (int)$pdo->lastInsertId();
 
         echo json_encode(['success' => true, 'id' => $new_id]);

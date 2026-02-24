@@ -6,14 +6,14 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ChevronRight, Car, Search, MessageCircle, Wrench, Plus,
-  Gauge, StickyNote, Pencil, Trash2, Save,
+  Gauge, StickyNote, Pencil, Trash2, Save, Cog, ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import MaintenanceForm from '@/components/MaintenanceForm'
-import type { GarageVehicleNatro, MaintenanceRecord } from '@/types/api'
+import type { GarageVehicleNatro, MaintenanceRecord, VehicleSpecRow } from '@/types/api'
 import {
   garageList, garageUpdate, maintenanceList, maintenanceAdd,
-  maintenanceUpdate, maintenanceRemove,
+  maintenanceUpdate, maintenanceRemove, fetchVehicleSpecs,
 } from '@/lib/api'
 import {
   getMaintenanceStatus, getStatusColor, getStatusLabel,
@@ -43,6 +43,12 @@ export default function GarageDetailPage() {
   const [nicknameValue, setNicknameValue] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Vehicle specs
+  const [specs, setSpecs] = useState<VehicleSpecRow[]>([])
+  const [selectedSpec, setSelectedSpec] = useState<VehicleSpecRow | null>(null)
+  const [specsLoading, setSpecsLoading] = useState(false)
+  const [showSpecPicker, setShowSpecPicker] = useState(false)
+
   // Maintenance form
   const [showForm, setShowForm] = useState(false)
   const [editRecord, setEditRecord] = useState<MaintenanceRecord | null>(null)
@@ -66,6 +72,28 @@ export default function GarageDetailPage() {
 
       const mRes = await maintenanceList(garageId)
       setRecords(mRes.records)
+
+      // Load vehicle specs
+      setSpecsLoading(true)
+      try {
+        // Extract platform code from generation_name for better matching
+        const genName = v.generation_name
+        const res = await fetchVehicleSpecs(v.brand_slug, genName, v.year ?? undefined)
+        if (res.specs.length > 0) {
+          setSpecs(res.specs)
+          // If vehicle has spec_id, find it; otherwise select first
+          if (v.spec_id) {
+            const matched = res.specs.find(s => s.id === v.spec_id)
+            setSelectedSpec(matched || res.specs[0])
+          } else {
+            setSelectedSpec(res.specs[0])
+          }
+        }
+      } catch {
+        // Specs not available, that's ok
+      } finally {
+        setSpecsLoading(false)
+      }
     } catch {
       router.push('/garaj')
     } finally {
@@ -245,6 +273,155 @@ export default function GarageDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Teknik Özellikler Section */}
+        {(specsLoading || specs.length > 0) && (
+          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Cog className="w-5 h-5 text-gray-400" /> Teknik Ozellikler
+              </h2>
+              {specs.length > 1 && (
+                <button
+                  onClick={() => setShowSpecPicker(!showSpecPicker)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
+                >
+                  <span className="truncate max-w-[200px]">{selectedSpec?.modification || 'Motor secin'}</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSpecPicker ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </div>
+
+            {/* Modification Picker */}
+            {showSpecPicker && specs.length > 1 && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500 mb-2">Motor varyantini secin:</p>
+                <div className="flex flex-wrap gap-2">
+                  {specs.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => { setSelectedSpec(s); setShowSpecPicker(false) }}
+                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                        selectedSpec?.id === s.id
+                          ? 'bg-primary-500 text-white'
+                          : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-300'
+                      }`}
+                    >
+                      {s.modification}
+                      {s.power_hp && <span className="ml-1 opacity-75">({s.power_hp} HP)</span>}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {specsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : selectedSpec ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {selectedSpec.engine_cc && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Motor</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selectedSpec.engine_cc} cc
+                      {selectedSpec.cylinders && <span className="text-gray-500 font-normal"> / {selectedSpec.cylinders} silindir</span>}
+                    </p>
+                  </div>
+                )}
+                {selectedSpec.power_hp && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Guc</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.power_hp} HP</p>
+                  </div>
+                )}
+                {selectedSpec.torque_nm && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Tork</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.torque_nm} Nm</p>
+                  </div>
+                )}
+                {selectedSpec.fuel_type && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Yakit</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.fuel_type}</p>
+                  </div>
+                )}
+                {selectedSpec.transmission && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Sanziman</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate" title={selectedSpec.transmission}>{selectedSpec.transmission}</p>
+                  </div>
+                )}
+                {selectedSpec.drivetrain && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cekis</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate" title={selectedSpec.drivetrain}>{selectedSpec.drivetrain}</p>
+                  </div>
+                )}
+                {selectedSpec.accel_0_100 && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">0-100 km/s</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.accel_0_100} sn</p>
+                  </div>
+                )}
+                {selectedSpec.top_speed_kmh && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Max Hiz</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.top_speed_kmh} km/s</p>
+                  </div>
+                )}
+                {selectedSpec.fuel_combined && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Yakit Tuketimi</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.fuel_combined} L/100km</p>
+                  </div>
+                )}
+                {(selectedSpec.length_mm || selectedSpec.width_mm || selectedSpec.height_mm) && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Boyutlar (U×G×Y)</p>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {selectedSpec.length_mm || '—'}×{selectedSpec.width_mm || '—'}×{selectedSpec.height_mm || '—'} mm
+                    </p>
+                  </div>
+                )}
+                {selectedSpec.wheelbase_mm && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Aks Araligi</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.wheelbase_mm} mm</p>
+                  </div>
+                )}
+                {selectedSpec.weight_kg && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Agirlik</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.weight_kg} kg</p>
+                  </div>
+                )}
+                {selectedSpec.trunk_liters && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Bagaj</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.trunk_liters} L</p>
+                  </div>
+                )}
+                {selectedSpec.fuel_tank_liters && (
+                  <div className="p-3 bg-gray-50 rounded-lg">
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Yakit Deposu</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.fuel_tank_liters} L</p>
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {selectedSpec && (
+              <p className="text-[10px] text-gray-400 mt-3">
+                {selectedSpec.model} {selectedSpec.generation}
+                {selectedSpec.year_start && ` (${selectedSpec.year_start}${selectedSpec.year_end ? `–${selectedSpec.year_end}` : '–'})`}
+                {' '}&middot; Kaynak: auto-data.net
+              </p>
+            )}
+          </div>
+        )}
 
         {/* KM Section */}
         <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">

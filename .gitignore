@@ -45,3 +45,7 @@ out.zip
 # API temp files
 /api/tmp/rate_limits/
 /api/tmp/
+
+# Autodata temp files
+_autodata_temp/
+public/data/vehicle_specs_import.sql

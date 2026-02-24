@@ -8,6 +8,8 @@ import type {
   GarageVehicleNatro,
   MaintenanceRecord,
   User,
+  VehicleSpecRow,
+  VehicleSpecModel,
 } from '@/types/api'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -129,6 +131,7 @@ export async function garageAdd(data: {
   generation_name: string
   year?: number
   nickname?: string
+  spec_id?: number
 }): Promise<{ success: boolean; id?: number }> {
   const params: Record<string, string> = {
     action: 'garage_add',
@@ -139,6 +142,7 @@ export async function garageAdd(data: {
   }
   if (data.year) params.year = String(data.year)
   if (data.nickname) params.nickname = data.nickname
+  if (data.spec_id) params.spec_id = String(data.spec_id)
   return actionPost<{ success: boolean; id?: number }>(params)
 }
 
@@ -313,4 +317,14 @@ export function searchOemParts(query: string) {
   return actionFetch<{ results: OemSearchResult[]; query: string }>({
     action: 'search_oem', q: query,
   })
+}
+
+// ==================== Vehicle Specs (Autodata) ====================
+
+export function fetchVehicleSpecs(brand: string, generation?: string, year?: number, model?: string) {
+  const params: Record<string, string> = { action: 'vehicle_specs', brand }
+  if (generation) params.generation = generation
+  if (year) params.year = String(year)
+  if (model) params.model = model
+  return actionFetch<{ specs: VehicleSpecRow[]; models: VehicleSpecModel[]; brand: string }>(params)
 }

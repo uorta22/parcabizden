@@ -74,6 +74,7 @@ export interface GarageVehicleNatro {
   current_km: number | null
   km_updated_at: string | null
   notes: string | null
+  spec_id: number | null
   overdue_count: number
   upcoming_count: number
   total_maintenance: number
@@ -90,6 +91,42 @@ export interface MaintenanceRecord {
   next_date: string | null
   notes: string | null
   created_at: string
+}
+
+export interface VehicleSpecRow {
+  id: number
+  brand: string
+  model: string
+  generation: string
+  modification: string
+  year_start: number | null
+  year_end: number | null
+  body_type: string | null
+  fuel_type: string | null
+  engine_cc: number | null
+  cylinders: number | null
+  power_hp: number | null
+  torque_nm: number | null
+  transmission: string | null
+  drivetrain: string | null
+  top_speed_kmh: number | null
+  accel_0_100: number | null
+  fuel_combined: number | null
+  length_mm: number | null
+  width_mm: number | null
+  height_mm: number | null
+  wheelbase_mm: number | null
+  weight_kg: number | null
+  trunk_liters: number | null
+  fuel_tank_liters: number | null
+  doors: number | null
+  seats: number | null
+}
+
+export interface VehicleSpecModel {
+  model: string
+  generation: string
+  mod_count: number
 }
 
 export interface Pagination {
