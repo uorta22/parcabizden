@@ -89,8 +89,8 @@ export default function GarageDetailPage() {
             setSelectedSpec(res.specs[0])
           }
         }
-      } catch {
-        // Specs not available, that's ok
+      } catch (err) {
+        console.warn('[VehicleSpecs] Yüklenemedi:', err, { brand: v.brand_slug, gen: v.generation_name, year: v.year })
       } finally {
         setSpecsLoading(false)
       }
@@ -272,6 +272,12 @@ export default function GarageDetailPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* DEBUG: Specs durumu */}
+        <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-3 mb-4 text-xs text-yellow-800">
+          <b>DEBUG:</b> brand={vehicle.brand_slug}, gen={vehicle.generation_name}, year={vehicle.year ?? 'null'},
+          specsLoading={String(specsLoading)}, specs.length={specs.length}, selectedSpec={selectedSpec?.modification ?? 'null'}
         </div>
 
         {/* Teknik Özellikler Section */}
