@@ -122,6 +122,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   const [view, setView] = useState<View>('categories')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [fallbackToGenerations, setFallbackToGenerations] = useState(false)
 
   // Data
   const [apiCategories, setApiCategories] = useState<VehicleCategory[]>([])
@@ -180,8 +181,14 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   useEffect(() => {
     setLoading(true)
     setError('')
+    setFallbackToGenerations(false)
     fetchVehicleCategories(brand, gen)
       .then(data => {
+        if (data.total_parts === 0 || data.categories.length === 0) {
+          // Slug mismatch — vehicle-tree slug doesn't match DB slug, fallback to generation picker
+          setFallbackToGenerations(true)
+          return
+        }
         setApiCategories(data.categories)
         setTotalParts(data.total_parts)
 
@@ -228,6 +235,11 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   const filteredParts = parts.filter(p => !partSearch || p.name.toLowerCase().includes(partSearch.toLowerCase()) || p.oem_number.toLowerCase().includes(partSearch.toLowerCase()))
   const paginatedParts = filteredParts.slice(0, partsPage * PARTS_PER_PAGE)
   const remainingParts = filteredParts.length - paginatedParts.length
+
+  // If generation slug doesn't match DB, fallback to generation picker
+  if (fallbackToGenerations) {
+    return <GenerationPicker brand={brand} marka={marka} modelName={modelName} />
+  }
 
   return (
     <>
