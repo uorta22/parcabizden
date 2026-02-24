@@ -76,12 +76,17 @@ export default function GarageDetailPage() {
       // Load vehicle specs
       setSpecsLoading(true)
       try {
-        // Extract platform code from generation_name for better matching
         const genName = v.generation_name
-        const res = await fetchVehicleSpecs(v.brand_slug, genName, v.year ?? undefined)
+        // Extract model name: "Octavia (NX3)" → "Octavia"
+        const modelName = genName.replace(/\s*\(.*$/, '').trim()
+
+        // Try with generation first, fallback to model-only
+        let res = await fetchVehicleSpecs(v.brand_slug, genName, v.year ?? undefined)
+        if (res.specs.length === 0 && modelName) {
+          res = await fetchVehicleSpecs(v.brand_slug, undefined, v.year ?? undefined, modelName)
+        }
         if (res.specs.length > 0) {
           setSpecs(res.specs)
-          // If vehicle has spec_id, find it; otherwise select first
           if (v.spec_id) {
             const matched = res.specs.find(s => s.id === v.spec_id)
             setSelectedSpec(matched || res.specs[0])
@@ -89,8 +94,8 @@ export default function GarageDetailPage() {
             setSelectedSpec(res.specs[0])
           }
         }
-      } catch (err) {
-        console.warn('[VehicleSpecs] Yüklenemedi:', err, { brand: v.brand_slug, gen: v.generation_name, year: v.year })
+      } catch {
+        // Specs not available
       } finally {
         setSpecsLoading(false)
       }

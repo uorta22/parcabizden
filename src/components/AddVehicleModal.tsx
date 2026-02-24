@@ -133,8 +133,13 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
     setModifications([])
     try {
       const genName = cleanModelName(model.name)
+      const modelName = genName.replace(/\s*\(.*$/, '').trim()
       const year = parseModelYear(model.name)
-      const res = await fetchVehicleSpecs(brandToSlug(activeBrand), genName, year > 0 ? year : undefined)
+      const slug = brandToSlug(activeBrand)
+      let res = await fetchVehicleSpecs(slug, genName, year > 0 ? year : undefined)
+      if (res.specs.length === 0 && modelName) {
+        res = await fetchVehicleSpecs(slug, undefined, year > 0 ? year : undefined, modelName)
+      }
       if (res.specs.length > 1) {
         setModifications(res.specs)
         setModsLoading(false)
