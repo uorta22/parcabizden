@@ -440,21 +440,36 @@ function handle_vehicle_specs($pdo) {
     $where = ['brand = :brand'];
     $params = [':brand' => $brand_name];
 
-    // Generation fuzzy match: extract platform code from generation string
+    // Generation fuzzy match — multi-strategy
     if ($generation) {
-        // Extract platform codes like E90, F30, W205, 312, etc. from parentheses or the string itself
+        // 1. Extract model name (text before parenthesis): "Octavia (NX3)" → "Octavia"
+        $model_name = trim(preg_replace('/\s*\(.*$/', '', $generation));
+
+        // 2. Extract platform code from parentheses: "(E90)" → "E90", "(NX3)" → "NX3"
         $platform_code = null;
-        if (preg_match('/\b([A-Z]\d{1,3}[A-Z]?)\b/i', $generation, $m)) {
+        if (preg_match('/\(([A-Z0-9]+)\)/i', $generation, $m)) {
             $platform_code = strtoupper($m[1]);
         }
 
+        // 3. Try platform code in autodata generation first
+        $gen_conditions = [];
         if ($platform_code) {
-            $where[] = 'generation LIKE :gen_pattern';
-            $params[':gen_pattern'] = '%' . $platform_code . '%';
-        } else {
-            // Try direct substring match
-            $where[] = 'generation LIKE :gen_pattern';
-            $params[':gen_pattern'] = '%' . $generation . '%';
+            $gen_conditions[] = 'generation LIKE :gen_platform';
+            $params[':gen_platform'] = '%' . $platform_code . '%';
+        }
+
+        // 4. Also try model name match (most reliable fallback)
+        if ($model_name) {
+            $gen_conditions[] = 'model LIKE :gen_model';
+            $params[':gen_model'] = '%' . $model_name . '%';
+        }
+
+        // 5. Also try full generation string
+        $gen_conditions[] = 'generation LIKE :gen_full';
+        $params[':gen_full'] = '%' . $generation . '%';
+
+        if (!empty($gen_conditions)) {
+            $where[] = '(' . implode(' OR ', $gen_conditions) . ')';
         }
     }
 

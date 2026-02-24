@@ -274,12 +274,6 @@ export default function GarageDetailPage() {
           </div>
         </div>
 
-        {/* DEBUG: Specs durumu */}
-        <div className="bg-yellow-50 border border-yellow-300 rounded-xl p-3 mb-4 text-xs text-yellow-800">
-          <b>DEBUG:</b> brand={vehicle.brand_slug}, gen={vehicle.generation_name}, year={vehicle.year ?? 'null'},
-          specsLoading={String(specsLoading)}, specs.length={specs.length}, selectedSpec={selectedSpec?.modification ?? 'null'}
-        </div>
-
         {/* Teknik Özellikler Section */}
         {(specsLoading || specs.length > 0) && (
           <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
