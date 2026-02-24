@@ -62,6 +62,10 @@ switch ($action) {
     case 'maintenance_update': handle_maintenance_update($pdo); break;
     case 'maintenance_remove': handle_maintenance_remove($pdo); break;
     case 'vehicle_specs': handle_vehicle_specs($pdo); break;
+    case 'autodata_brands':     handle_autodata_brands($pdo); break;
+    case 'autodata_models':     handle_autodata_models($pdo); break;
+    case 'autodata_generations': handle_autodata_generations($pdo); break;
+    case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
@@ -408,6 +412,33 @@ function handle_chat_messages($pdo) {
 // ==================== Vehicle Specs Handler ====================
 
 function handle_vehicle_specs($pdo) {
+    // Direct ID lookup — fastest path when spec_id is known
+    $spec_id = isset($_GET['spec_id']) && $_GET['spec_id'] !== '' ? intval($_GET['spec_id']) : null;
+    if ($spec_id) {
+        try {
+            $stmt = $pdo->prepare('SELECT id, brand, model, generation, modification, year_start, year_end, body_type, fuel_type, engine_cc, cylinders, power_hp, torque_nm, transmission, drivetrain, top_speed_kmh, accel_0_100, fuel_combined, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, fuel_tank_liters, doors, seats FROM vehicle_specs WHERE id = :id');
+            $stmt->execute([':id' => $spec_id]);
+            $spec = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($spec) {
+                $spec['id'] = (int)$spec['id'];
+                foreach (['year_start','year_end','engine_cc','cylinders','length_mm','width_mm','height_mm','wheelbase_mm','doors','seats'] as $k) { $spec[$k] = $spec[$k] !== null ? (int)$spec[$k] : null; }
+                foreach (['power_hp','torque_nm','top_speed_kmh','accel_0_100','fuel_combined','weight_kg','trunk_liters','fuel_tank_liters'] as $k) { $spec[$k] = $spec[$k] !== null ? (float)$spec[$k] : null; }
+
+                // Also fetch sibling specs (same brand+model+generation)
+                $siblings = $pdo->prepare('SELECT id, brand, model, generation, modification, year_start, year_end, body_type, fuel_type, engine_cc, cylinders, power_hp, torque_nm, transmission, drivetrain, top_speed_kmh, accel_0_100, fuel_combined, length_mm, width_mm, height_mm, wheelbase_mm, weight_kg, trunk_liters, fuel_tank_liters, doors, seats FROM vehicle_specs WHERE brand = :brand AND model = :model AND generation = :gen ORDER BY modification');
+                $siblings->execute([':brand' => $spec['brand'], ':model' => $spec['model'], ':gen' => $spec['generation']]);
+                $all_specs = $siblings->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($all_specs as &$s) {
+                    $s['id'] = (int)$s['id'];
+                    foreach (['year_start','year_end','engine_cc','cylinders','length_mm','width_mm','height_mm','wheelbase_mm','doors','seats'] as $k) { $s[$k] = $s[$k] !== null ? (int)$s[$k] : null; }
+                    foreach (['power_hp','torque_nm','top_speed_kmh','accel_0_100','fuel_combined','weight_kg','trunk_liters','fuel_tank_liters'] as $k) { $s[$k] = $s[$k] !== null ? (float)$s[$k] : null; }
+                }
+                echo json_encode(['specs' => $all_specs, 'models' => [], 'brand' => $spec['brand']]);
+                return;
+            }
+        } catch (PDOException $e) {}
+    }
+
     $brand_slug = trim($_GET['brand'] ?? '');
     if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
 
@@ -525,6 +556,204 @@ function handle_vehicle_specs($pdo) {
     } catch (PDOException $e) {
         // Table might not exist yet
         echo json_encode(['specs' => [], 'models' => [], 'brand' => $brand_name, 'note' => 'vehicle_specs tablosu henuz yuklu degil']);
+    }
+}
+
+// ==================== Autodata Handlers ====================
+
+function handle_autodata_brands($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT brand, COUNT(DISTINCT model) as model_count, COUNT(*) as total FROM vehicle_specs GROUP BY brand ORDER BY brand");
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $brands = [];
+        foreach ($rows as $r) {
+            $slug = strtolower(trim($r['brand']));
+            $slug = preg_replace('/\s+/', '-', $slug);
+            $brands[] = [
+                'name' => $r['brand'],
+                'slug' => $slug,
+                'model_count' => (int)$r['model_count'],
+                'total' => (int)$r['total'],
+            ];
+        }
+        echo json_encode(['brands' => $brands]);
+    } catch (PDOException $e) {
+        echo json_encode(['brands' => [], 'error' => 'vehicle_specs tablosu bulunamadi']);
+    }
+}
+
+function handle_autodata_models($pdo) {
+    $brand_slug = trim($_GET['brand'] ?? '');
+    if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
+
+    // Resolve brand slug to autodata brand name
+    $brand_name = autodata_resolve_brand_name($pdo, $brand_slug);
+    if (!$brand_name) { echo json_encode(['models' => []]); return; }
+
+    try {
+        $stmt = $pdo->prepare("SELECT DISTINCT model, COUNT(DISTINCT generation) as gen_count, MIN(year_start) as min_year, MAX(COALESCE(year_end, 2025)) as max_year FROM vehicle_specs WHERE brand = :brand GROUP BY model ORDER BY model");
+        $stmt->execute([':brand' => $brand_name]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $models = [];
+        foreach ($rows as $r) {
+            $models[] = [
+                'name' => $r['model'],
+                'gen_count' => (int)$r['gen_count'],
+                'min_year' => $r['min_year'] !== null ? (int)$r['min_year'] : null,
+                'max_year' => $r['max_year'] !== null ? (int)$r['max_year'] : null,
+            ];
+        }
+        echo json_encode(['models' => $models, 'brand' => $brand_name]);
+    } catch (PDOException $e) {
+        echo json_encode(['models' => []]);
+    }
+}
+
+function handle_autodata_generations($pdo) {
+    $brand_slug = trim($_GET['brand'] ?? '');
+    $model = trim($_GET['model'] ?? '');
+    if (!$brand_slug || !$model) { echo json_encode(['error' => 'brand ve model parametreleri gerekli']); return; }
+
+    $brand_name = autodata_resolve_brand_name($pdo, $brand_slug);
+    if (!$brand_name) { echo json_encode(['generations' => []]); return; }
+
+    try {
+        $stmt = $pdo->prepare("SELECT DISTINCT generation, MIN(year_start) as year_start, MAX(year_end) as year_end, body_type, COUNT(*) as mod_count FROM vehicle_specs WHERE brand = :brand AND model = :model GROUP BY generation, body_type ORDER BY MIN(year_start) DESC");
+        $stmt->execute([':brand' => $brand_name, ':model' => $model]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $generations = [];
+        foreach ($rows as $r) {
+            $generations[] = [
+                'name' => $r['generation'],
+                'year_start' => $r['year_start'] !== null ? (int)$r['year_start'] : null,
+                'year_end' => $r['year_end'] !== null ? (int)$r['year_end'] : null,
+                'body_type' => $r['body_type'],
+                'mod_count' => (int)$r['mod_count'],
+            ];
+        }
+        echo json_encode(['generations' => $generations]);
+    } catch (PDOException $e) {
+        echo json_encode(['generations' => []]);
+    }
+}
+
+function handle_autodata_resolve_slug($pdo) {
+    $brand_slug = trim($_GET['brand'] ?? '');
+    $model = trim($_GET['model'] ?? '');
+    $generation = trim($_GET['generation'] ?? '');
+    if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
+
+    // Get all generation slugs for this brand from parts DB
+    try {
+        $stmt = $pdo->prepare("SELECT DISTINCT generation_slug, COUNT(DISTINCT oem_number) as part_count FROM parts WHERE brand_slug = :brand GROUP BY generation_slug");
+        $stmt->execute([':brand' => $brand_slug]);
+        $db_gens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        echo json_encode(['matches' => [], 'auto_selected' => null]);
+        return;
+    }
+
+    if (empty($db_gens)) {
+        echo json_encode(['matches' => [], 'auto_selected' => null]);
+        return;
+    }
+
+    // Extract platform code from generation: "3 Series (E90)" → "E90"
+    $platform_code = null;
+    if ($generation && preg_match('/\(([A-Z0-9]+)\)/i', $generation, $m)) {
+        $platform_code = strtoupper($m[1]);
+    }
+
+    // Extract model name from generation: "3 Series (E90)" → "3 Series"
+    $gen_model_name = $generation ? trim(preg_replace('/\s*\(.*$/', '', $generation)) : '';
+
+    // Normalize for matching
+    $model_lower = strtolower($model ?: $gen_model_name);
+    $model_slug = str_replace(' ', '-', $model_lower);
+
+    $matches = [];
+    foreach ($db_gens as $g) {
+        $slug = $g['generation_slug'];
+        $slug_lower = strtolower($slug);
+        $score = 0;
+
+        // Strategy 1: Platform code match (highest priority)
+        if ($platform_code && stripos($slug, $platform_code) !== false) {
+            $score += 100;
+        }
+
+        // Strategy 2: Model name match
+        if ($model_slug && (strpos($slug_lower, $model_slug) !== false || strpos($slug_lower, $model_lower) !== false)) {
+            $score += 50;
+        }
+
+        // Strategy 3: Partial model word match
+        if ($model_lower) {
+            $model_words = explode(' ', $model_lower);
+            foreach ($model_words as $word) {
+                if (strlen($word) >= 2 && strpos($slug_lower, strtolower(str_replace(' ', '-', $word))) !== false) {
+                    $score += 10;
+                }
+            }
+        }
+
+        if ($score > 0) {
+            $matches[] = [
+                'generation_slug' => $slug,
+                'generation_name' => format_gen_slug($slug),
+                'part_count' => (int)$g['part_count'],
+                'score' => $score,
+            ];
+        }
+    }
+
+    // Sort by score desc, then part_count desc
+    usort($matches, function($a, $b) {
+        if ($a['score'] !== $b['score']) return $b['score'] - $a['score'];
+        return $b['part_count'] - $a['part_count'];
+    });
+
+    // Remove score from output
+    $output = [];
+    foreach ($matches as $m) {
+        unset($m['score']);
+        $output[] = $m;
+    }
+
+    $auto_selected = !empty($output) ? $output[0]['generation_slug'] : null;
+    echo json_encode(['matches' => $output, 'auto_selected' => $auto_selected]);
+}
+
+function autodata_resolve_brand_name($pdo, $brand_slug) {
+    // Map of slug → autodata brand name
+    $brand_map = [
+        'audi' => 'Audi', 'bmw' => 'BMW', 'volkswagen' => 'Volkswagen',
+        'mercedes-benz' => 'Mercedes-Benz', 'skoda' => 'Skoda', 'seat' => 'SEAT',
+        'porsche' => 'Porsche', 'volvo' => 'Volvo', 'toyota' => 'Toyota',
+        'nissan' => 'Nissan', 'honda' => 'Honda', 'hyundai' => 'Hyundai',
+        'kia' => 'Kia', 'ford' => 'Ford', 'renault' => 'Renault',
+        'peugeot' => 'Peugeot', 'citroen' => 'Citroen', 'fiat' => 'Fiat',
+        'opel' => 'Opel', 'mazda' => 'Mazda', 'subaru' => 'Subaru',
+        'suzuki' => 'Suzuki', 'mitsubishi' => 'Mitsubishi', 'chevrolet' => 'Chevrolet',
+        'dacia' => 'Dacia', 'mini' => 'MINI', 'alfa-romeo' => 'Alfa Romeo',
+        'land-rover' => 'Land Rover', 'jaguar' => 'Jaguar', 'lexus' => 'Lexus',
+        'infiniti' => 'Infiniti', 'cupra' => 'Cupra', 'ds' => 'DS',
+        'genesis' => 'Genesis', 'tesla' => 'Tesla', 'ferrari' => 'Ferrari',
+        'lamborghini' => 'Lamborghini', 'maserati' => 'Maserati',
+        'bentley' => 'Bentley', 'aston-martin' => 'Aston Martin',
+        'rolls-royce' => 'Rolls-Royce', 'bugatti' => 'Bugatti',
+    ];
+
+    if (isset($brand_map[$brand_slug])) return $brand_map[$brand_slug];
+
+    // Fallback: try to find brand name from vehicle_specs directly
+    try {
+        $stmt = $pdo->prepare("SELECT DISTINCT brand FROM vehicle_specs WHERE LOWER(REPLACE(brand, ' ', '-')) = :slug LIMIT 1");
+        $stmt->execute([':slug' => $brand_slug]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row ? $row['brand'] : null;
+    } catch (PDOException $e) {
+        return ucfirst($brand_slug);
     }
 }
 

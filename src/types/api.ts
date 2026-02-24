@@ -129,6 +129,34 @@ export interface VehicleSpecModel {
   mod_count: number
 }
 
+export interface AutodataBrand {
+  name: string
+  slug: string
+  model_count: number
+  total: number
+}
+
+export interface AutodataModel {
+  name: string
+  gen_count: number
+  min_year: number | null
+  max_year: number | null
+}
+
+export interface AutodataGeneration {
+  name: string
+  year_start: number | null
+  year_end: number | null
+  body_type: string | null
+  mod_count: number
+}
+
+export interface SlugMatch {
+  generation_slug: string
+  generation_name: string
+  part_count: number
+}
+
 export interface Pagination {
   page: number
   limit: number

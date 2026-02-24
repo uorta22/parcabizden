@@ -10,6 +10,10 @@ import type {
   User,
   VehicleSpecRow,
   VehicleSpecModel,
+  AutodataBrand,
+  AutodataModel,
+  AutodataGeneration,
+  SlugMatch,
 } from '@/types/api'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -321,8 +325,31 @@ export function searchOemParts(query: string) {
 
 // ==================== Vehicle Specs (Autodata) ====================
 
-export function fetchVehicleSpecs(brand: string, generation?: string, year?: number, model?: string) {
+// ==================== Autodata Endpoints ====================
+
+export function fetchAutodataBrands() {
+  return actionFetch<{ brands: AutodataBrand[] }>({ action: 'autodata_brands' })
+}
+
+export function fetchAutodataModels(brandSlug: string) {
+  return actionFetch<{ models: AutodataModel[]; brand: string }>({ action: 'autodata_models', brand: brandSlug })
+}
+
+export function fetchAutodataGenerations(brandSlug: string, model: string) {
+  return actionFetch<{ generations: AutodataGeneration[] }>({ action: 'autodata_generations', brand: brandSlug, model })
+}
+
+export function resolveAutodataSlug(brandSlug: string, model: string, generation: string, year?: number) {
+  const params: Record<string, string> = { action: 'autodata_resolve_slug', brand: brandSlug, model, generation }
+  if (year) params.year = String(year)
+  return actionFetch<{ matches: SlugMatch[]; auto_selected: string | null }>(params)
+}
+
+// ==================== Vehicle Specs (Autodata) ====================
+
+export function fetchVehicleSpecs(brand: string, generation?: string, year?: number, model?: string, specId?: number) {
   const params: Record<string, string> = { action: 'vehicle_specs', brand }
+  if (specId) params.spec_id = String(specId)
   if (generation) params.generation = generation
   if (year) params.year = String(year)
   if (model) params.model = model

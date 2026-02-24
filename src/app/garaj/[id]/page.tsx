@@ -76,15 +76,23 @@ export default function GarageDetailPage() {
       // Load vehicle specs
       setSpecsLoading(true)
       try {
-        const genName = v.generation_name
-        // Extract model name: "Octavia (NX3)" → "Octavia"
-        const modelName = genName.replace(/\s*\(.*$/, '').trim()
+        let res: { specs: VehicleSpecRow[]; models: unknown[]; brand: string }
 
-        // Try with generation first, fallback to model-only
-        let res = await fetchVehicleSpecs(v.brand_slug, genName, v.year ?? undefined)
-        if (res.specs.length === 0 && modelName) {
-          res = await fetchVehicleSpecs(v.brand_slug, undefined, v.year ?? undefined, modelName)
+        if (v.spec_id) {
+          // Direct spec_id lookup — fastest, most accurate
+          res = await fetchVehicleSpecs(v.brand_slug, undefined, undefined, undefined, v.spec_id)
+        } else {
+          const genName = v.generation_name
+          // Extract model name: "Octavia (NX3)" → "Octavia"
+          const modelName = genName.replace(/\s*\(.*$/, '').trim()
+
+          // Try with generation first, fallback to model-only
+          res = await fetchVehicleSpecs(v.brand_slug, genName, v.year ?? undefined)
+          if (res.specs.length === 0 && modelName) {
+            res = await fetchVehicleSpecs(v.brand_slug, undefined, v.year ?? undefined, modelName)
+          }
         }
+
         if (res.specs.length > 0) {
           setSpecs(res.specs)
           if (v.spec_id) {

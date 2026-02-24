@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check } from 'lucide-react'
+import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, resolveAutodataSlug } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
+import type { AutodataGeneration, SlugMatch } from '@/types/api'
 import BrandPicker from '@/components/BrandPicker'
 
 // All 17 API categories with Turkish names (hardcoded — these don't change)
@@ -470,33 +471,88 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
 
 // ── Generation Picker (when brand is known but gen is missing) ──
 function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: string; modelName: string }) {
-  const [generations, setGenerations] = useState<Array<{ generation_slug: string; generation_name: string; part_count: number }>>([])
+  // Autodata generations (richer data)
+  const [autodataGens, setAutodataGens] = useState<AutodataGeneration[]>([])
+  // Fallback: parts DB generations
+  const [dbGenerations, setDbGenerations] = useState<Array<{ generation_slug: string; generation_name: string; part_count: number }>>([])
   const [loading, setLoading] = useState(true)
+  const [resolving, setResolving] = useState(false)
   const [error, setError] = useState('')
   const [selectedGen, setSelectedGen] = useState<string | null>(null)
-  const searchParams = useSearchParams()
-  const modelSlug = searchParams.get('model_slug')
-  const modelKey = searchParams.get('model_key')
+  const [useAutodata, setUseAutodata] = useState(false)
 
   useEffect(() => {
     setLoading(true)
     setError('')
-    fetchGenerations(brand)
-      .then(data => {
-        setGenerations(data.generations || [])
-        // Auto-select if only one generation
+
+    // If we have a model_name, try autodata first
+    if (modelName) {
+      fetchAutodataGenerations(brand, modelName)
+        .then(data => {
+          if (data.generations && data.generations.length > 0) {
+            setAutodataGens(data.generations)
+            setUseAutodata(true)
+            setLoading(false)
+          } else {
+            // Fallback to parts DB generations
+            return loadDbGenerations()
+          }
+        })
+        .catch(() => loadDbGenerations())
+    } else {
+      loadDbGenerations()
+    }
+
+    async function loadDbGenerations() {
+      try {
+        const data = await fetchGenerations(brand)
+        setDbGenerations(data.generations || [])
+        setUseAutodata(false)
         if (data.generations?.length === 1) {
           setSelectedGen(data.generations[0].generation_slug)
         }
-      })
-      .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [brand])
+      } catch (e: unknown) {
+        setError(e instanceof Error ? e.message : 'Hata olustu')
+      } finally {
+        setLoading(false)
+      }
+    }
+  }, [brand, modelName])
+
+  // Handle autodata generation selection — resolve to parts DB slug
+  const handleAutodataSelect = async (gen: AutodataGeneration) => {
+    setResolving(true)
+    try {
+      const result = await resolveAutodataSlug(brand, modelName, gen.name, gen.year_start ?? undefined)
+      if (result.auto_selected) {
+        setSelectedGen(result.auto_selected)
+      } else if (result.matches.length > 0) {
+        setSelectedGen(result.matches[0].generation_slug)
+      } else {
+        // No match — try loading DB generations and showing them
+        try {
+          const data = await fetchGenerations(brand)
+          if (data.generations && data.generations.length > 0) {
+            setDbGenerations(data.generations)
+            setAutodataGens([])
+            setUseAutodata(false)
+          } else {
+            setError('Parca katalogu eslemesi bulunamadi')
+          }
+        } catch {
+          setError('Parca katalogu eslemesi bulunamadi')
+        }
+      }
+    } catch {
+      setError('Esleme hatasi olustu')
+    } finally {
+      setResolving(false)
+    }
+  }
 
   // If a generation is selected, show the full parts explorer
   if (selectedGen) {
-    const genSlugParam = `${brand}`
-    return <VehiclePartsExplorer brand={genSlugParam} gen={selectedGen} marka={marka} modelName={modelName} />
+    return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} />
   }
 
   return (
@@ -506,43 +562,85 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         <div className="px-6 py-3 bg-primary-50 border-b border-primary-100">
           <div className="flex items-center gap-2">
             <Car className="w-4 h-4 text-primary-500" />
-            <span className="text-primary-600 text-sm font-medium">Seçili Araç</span>
+            <span className="text-primary-600 text-sm font-medium">Secili Arac</span>
           </div>
         </div>
         <div className="p-5 md:p-6 flex items-center gap-4">
           <div className="flex-1">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka} {modelName}</h2>
-            <p className="text-sm text-gray-500 mt-1">Aracınızın nesil/dönemini seçin.</p>
+            <p className="text-sm text-gray-500 mt-1">Aracinizin nesil/donemini secin.</p>
           </div>
         </div>
       </div>
 
-      {loading && (
+      {(loading || resolving) && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 text-primary-500 animate-spin mx-auto" />
+            {resolving && <p className="text-gray-500 text-sm mt-3">Parca katalogu eslestiriliyor...</p>}
+          </div>
         </div>
       )}
 
-      {error && !loading && (
+      {error && !loading && !resolving && (
         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
           <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
 
-      {!loading && !error && generations.length > 0 && (
+      {/* Autodata generations (richer cards) */}
+      {!loading && !resolving && !error && useAutodata && autodataGens.length > 0 && (
         <div>
           <div className="flex items-center gap-3 mb-5">
             <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
               <Car className="w-5 h-5 text-primary-500" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-gray-900">{generations.length} nesil bulundu</h3>
-              <p className="text-gray-500 text-xs">Doğru nesil/dönem seçimi daha iyi parça listesi sağlar</p>
+              <h3 className="text-lg font-bold text-gray-900">{autodataGens.length} nesil bulundu</h3>
+              <p className="text-gray-500 text-xs">Dogru nesil/donem secimi daha iyi parca listesi saglar</p>
             </div>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {generations.map((gen) => (
+            {autodataGens.map((gen) => (
+              <button
+                key={`${gen.name}-${gen.body_type}`}
+                onClick={() => handleAutodataSelect(gen)}
+                className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-5 text-left transition-all duration-200"
+              >
+                <p className="text-gray-900 font-semibold text-sm group-hover:text-primary-600 transition-colors mb-2 leading-snug">{gen.name}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  {(gen.year_start || gen.year_end) && (
+                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
+                      <Calendar className="w-3 h-3" />
+                      {gen.year_start || '?'}–{gen.year_end || 'gunumuz'}
+                    </span>
+                  )}
+                  {gen.body_type && (
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">{gen.body_type}</span>
+                  )}
+                  <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">{gen.mod_count} varyant</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* DB generations fallback (simpler cards) */}
+      {!loading && !resolving && !error && !useAutodata && dbGenerations.length > 0 && (
+        <div>
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+              <Car className="w-5 h-5 text-primary-500" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">{dbGenerations.length} nesil bulundu</h3>
+              <p className="text-gray-500 text-xs">Dogru nesil/donem secimi daha iyi parca listesi saglar</p>
+            </div>
+          </div>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {dbGenerations.map((gen) => (
               <button
                 key={gen.generation_slug}
                 onClick={() => setSelectedGen(gen.generation_slug)}
@@ -551,7 +649,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
                 <p className="text-gray-900 font-semibold text-sm group-hover:text-primary-600 transition-colors mb-2 leading-snug">{gen.generation_name}</p>
                 <div className="flex items-center gap-1.5">
                   <Package className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-gray-500 text-xs tabular-nums">{gen.part_count.toLocaleString('tr-TR')} parça</span>
+                  <span className="text-gray-500 text-xs tabular-nums">{gen.part_count.toLocaleString('tr-TR')} parca</span>
                 </div>
               </button>
             ))}
@@ -559,10 +657,10 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         </div>
       )}
 
-      {!loading && !error && generations.length === 0 && (
+      {!loading && !resolving && !error && (useAutodata ? autodataGens.length === 0 : dbGenerations.length === 0) && (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-          <p className="text-gray-600 mb-4">Bu marka için nesil bilgisi bulunamadı.</p>
-          <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} için parça arıyorum.`)} target="_blank" rel="noopener noreferrer"
+          <p className="text-gray-600 mb-4">Bu marka icin nesil bilgisi bulunamadi.</p>
+          <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} icin parca ariyorum.`)} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
             <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
           </a>

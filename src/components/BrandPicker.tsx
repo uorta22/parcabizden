@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { Search, ChevronRight, ChevronDown, X, Car } from 'lucide-react'
-import { cleanModelName } from '@/lib/vehicle'
+import { Search, ChevronRight, ChevronDown, X, Car, Loader2, Calendar, Cog } from 'lucide-react'
+import { fetchAutodataBrands, fetchAutodataModels } from '@/lib/api'
+import type { AutodataBrand, AutodataModel } from '@/types/api'
 
 interface VehicleModel {
   key: string
@@ -20,11 +21,14 @@ interface BrandData {
 type VehicleTree = Record<string, BrandData>
 
 const brandLogoOverrides: Record<string, string> = {
+  'Mercedes-Benz': 'mercedes-benz.png',
   'Mercedes': 'mercedes-benz.png',
   'MINI': 'mini.png',
   'MAN': 'man.png',
   'Genesis': 'genesis.jpg',
   'Lada': 'lada.jpg',
+  'Alfa Romeo': 'alfa-romeo.png',
+  'Land Rover': 'land-rover.png',
 }
 
 function getBrandLogoPath(brand: string): string {
@@ -33,48 +37,56 @@ function getBrandLogoPath(brand: string): string {
   return `/brands/${slug}.png`
 }
 
-// Popular brands shown first
-const popularBrands = [
-  'Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Toyota', 'Ford',
-  'Renault', 'Fiat', 'Hyundai', 'Kia', 'Peugeot', 'Opel',
-  'Honda', 'Nissan', 'Skoda', 'Volvo', 'Citroen', 'Dacia',
-]
+// Map autodata brand names to vehicle-tree.json keys
+const brandNameToTreeKey: Record<string, string> = {
+  'Mercedes-Benz': 'Mercedes',
+}
+
+function getTreeKey(name: string): string {
+  return brandNameToTreeKey[name] || name
+}
 
 export default function BrandPicker() {
+  const [brands, setBrands] = useState<AutodataBrand[]>([])
   const [tree, setTree] = useState<VehicleTree | null>(null)
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [expandedBrand, setExpandedBrand] = useState<string | null>(null)
+  const [expandedBrand, setExpandedBrand] = useState<AutodataBrand | null>(null)
+  const [models, setModels] = useState<AutodataModel[]>([])
+  const [modelsLoading, setModelsLoading] = useState(false)
 
   useEffect(() => {
-    fetch('/data/vehicle-tree.json')
-      .then(r => r.json())
-      .then(setTree)
-      .catch(() => {})
+    Promise.all([
+      fetchAutodataBrands().then(d => setBrands(d.brands)).catch(() => {}),
+      fetch('/data/vehicle-tree.json').then(r => r.json()).then(setTree).catch(() => {}),
+    ]).finally(() => setLoading(false))
   }, [])
-
-  const brands = useMemo(() => {
-    if (!tree) return []
-    return Object.keys(tree).sort((a, b) => a.localeCompare(b, 'tr'))
-  }, [tree])
 
   const filteredBrands = useMemo(() => {
     if (!search.trim()) return brands
     const q = search.toLowerCase()
-    return brands.filter(b => b.toLowerCase().includes(q))
+    return brands.filter(b => b.name.toLowerCase().includes(q))
   }, [brands, search])
 
-  const allModels = useMemo(() => {
-    if (!expandedBrand || !tree) return []
-    const brand = tree[expandedBrand]
-    if (!brand) return []
-    const models: VehicleModel[] = []
-    for (const typeModels of Object.values(brand.body_types)) {
-      models.push(...typeModels)
+  const handleBrandClick = async (brand: AutodataBrand) => {
+    if (expandedBrand?.slug === brand.slug) {
+      setExpandedBrand(null)
+      setModels([])
+      return
     }
-    return models
-  }, [expandedBrand, tree])
+    setExpandedBrand(brand)
+    setModelsLoading(true)
+    try {
+      const data = await fetchAutodataModels(brand.slug)
+      setModels(data.models)
+    } catch {
+      setModels([])
+    } finally {
+      setModelsLoading(false)
+    }
+  }
 
-  if (!tree) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -86,10 +98,10 @@ export default function BrandPicker() {
     <div className="mb-12">
       <div className="text-center mb-8">
         <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2">
-          Marka Seçerek <span className="text-primary-500">Parça Ara</span>
+          Marka Secerek <span className="text-primary-500">Parca Ara</span>
         </h2>
         <p className="text-gray-500 max-w-xl mx-auto">
-          Aracınızın markasını seçin, ardından modelinizi belirleyin ve size özel parça kataloğuna ulaşın.
+          Aracinizin markasini secin, ardindan modelinizi belirleyin ve size ozel parca kataloguna ulasin.
         </p>
       </div>
 
@@ -100,7 +112,7 @@ export default function BrandPicker() {
           type="text"
           value={search}
           onChange={e => { setSearch(e.target.value); setExpandedBrand(null) }}
-          placeholder="Marka ara... (ör: BMW, Mercedes)"
+          placeholder="Marka ara... (orn: BMW, Mercedes)"
           className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500/20 transition-all"
         />
         {search && (
@@ -112,12 +124,12 @@ export default function BrandPicker() {
 
       {/* Brand grid */}
       <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
-        {filteredBrands.map(brandName => {
-          const isExpanded = expandedBrand === brandName
+        {filteredBrands.map(brand => {
+          const isExpanded = expandedBrand?.slug === brand.slug
           return (
             <button
-              key={brandName}
-              onClick={() => setExpandedBrand(isExpanded ? null : brandName)}
+              key={brand.slug}
+              onClick={() => handleBrandClick(brand)}
               className={`flex flex-col items-center gap-2.5 p-3 sm:p-4 rounded-xl border transition-all ${
                 isExpanded
                   ? 'border-primary-500 bg-primary-50 shadow-sm'
@@ -127,8 +139,8 @@ export default function BrandPicker() {
               <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={getBrandLogoPath(brandName)}
-                  alt={brandName}
+                  src={getBrandLogoPath(brand.name)}
+                  alt={brand.name}
                   className="object-contain w-12 h-12 sm:w-14 sm:h-14"
                   loading="lazy"
                   onError={(e) => {
@@ -138,15 +150,16 @@ export default function BrandPicker() {
                     if (parent && !parent.querySelector('span')) {
                       const span = document.createElement('span')
                       span.className = 'w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-base'
-                      span.textContent = brandName.charAt(0)
+                      span.textContent = brand.name.charAt(0)
                       parent.appendChild(span)
                     }
                   }}
                 />
               </div>
               <span className={`text-xs sm:text-sm font-medium text-center leading-tight ${isExpanded ? 'text-primary-600' : 'text-gray-700'}`}>
-                {brandName}
+                {brand.name}
               </span>
+              <span className="text-[10px] text-gray-400 tabular-nums">{brand.model_count} model</span>
               {isExpanded ? (
                 <ChevronDown className="w-3 h-3 text-primary-500" />
               ) : (
@@ -158,45 +171,55 @@ export default function BrandPicker() {
       </div>
 
       {filteredBrands.length === 0 && (
-        <p className="text-gray-400 text-sm text-center py-8">Marka bulunamadı</p>
+        <p className="text-gray-400 text-sm text-center py-8">Marka bulunamadi</p>
       )}
 
       {/* Model dropdown */}
-      {expandedBrand && allModels.length > 0 && (
+      {expandedBrand && (
         <div className="mt-4 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
           <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Car className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-semibold text-gray-900">{expandedBrand}</span>
-              <span className="text-xs text-gray-400">— {allModels.length} model</span>
+              <span className="text-sm font-semibold text-gray-900">{expandedBrand.name}</span>
+              <span className="text-xs text-gray-400">— {models.length} model</span>
             </div>
-            <button onClick={() => setExpandedBrand(null)} className="text-gray-400 hover:text-gray-600">
+            <button onClick={() => { setExpandedBrand(null); setModels([]) }} className="text-gray-400 hover:text-gray-600">
               <X className="w-4 h-4" />
             </button>
           </div>
-          <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto">
-            {allModels.map(model => {
-              const brandSlug = expandedBrand.toLowerCase().replace(/\s+/g, '-')
-              return (
+
+          {modelsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
+            </div>
+          ) : (
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto">
+              {models.map(model => (
                 <Link
-                  key={`${model.key}-${model.slug}`}
-                  href={`/parcalar?brand=${encodeURIComponent(brandSlug)}&marka=${encodeURIComponent(expandedBrand)}&model_name=${encodeURIComponent(cleanModelName(model.name))}&model_slug=${model.slug}&model_key=${model.key}`}
+                  key={model.name}
+                  href={`/parcalar?brand=${encodeURIComponent(expandedBrand.slug)}&marka=${encodeURIComponent(expandedBrand.name)}&model_name=${encodeURIComponent(model.name)}`}
                   className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-primary-300 hover:bg-primary-50/50 transition-all group"
                 >
-                  {model.image && (
-                    <div className="w-14 h-10 flex-shrink-0 rounded-lg bg-gray-50 overflow-hidden flex items-center justify-center">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={model.image} alt={model.name} className="w-full h-full object-contain p-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-gray-700 group-hover:text-primary-600 font-medium leading-tight block truncate">
+                      {model.name}
+                    </span>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                        <Cog className="w-2.5 h-2.5" /> {model.gen_count} nesil
+                      </span>
+                      {model.min_year && model.max_year && (
+                        <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                          <Calendar className="w-2.5 h-2.5" /> {model.min_year}–{model.max_year}
+                        </span>
+                      )}
                     </div>
-                  )}
-                  <span className="text-sm text-gray-700 group-hover:text-primary-600 font-medium leading-tight flex-1 min-w-0 truncate">
-                    {cleanModelName(model.name)}
-                  </span>
+                  </div>
                   <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 flex-shrink-0" />
                 </Link>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
