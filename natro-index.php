@@ -554,7 +554,16 @@ function handle_garage_list($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, spec_id, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
+        // spec_id kolonu opsiyonel — yoksa NULL olarak dön
+        $hasSpecId = false;
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM garage LIKE 'spec_id'");
+            $hasSpecId = $colCheck->rowCount() > 0;
+        } catch (PDOException $e) {}
+
+        $cols = 'id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, created_at';
+        if ($hasSpecId) $cols = 'id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, spec_id, created_at';
+        $stmt = $pdo->prepare("SELECT $cols FROM garage WHERE user_id = ? ORDER BY created_at DESC");
         $stmt->execute([$user_id]);
         $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -563,7 +572,7 @@ function handle_garage_list($pdo) {
             $v['id'] = (int)$v['id'];
             $v['year'] = $v['year'] !== null ? (int)$v['year'] : null;
             $v['current_km'] = $v['current_km'] !== null ? (int)$v['current_km'] : null;
-            $v['spec_id'] = $v['spec_id'] !== null ? (int)$v['spec_id'] : null;
+            $v['spec_id'] = isset($v['spec_id']) && $v['spec_id'] !== null ? (int)$v['spec_id'] : null;
 
             // Count maintenance stats
             $mstmt = $pdo->prepare('SELECT next_km, next_date FROM vehicle_maintenance WHERE garage_id = ? AND user_id = ?');
@@ -621,8 +630,20 @@ function handle_garage_add($pdo) {
 
         $spec_id = isset($_POST['spec_id']) && $_POST['spec_id'] !== '' ? intval($_POST['spec_id']) : null;
 
-        $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, spec_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null, $spec_id]);
+        // spec_id kolonu opsiyonel
+        $hasSpecCol = false;
+        try {
+            $cc = $pdo->query("SHOW COLUMNS FROM garage LIKE 'spec_id'");
+            $hasSpecCol = $cc->rowCount() > 0;
+        } catch (PDOException $e) {}
+
+        if ($hasSpecCol) {
+            $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, spec_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null, $spec_id]);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname) VALUES (?, ?, ?, ?, ?, ?, ?)');
+            $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null]);
+        }
         $new_id = (int)$pdo->lastInsertId();
 
         echo json_encode(['success' => true, 'id' => $new_id]);
