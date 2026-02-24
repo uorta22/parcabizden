@@ -14,7 +14,7 @@ interface GarageCardProps {
 }
 
 function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
-  const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}`
+  const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
   const detailHref = `/garaj/${vehicle.id}`
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
 
@@ -53,7 +53,7 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
       <div className="p-4 flex flex-col flex-1">
         <Link href={detailHref} className="block">
           <h3 className="text-gray-900 font-semibold group-hover:text-primary-600 transition-colors leading-tight">
-            {vehicle.brand_name}
+            {vehicle.year ? `${vehicle.year} ${vehicle.brand_name}` : vehicle.brand_name}
           </h3>
           <p className="text-gray-600 text-sm leading-tight mt-0.5 truncate">
             {vehicle.generation_name}

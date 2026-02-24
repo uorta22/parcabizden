@@ -27,6 +27,7 @@ interface AddVehicleModalProps {
     brand_name: string
     generation_slug: string
     generation_name: string
+    year?: number
     nickname?: string
   }) => Promise<void>
 }
@@ -121,11 +122,13 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
     setError('')
     setIsSubmitting(true)
     try {
+      const year = parseModelYear(model.name)
       await onAdd({
         brand_slug: brandToSlug(activeBrand),
         brand_name: activeBrand,
         generation_slug: model.slug,
         generation_name: cleanModelName(model.name),
+        year: year > 0 ? year : undefined,
       })
       handleClose()
     } catch (err) {

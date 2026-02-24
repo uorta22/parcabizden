@@ -174,7 +174,7 @@ export default function GarageDetailPage() {
 
   if (!vehicle) return null
 
-  const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}`
+  const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
 
   return (
@@ -186,7 +186,7 @@ export default function GarageDetailPage() {
           <ChevronRight className="w-4 h-4" />
           <Link href="/garaj" className="hover:text-gray-900 transition-colors">Garajim</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900">{vehicle.brand_name} {vehicle.generation_name}</span>
+          <span className="text-gray-900">{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.brand_name} {vehicle.generation_name}</span>
         </nav>
 
         {/* Vehicle Info Card */}
@@ -202,7 +202,7 @@ export default function GarageDetailPage() {
             <div className="p-6 flex-1">
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{vehicle.brand_name}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{vehicle.year ? `${vehicle.year} ${vehicle.brand_name}` : vehicle.brand_name}</h1>
                   <p className="text-gray-600 mt-0.5">{vehicle.generation_name}</p>
                 </div>
               </div>

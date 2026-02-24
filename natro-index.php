@@ -445,13 +445,14 @@ function handle_garage_list($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, nickname, current_km, km_updated_at, notes, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
+        $stmt = $pdo->prepare('SELECT id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, created_at FROM garage WHERE user_id = ? ORDER BY created_at DESC');
         $stmt->execute([$user_id]);
         $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $today = date('Y-m-d');
         foreach ($vehicles as &$v) {
             $v['id'] = (int)$v['id'];
+            $v['year'] = $v['year'] !== null ? (int)$v['year'] : null;
             $v['current_km'] = $v['current_km'] !== null ? (int)$v['current_km'] : null;
 
             // Count maintenance stats
@@ -491,6 +492,7 @@ function handle_garage_add($pdo) {
         $generation_slug = trim($_POST['generation_slug'] ?? '');
         $generation_name = trim($_POST['generation_name'] ?? '');
         $nickname        = trim($_POST['nickname'] ?? '');
+        $year            = isset($_POST['year']) && $_POST['year'] !== '' ? intval($_POST['year']) : null;
 
         if (!$brand_slug || !$brand_name || !$generation_slug || !$generation_name) {
             http_response_code(400);
@@ -507,8 +509,8 @@ function handle_garage_add($pdo) {
             return;
         }
 
-        $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, nickname) VALUES (?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $nickname ?: null]);
+        $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null]);
         $new_id = (int)$pdo->lastInsertId();
 
         echo json_encode(['success' => true, 'id' => $new_id]);

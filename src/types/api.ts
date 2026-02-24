@@ -69,6 +69,7 @@ export interface GarageVehicleNatro {
   brand_name: string
   generation_slug: string
   generation_name: string
+  year: number | null
   nickname: string | null
   current_km: number | null
   km_updated_at: string | null

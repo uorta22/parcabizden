@@ -40,6 +40,7 @@ export default function GarajPage() {
     brand_name: string
     generation_slug: string
     generation_name: string
+    year?: number
     nickname?: string
   }) => {
     await garageAdd(data)

@@ -127,6 +127,7 @@ export async function garageAdd(data: {
   brand_name: string
   generation_slug: string
   generation_name: string
+  year?: number
   nickname?: string
 }): Promise<{ success: boolean; id?: number }> {
   const params: Record<string, string> = {
@@ -136,6 +137,7 @@ export async function garageAdd(data: {
     generation_slug: data.generation_slug,
     generation_name: data.generation_name,
   }
+  if (data.year) params.year = String(data.year)
   if (data.nickname) params.nickname = data.nickname
   return actionPost<{ success: boolean; id?: number }>(params)
 }
