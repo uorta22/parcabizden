@@ -39,7 +39,6 @@ export default function Header() {
   const navLinks = [
     { href: '/', label: 'Ana Sayfa' },
     { href: '/parcalar', label: 'Parçalar' },
-    { href: '/sase-sorgula', label: 'Şase Sorgula' },
     { href: '/ai-asistan', label: 'AI Asistan', icon: true },
     { href: '/hakkimizda', label: 'Hakkımızda' },
     { href: '/iletisim', label: 'İletişim' },
