@@ -485,66 +485,86 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     setLoading(true)
     setError('')
 
+    // Always pre-fetch DB generations as fallback
+    const dbPromise = fetchGenerations(brand)
+      .then(data => {
+        setDbGenerations(data.generations || [])
+        return data.generations || []
+      })
+      .catch(() => [] as Array<{ generation_slug: string; generation_name: string; part_count: number }>)
+
     // If we have a model_name, try autodata first
     if (modelName) {
       fetchAutodataGenerations(brand, modelName)
-        .then(data => {
+        .then(async data => {
           if (data.generations && data.generations.length > 0) {
             setAutodataGens(data.generations)
             setUseAutodata(true)
             setLoading(false)
           } else {
-            // Fallback to parts DB generations
-            return loadDbGenerations()
+            // No autodata generations — wait for DB fallback
+            const dbGens = await dbPromise
+            setUseAutodata(false)
+            if (dbGens.length === 1) {
+              setSelectedGen(dbGens[0].generation_slug)
+            }
+            setLoading(false)
           }
         })
-        .catch(() => loadDbGenerations())
+        .catch(async () => {
+          const dbGens = await dbPromise
+          setUseAutodata(false)
+          if (dbGens.length === 1) {
+            setSelectedGen(dbGens[0].generation_slug)
+          }
+          setLoading(false)
+        })
     } else {
-      loadDbGenerations()
-    }
-
-    async function loadDbGenerations() {
-      try {
-        const data = await fetchGenerations(brand)
-        setDbGenerations(data.generations || [])
+      dbPromise.then(dbGens => {
         setUseAutodata(false)
-        if (data.generations?.length === 1) {
-          setSelectedGen(data.generations[0].generation_slug)
+        if (dbGens.length === 1) {
+          setSelectedGen(dbGens[0].generation_slug)
         }
-      } catch (e: unknown) {
-        setError(e instanceof Error ? e.message : 'Hata olustu')
-      } finally {
         setLoading(false)
-      }
+      })
     }
   }, [brand, modelName])
 
   // Handle autodata generation selection — resolve to parts DB slug
   const handleAutodataSelect = async (gen: AutodataGeneration) => {
     setResolving(true)
+    setError('')
     try {
       const result = await resolveAutodataSlug(brand, modelName, gen.name, gen.year_start ?? undefined)
       if (result.auto_selected) {
+        // Best case: exact match found, go directly to parts
         setSelectedGen(result.auto_selected)
-      } else if (result.matches.length > 0) {
+      } else if (result.matches.length === 1) {
+        // Single match, auto-select
         setSelectedGen(result.matches[0].generation_slug)
+      } else if (result.matches.length > 1) {
+        // Multiple matches — show them as DB generations to pick from
+        setDbGenerations(result.matches)
+        setAutodataGens([])
+        setUseAutodata(false)
+        setResolving(false)
       } else {
-        // No match — try loading DB generations and showing them
-        try {
-          const data = await fetchGenerations(brand)
-          if (data.generations && data.generations.length > 0) {
-            setDbGenerations(data.generations)
-            setAutodataGens([])
-            setUseAutodata(false)
-          } else {
-            setError('Parca katalogu eslemesi bulunamadi')
-          }
-        } catch {
-          setError('Parca katalogu eslemesi bulunamadi')
+        // No matches from resolve — use pre-fetched DB generations
+        if (dbGenerations.length > 0) {
+          setAutodataGens([])
+          setUseAutodata(false)
+        } else {
+          setError('no_parts')
         }
       }
     } catch {
-      setError('Esleme hatasi olustu')
+      // resolveAutodataSlug failed — use pre-fetched DB generations
+      if (dbGenerations.length > 0) {
+        setAutodataGens([])
+        setUseAutodata(false)
+      } else {
+        setError('no_parts')
+      }
     } finally {
       setResolving(false)
     }
@@ -582,7 +602,23 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         </div>
       )}
 
-      {error && !loading && !resolving && (
+      {error === 'no_parts' && !loading && !resolving && (
+        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+          <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Package className="w-7 h-7 text-gray-400" />
+          </div>
+          <h3 className="text-gray-900 font-semibold mb-2">Parca katalogu henuz hazir degil</h3>
+          <p className="text-gray-500 text-sm mb-5 max-w-md mx-auto">
+            {marka} {modelName} icin parca katalogu henuz sistemimizde bulunmuyor. WhatsApp uzerinden talep olusturabilirsiniz.
+          </p>
+          <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} icin parca ariyorum.`)} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors">
+            <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Et
+          </a>
+        </div>
+      )}
+
+      {error && error !== 'no_parts' && !loading && !resolving && (
         <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
           <p className="text-red-600 text-sm">{error}</p>

@@ -141,27 +141,19 @@ export default function BrandModelSelector() {
     if (!selectedBrand || !selectedModel) return
     setResolving(true)
     try {
+      const modelLabel = `${selectedModel.name} ${gen.name !== selectedModel.name ? gen.name : ''}`.trim()
       const result = await resolveAutodataSlug(selectedBrand.slug, selectedModel.name, gen.name, gen.year_start ?? undefined)
       if (result.auto_selected) {
-        // Navigate directly to parts page with resolved slug
+        // Best case: exact match found, go directly to parts
         const params = new URLSearchParams({
           brand: selectedBrand.slug,
           gen: result.auto_selected,
           marka: selectedBrand.name,
-          model_name: `${selectedModel.name} ${gen.name !== selectedModel.name ? gen.name : ''}`.trim(),
-        })
-        router.push(`/parcalar?${params.toString()}`)
-      } else if (result.matches.length > 0) {
-        // Navigate with first match
-        const params = new URLSearchParams({
-          brand: selectedBrand.slug,
-          gen: result.matches[0].generation_slug,
-          marka: selectedBrand.name,
-          model_name: `${selectedModel.name} ${gen.name !== selectedModel.name ? gen.name : ''}`.trim(),
+          model_name: modelLabel,
         })
         router.push(`/parcalar?${params.toString()}`)
       } else {
-        // No match in parts DB — navigate without gen, GenerationPicker will handle
+        // No exact match — navigate without gen, let GenerationPicker handle
         const params = new URLSearchParams({
           brand: selectedBrand.slug,
           marka: selectedBrand.name,

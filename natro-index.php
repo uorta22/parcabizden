@@ -665,11 +665,18 @@ function handle_autodata_resolve_slug($pdo) {
     }
 
     // Extract model name from generation: "3 Series (E90)" → "3 Series"
+    // Also strip Roman numerals at the end: "Sandero III" → "Sandero"
     $gen_model_name = $generation ? trim(preg_replace('/\s*\(.*$/', '', $generation)) : '';
+    $gen_model_base = trim(preg_replace('/\s+(I{1,3}|IV|V|VI{0,3})$/i', '', $gen_model_name));
 
     // Normalize for matching
     $model_lower = strtolower($model ?: $gen_model_name);
     $model_slug = str_replace(' ', '-', $model_lower);
+    $model_base_lower = strtolower($gen_model_base ?: $model_lower);
+    $model_base_slug = str_replace(' ', '-', $model_base_lower);
+
+    // Extract year from generation if present
+    $year = isset($_GET['year']) && $_GET['year'] !== '' ? intval($_GET['year']) : null;
 
     $matches = [];
     foreach ($db_gens as $g) {
@@ -682,17 +689,38 @@ function handle_autodata_resolve_slug($pdo) {
             $score += 100;
         }
 
-        // Strategy 2: Model name match
+        // Strategy 2: Exact model name match in slug
         if ($model_slug && (strpos($slug_lower, $model_slug) !== false || strpos($slug_lower, $model_lower) !== false)) {
             $score += 50;
         }
 
-        // Strategy 3: Partial model word match
+        // Strategy 3: Base model name match (without Roman numerals)
+        // e.g. "sandero" matches "sandero_sandero-06-2008"
+        if ($model_base_slug && $model_base_slug !== $model_slug && strpos($slug_lower, $model_base_slug) !== false) {
+            $score += 40;
+        }
+
+        // Strategy 4: Partial model word match
         if ($model_lower) {
-            $model_words = explode(' ', $model_lower);
+            $model_words = array_merge(explode(' ', $model_lower), explode('-', $model_slug));
+            $model_words = array_unique($model_words);
             foreach ($model_words as $word) {
-                if (strlen($word) >= 2 && strpos($slug_lower, strtolower(str_replace(' ', '-', $word))) !== false) {
+                $word = trim($word);
+                if (strlen($word) >= 3 && strpos($slug_lower, $word) !== false) {
                     $score += 10;
+                }
+            }
+        }
+
+        // Strategy 5: Year range matching from slug
+        if ($year && $score > 0) {
+            // Try to extract year from slug like "sandero-06-2008" or "sandero-2020"
+            if (preg_match('/(\d{4})/', $slug, $ym)) {
+                $slug_year = (int)$ym[1];
+                if ($slug_year > 1980 && $slug_year < 2030) {
+                    if ($year >= $slug_year && $year <= $slug_year + 10) {
+                        $score += 20; // Year range bonus
+                    }
                 }
             }
         }
@@ -721,6 +749,19 @@ function handle_autodata_resolve_slug($pdo) {
     }
 
     $auto_selected = !empty($output) ? $output[0]['generation_slug'] : null;
+
+    // If no matches but brand has generations, return all as unmatched fallback
+    if (empty($output) && !empty($db_gens)) {
+        foreach ($db_gens as $g) {
+            $output[] = [
+                'generation_slug' => $g['generation_slug'],
+                'generation_name' => format_gen_slug($g['generation_slug']),
+                'part_count' => (int)$g['part_count'],
+            ];
+        }
+        usort($output, function($a, $b) { return $b['part_count'] - $a['part_count']; });
+    }
+
     echo json_encode(['matches' => $output, 'auto_selected' => $auto_selected]);
 }
 
