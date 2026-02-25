@@ -463,6 +463,7 @@ function handle_vehicle_specs($pdo) {
         'lamborghini' => 'Lamborghini', 'maserati' => 'Maserati',
         'bentley' => 'Bentley', 'aston-martin' => 'Aston Martin',
         'rolls-royce' => 'Rolls-Royce', 'bugatti' => 'Bugatti',
+        'abarth' => 'Fiat', 'lancia' => 'Lancia',
     ];
 
     $brand_name = isset($brand_map[$brand_slug]) ? $brand_map[$brand_slug] : ucfirst($brand_slug);
@@ -783,6 +784,7 @@ function autodata_resolve_brand_name($pdo, $brand_slug) {
         'lamborghini' => 'Lamborghini', 'maserati' => 'Maserati',
         'bentley' => 'Bentley', 'aston-martin' => 'Aston Martin',
         'rolls-royce' => 'Rolls-Royce', 'bugatti' => 'Bugatti',
+        'abarth' => 'Fiat', 'lancia' => 'Lancia',
     ];
 
     if (isset($brand_map[$brand_slug])) return $brand_map[$brand_slug];
