@@ -32,7 +32,7 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
     : null
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary-400 hover:shadow-md transition-all group flex flex-col">
+    <Link href={detailHref} className="block bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary-400 hover:shadow-md transition-all group flex flex-col cursor-pointer">
       {/* Vehicle Image */}
       <div className="relative h-36 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
         {vehicleImage ? (
@@ -41,7 +41,7 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
           <Car className="w-16 h-16 text-gray-300" />
         )}
         <button
-          onClick={() => onRemove(vehicle.id)}
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(vehicle.id) }}
           className="absolute top-2 right-2 p-1.5 bg-white/80 hover:bg-red-50 text-gray-400 hover:text-red-500 rounded-lg transition-all backdrop-blur-sm"
           title="Garajdan Sil"
         >
@@ -51,7 +51,7 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
 
       {/* Info */}
       <div className="p-4 flex flex-col flex-1">
-        <Link href={detailHref} className="block">
+        <div>
           <h3 className="text-gray-900 font-semibold group-hover:text-primary-600 transition-colors leading-tight">
             {vehicle.year ? `${vehicle.year} ${vehicle.brand_name}` : vehicle.brand_name}
           </h3>
@@ -61,7 +61,7 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
           {vehicle.nickname && (
             <p className="text-primary-500 text-xs font-medium mt-1">&quot;{vehicle.nickname}&quot;</p>
           )}
-        </Link>
+        </div>
 
         {/* KM Info */}
         {vehicle.current_km !== null && (
@@ -94,22 +94,23 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
         <div className="grid grid-cols-3 gap-2 mt-auto pt-4">
           <Link
             href={partsHref}
+            onClick={(e) => e.stopPropagation()}
             className="flex flex-col items-center gap-1 px-2 py-2 bg-primary-50 hover:bg-primary-500 text-primary-600 hover:text-white rounded-lg transition-all text-xs font-medium"
           >
             <Search className="w-4 h-4" />
             Parca Ara
           </Link>
-          <Link
-            href={detailHref}
-            className="flex flex-col items-center gap-1 px-2 py-2 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white rounded-lg transition-all text-xs font-medium"
+          <span
+            className="flex flex-col items-center gap-1 px-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium"
           >
             <Wrench className="w-4 h-4" />
             Bakim
-          </Link>
+          </span>
           <a
             href={getWhatsAppUrl(whatsappMsg)}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="flex flex-col items-center gap-1 px-2 py-2 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white rounded-lg transition-all text-xs font-medium"
           >
             <MessageCircle className="w-4 h-4" />
@@ -117,7 +118,7 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
           </a>
         </div>
       </div>
-    </div>
+    </Link>
   )
 }
 

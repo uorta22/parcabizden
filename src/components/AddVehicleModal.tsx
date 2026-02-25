@@ -108,11 +108,8 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
     const brand = tree[brandName]
     if (!brand) return
     setActiveBrand(brandName)
-    const bodyTypes = Object.keys(brand.body_types)
-    if (bodyTypes.length > 0) {
-      setActiveBodyType(bodyTypes[0])
-      setAnimKey(prev => prev + 1)
-    }
+    setActiveBodyType('__all__')
+    setAnimKey(prev => prev + 1)
   }, [tree])
 
   const handleBodyTypeChange = useCallback((bt: string) => {
@@ -208,7 +205,10 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
   const activeBrandData = activeBrand && tree ? tree[activeBrand] : null
   const bodyTypes = activeBrandData ? Object.keys(activeBrandData.body_types) : []
   const activeModels = activeBrandData && activeBodyType
-    ? [...(activeBrandData.body_types[activeBodyType] || [])].sort((a, b) => {
+    ? [...(activeBodyType === '__all__'
+        ? Object.values(activeBrandData.body_types).flat()
+        : (activeBrandData.body_types[activeBodyType] || [])
+      )].sort((a, b) => {
         const yearA = parseModelYear(a.name)
         const yearB = parseModelYear(b.name)
         return sortOrder === 'newest' ? yearB - yearA : yearA - yearB
@@ -452,6 +452,19 @@ export default function AddVehicleModal({ isOpen, onClose, onAdd }: AddVehicleMo
 
                     {/* Body Type Tabs */}
                     <div className="flex overflow-x-auto scrollbar-hide px-3 pb-2.5 gap-1.5">
+                      <button
+                        onClick={() => handleBodyTypeChange('__all__')}
+                        className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-[background-color,color,border-color,box-shadow] duration-200 ${
+                          activeBodyType === '__all__'
+                            ? 'bg-primary-50 text-primary-600 border border-primary-300'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
+                        }`}
+                      >
+                        Tumu
+                        <span className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded-md ${
+                          activeBodyType === '__all__' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'
+                        }`}>{totalModels}</span>
+                      </button>
                       {bodyTypes.map((bt) => {
                         const count = activeBrandData.body_types[bt]?.length || 0
                         const isActive = activeBodyType === bt

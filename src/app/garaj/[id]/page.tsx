@@ -542,7 +542,6 @@ export default function GarageDetailPage() {
                     <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-100">
                       {selectedSpec.model} {selectedSpec.generation}
                       {selectedSpec.year_start && ` (${selectedSpec.year_start}${selectedSpec.year_end ? `–${selectedSpec.year_end}` : '–'})`}
-                      {' '}&middot; Kaynak: auto-data.net
                     </p>
                   </div>
                 ) : null}

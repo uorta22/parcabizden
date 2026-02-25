@@ -299,7 +299,6 @@ function PartDetailContent() {
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Marka</th>
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</th>
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Kasa Kodu</th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Üretim Yılı</th>
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Grup</th>
                       </tr>
                     </thead>
@@ -320,7 +319,6 @@ function PartDetailContent() {
                               <span className="text-gray-300">—</span>
                             )}
                           </td>
-                          <td className="px-6 py-3.5 text-sm text-gray-700 tabular-nums">{row.year || '—'}</td>
                           <td className="px-6 py-3.5 text-xs text-gray-500">{row.nodeName || '—'}</td>
                         </tr>
                       ))}
@@ -344,10 +342,6 @@ function PartDetailContent() {
                         <div>
                           <span className="text-xs text-gray-400">Kasa Kodu</span>
                           <p className="text-gray-700 font-mono text-xs">{row.chassis || '—'}</p>
-                        </div>
-                        <div>
-                          <span className="text-xs text-gray-400">Üretim Yılı</span>
-                          <p className="text-gray-700 tabular-nums">{row.year || '—'}</p>
                         </div>
                         {row.nodeName && (
                           <div>
