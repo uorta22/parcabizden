@@ -375,6 +375,15 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     return Array.from(counts.entries()).map(([type, count]) => ({ type, count }))
   }, [generations])
 
+  // Sorted models
+  const sortedModels = useMemo(() => {
+    return [...models].sort((a, b) => {
+      const yearA = (sortOrder === 'newest' ? a.max_year : a.min_year) || 0
+      const yearB = (sortOrder === 'newest' ? b.max_year : b.min_year) || 0
+      return sortOrder === 'newest' ? yearB - yearA : yearA - yearB
+    })
+  }, [models, sortOrder])
+
   // Filtered & sorted generations
   const filteredGenerations = useMemo(() => {
     let gens = [...generations]
@@ -614,6 +623,14 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                       <h3 className="text-gray-900 font-semibold text-base">{selectedBrand.name}</h3>
                       <p className="text-[11px] text-gray-500 tabular-nums">{models.length} model &middot; Model secin</p>
                     </div>
+                    <button
+                      onClick={toggleSort}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium bg-gray-100 border border-gray-200 hover:border-primary-400 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-all duration-200"
+                      title={sortOrder === 'newest' ? 'Yeniden eskiye sirali' : 'Eskiden yeniye sirali'}
+                    >
+                      <ArrowUpDown className="w-3 h-3" />
+                      <span className="hidden sm:inline">{sortOrder === 'newest' ? 'Yeni → Eski' : 'Eski → Yeni'}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -624,7 +641,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                     </div>
                   ) : (
                     <div className={`grid gap-3 ${isModal ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
-                      {models.map((model, index) => {
+                      {sortedModels.map((model, index) => {
                         const image = findModelImage(selectedBrand.name, model.name)
                         return (
                           <button
