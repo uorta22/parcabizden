@@ -839,15 +839,24 @@ function handle_garage_list($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        // spec_id kolonu opsiyonel — yoksa NULL olarak dön
-        $hasSpecId = false;
+        // Opsiyonel kolonları kontrol et
+        $hasSpecId = false; $hasPlaka = false; $hasSaseNo = false;
         try {
-            $colCheck = $pdo->query("SHOW COLUMNS FROM garage LIKE 'spec_id'");
-            $hasSpecId = $colCheck->rowCount() > 0;
+            $colCheck = $pdo->query("SHOW COLUMNS FROM garage");
+            $existingCols = $colCheck->fetchAll(PDO::FETCH_COLUMN);
+            $hasSpecId = in_array('spec_id', $existingCols);
+            $hasPlaka = in_array('plaka', $existingCols);
+            $hasSaseNo = in_array('sase_no', $existingCols);
         } catch (PDOException $e) {}
 
+        // Eksik kolonları ekle
+        if (!$hasPlaka) { try { $pdo->exec("ALTER TABLE garage ADD COLUMN plaka VARCHAR(20) DEFAULT NULL"); $hasPlaka = true; } catch (PDOException $e) {} }
+        if (!$hasSaseNo) { try { $pdo->exec("ALTER TABLE garage ADD COLUMN sase_no VARCHAR(50) DEFAULT NULL"); $hasSaseNo = true; } catch (PDOException $e) {} }
+
         $cols = 'id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, created_at';
-        if ($hasSpecId) $cols = 'id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, spec_id, created_at';
+        if ($hasSpecId) $cols .= ', spec_id';
+        if ($hasPlaka) $cols .= ', plaka';
+        if ($hasSaseNo) $cols .= ', sase_no';
         $stmt = $pdo->prepare("SELECT $cols FROM garage WHERE user_id = ? ORDER BY created_at DESC");
         $stmt->execute([$user_id]);
         $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -858,6 +867,8 @@ function handle_garage_list($pdo) {
             $v['year'] = $v['year'] !== null ? (int)$v['year'] : null;
             $v['current_km'] = $v['current_km'] !== null ? (int)$v['current_km'] : null;
             $v['spec_id'] = isset($v['spec_id']) && $v['spec_id'] !== null ? (int)$v['spec_id'] : null;
+            if (!isset($v['plaka'])) $v['plaka'] = null;
+            if (!isset($v['sase_no'])) $v['sase_no'] = null;
 
             // Count maintenance stats
             $mstmt = $pdo->prepare('SELECT next_km, next_date FROM vehicle_maintenance WHERE garage_id = ? AND user_id = ?');
@@ -914,21 +925,28 @@ function handle_garage_add($pdo) {
         }
 
         $spec_id = isset($_POST['spec_id']) && $_POST['spec_id'] !== '' ? intval($_POST['spec_id']) : null;
+        $plaka   = isset($_POST['plaka']) && trim($_POST['plaka']) !== '' ? strtoupper(trim($_POST['plaka'])) : null;
+        $sase_no = isset($_POST['sase_no']) && trim($_POST['sase_no']) !== '' ? strtoupper(trim($_POST['sase_no'])) : null;
 
-        // spec_id kolonu opsiyonel
-        $hasSpecCol = false;
+        // Opsiyonel kolonları kontrol et
+        $hasSpecCol = false; $hasPlakaCol = false; $hasSaseCol = false;
         try {
-            $cc = $pdo->query("SHOW COLUMNS FROM garage LIKE 'spec_id'");
-            $hasSpecCol = $cc->rowCount() > 0;
+            $cc = $pdo->query("SHOW COLUMNS FROM garage");
+            $existingCols = $cc->fetchAll(PDO::FETCH_COLUMN);
+            $hasSpecCol = in_array('spec_id', $existingCols);
+            $hasPlakaCol = in_array('plaka', $existingCols);
+            $hasSaseCol = in_array('sase_no', $existingCols);
         } catch (PDOException $e) {}
 
-        if ($hasSpecCol) {
-            $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, spec_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null, $spec_id]);
-        } else {
-            $stmt = $pdo->prepare('INSERT INTO garage (user_id, brand_slug, brand_name, generation_slug, generation_name, year, nickname) VALUES (?, ?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null]);
-        }
+        $insertCols = ['user_id', 'brand_slug', 'brand_name', 'generation_slug', 'generation_name', 'year', 'nickname'];
+        $insertVals = [$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null];
+        if ($hasSpecCol) { $insertCols[] = 'spec_id'; $insertVals[] = $spec_id; }
+        if ($hasPlakaCol) { $insertCols[] = 'plaka'; $insertVals[] = $plaka; }
+        if ($hasSaseCol) { $insertCols[] = 'sase_no'; $insertVals[] = $sase_no; }
+
+        $placeholders = implode(', ', array_fill(0, count($insertCols), '?'));
+        $stmt = $pdo->prepare('INSERT INTO garage (' . implode(', ', $insertCols) . ') VALUES (' . $placeholders . ')');
+        $stmt->execute($insertVals);
         $new_id = (int)$pdo->lastInsertId();
 
         echo json_encode(['success' => true, 'id' => $new_id]);
@@ -984,6 +1002,8 @@ function handle_garage_update($pdo) {
             $updates[] = 'current_km = ?'; $params[] = intval($_POST['current_km']);
             $updates[] = 'km_updated_at = NOW()';
         }
+        if (isset($_POST['plaka'])) { $updates[] = 'plaka = ?'; $params[] = trim($_POST['plaka']) !== '' ? strtoupper(trim($_POST['plaka'])) : null; }
+        if (isset($_POST['sase_no'])) { $updates[] = 'sase_no = ?'; $params[] = trim($_POST['sase_no']) !== '' ? strtoupper(trim($_POST['sase_no'])) : null; }
 
         if (empty($updates)) { echo json_encode(['success' => true]); return; }
 

@@ -136,6 +136,8 @@ export async function garageAdd(data: {
   year?: number
   nickname?: string
   spec_id?: number
+  plaka?: string
+  sase_no?: string
 }): Promise<{ success: boolean; id?: number }> {
   const params: Record<string, string> = {
     action: 'garage_add',
@@ -147,6 +149,8 @@ export async function garageAdd(data: {
   if (data.year) params.year = String(data.year)
   if (data.nickname) params.nickname = data.nickname
   if (data.spec_id) params.spec_id = String(data.spec_id)
+  if (data.plaka) params.plaka = data.plaka
+  if (data.sase_no) params.sase_no = data.sase_no
   return actionPost<{ success: boolean; id?: number }>(params)
 }
 
@@ -159,11 +163,15 @@ export async function garageUpdate(data: {
   nickname?: string
   current_km?: number
   notes?: string
+  plaka?: string
+  sase_no?: string
 }): Promise<{ success: boolean }> {
   const params: Record<string, string> = { action: 'garage_update', id: String(data.id) }
   if (data.nickname !== undefined) params.nickname = data.nickname
   if (data.current_km !== undefined) params.current_km = String(data.current_km)
   if (data.notes !== undefined) params.notes = data.notes
+  if (data.plaka !== undefined) params.plaka = data.plaka
+  if (data.sase_no !== undefined) params.sase_no = data.sase_no
   return actionPost<{ success: boolean }>(params)
 }
 

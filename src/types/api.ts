@@ -75,6 +75,8 @@ export interface GarageVehicleNatro {
   km_updated_at: string | null
   notes: string | null
   spec_id: number | null
+  plaka: string | null
+  sase_no: string | null
   overdue_count: number
   upcoming_count: number
   total_maintenance: number

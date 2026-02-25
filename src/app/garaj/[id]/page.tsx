@@ -6,7 +6,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import {
   ChevronRight, Car, Search, MessageCircle, Wrench, Plus,
-  Gauge, StickyNote, Pencil, Trash2, Save, Cog, ChevronDown,
+  Gauge, StickyNote, Pencil, Trash2, Save, Cog, Zap, Fuel,
+  Settings2, Ruler, Hash, CreditCard, X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import MaintenanceForm from '@/components/MaintenanceForm'
@@ -41,13 +42,15 @@ export default function GarageDetailPage() {
   const [notesValue, setNotesValue] = useState('')
   const [editingNickname, setEditingNickname] = useState(false)
   const [nicknameValue, setNicknameValue] = useState('')
+  const [editingPlaka, setEditingPlaka] = useState(false)
+  const [plakaValue, setPlakaValue] = useState('')
+  const [editingSase, setEditingSase] = useState(false)
+  const [saseValue, setSaseValue] = useState('')
   const [saving, setSaving] = useState(false)
 
   // Vehicle specs
-  const [specs, setSpecs] = useState<VehicleSpecRow[]>([])
   const [selectedSpec, setSelectedSpec] = useState<VehicleSpecRow | null>(null)
   const [specsLoading, setSpecsLoading] = useState(false)
-  const [showSpecPicker, setShowSpecPicker] = useState(false)
 
   // Maintenance form
   const [showForm, setShowForm] = useState(false)
@@ -65,6 +68,8 @@ export default function GarageDetailPage() {
       setKmValue(v.current_km?.toString() || '')
       setNotesValue(v.notes || '')
       setNicknameValue(v.nickname || '')
+      setPlakaValue(v.plaka || '')
+      setSaseValue(v.sase_no || '')
 
       if (treeData) {
         setVehicleImage(findVehicleImage(treeData, v.brand_slug, v.generation_slug))
@@ -79,14 +84,10 @@ export default function GarageDetailPage() {
         let res: { specs: VehicleSpecRow[]; models: unknown[]; brand: string }
 
         if (v.spec_id) {
-          // Direct spec_id lookup — fastest, most accurate
           res = await fetchVehicleSpecs(v.brand_slug, undefined, undefined, undefined, v.spec_id)
         } else {
           const genName = v.generation_name
-          // Extract model name: "Octavia (NX3)" → "Octavia"
           const modelName = genName.replace(/\s*\(.*$/, '').trim()
-
-          // Try with generation first, fallback to model-only
           res = await fetchVehicleSpecs(v.brand_slug, genName, v.year ?? undefined)
           if (res.specs.length === 0 && modelName) {
             res = await fetchVehicleSpecs(v.brand_slug, undefined, v.year ?? undefined, modelName)
@@ -94,7 +95,6 @@ export default function GarageDetailPage() {
         }
 
         if (res.specs.length > 0) {
-          setSpecs(res.specs)
           if (v.spec_id) {
             const matched = res.specs.find(s => s.id === v.spec_id)
             setSelectedSpec(matched || res.specs[0])
@@ -149,6 +149,26 @@ export default function GarageDetailPage() {
     } finally { setSaving(false) }
   }
 
+  const handleSavePlaka = async () => {
+    if (!vehicle) return
+    setSaving(true)
+    try {
+      await garageUpdate({ id: garageId, plaka: plakaValue })
+      setVehicle({ ...vehicle, plaka: plakaValue || null })
+      setEditingPlaka(false)
+    } finally { setSaving(false) }
+  }
+
+  const handleSaveSase = async () => {
+    if (!vehicle) return
+    setSaving(true)
+    try {
+      await garageUpdate({ id: garageId, sase_no: saseValue })
+      setVehicle({ ...vehicle, sase_no: saseValue || null })
+      setEditingSase(false)
+    } finally { setSaving(false) }
+  }
+
   const handleAddMaintenance = async (data: {
     garage_id: number
     maintenance_type: string
@@ -162,7 +182,6 @@ export default function GarageDetailPage() {
     const mRes = await maintenanceList(garageId)
     setRecords(mRes.records)
     setShowForm(false)
-    // Refresh vehicle stats
     const gRes = await garageList()
     const v = gRes.vehicles.find(v => v.id === garageId)
     if (v) setVehicle(v)
@@ -219,10 +238,10 @@ export default function GarageDetailPage() {
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
 
   return (
-    <div className="min-h-screen py-8 md:py-12">
-      <div className="container mx-auto px-4 max-w-4xl">
+    <div className="min-h-screen py-6 md:py-10">
+      <div className="container mx-auto px-4 max-w-5xl">
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8 flex-wrap">
+        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 flex-wrap">
           <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
           <Link href="/garaj" className="hover:text-gray-900 transition-colors">Garajim</Link>
@@ -230,307 +249,325 @@ export default function GarageDetailPage() {
           <span className="text-gray-900">{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.brand_name} {vehicle.generation_name}</span>
         </nav>
 
-        {/* Vehicle Info Card */}
+        {/* ===== Araç Başlık Kartı (tam genişlik) ===== */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">
           <div className="md:flex">
-            <div className="md:w-72 h-48 md:h-auto bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center relative flex-shrink-0">
+            <div className="md:w-64 h-44 md:h-auto bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center relative flex-shrink-0">
               {vehicleImage ? (
-                <Image src={vehicleImage} alt={vehicle.brand_name} fill className="object-contain p-6" sizes="300px" />
+                <Image src={vehicleImage} alt={vehicle.brand_name} fill className="object-contain p-5" sizes="260px" />
               ) : (
                 <Car className="w-20 h-20 text-gray-300" />
               )}
             </div>
-            <div className="p-6 flex-1">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{vehicle.year ? `${vehicle.year} ${vehicle.brand_name}` : vehicle.brand_name}</h1>
-                  <p className="text-gray-600 mt-0.5">{vehicle.generation_name}</p>
-                </div>
-              </div>
-
-              {/* Nickname */}
-              <div className="mt-4">
-                {editingNickname ? (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={nicknameValue}
-                      onChange={(e) => setNicknameValue(e.target.value)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                      placeholder="Takma ad verin..."
-                    />
-                    <button onClick={handleSaveNickname} disabled={saving} className="p-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
-                      <Save className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => { setEditingNickname(false); setNicknameValue(vehicle.nickname || '') }} className="p-1.5 text-gray-400 hover:text-gray-600">
-                      &times;
-                    </button>
+            <div className="p-5 flex-1 flex flex-col justify-between">
+              <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h1 className="text-xl font-bold text-gray-900">
+                      {vehicle.year ? `${vehicle.year} ${vehicle.brand_name}` : vehicle.brand_name}
+                    </h1>
+                    <p className="text-gray-500 text-sm mt-0.5">{vehicle.generation_name}</p>
                   </div>
-                ) : (
-                  <button onClick={() => setEditingNickname(true)} className="text-sm text-primary-500 hover:text-primary-600 flex items-center gap-1">
-                    <Pencil className="w-3 h-3" />
-                    {vehicle.nickname ? `"${vehicle.nickname}"` : 'Takma ad ekle'}
-                  </button>
+                  {/* Nickname inline */}
+                  <div className="flex-shrink-0">
+                    {editingNickname ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          value={nicknameValue}
+                          onChange={(e) => setNicknameValue(e.target.value)}
+                          className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-32"
+                          placeholder="Takma ad..."
+                        />
+                        <button onClick={handleSaveNickname} disabled={saving} className="p-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+                          <Save className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => { setEditingNickname(false); setNicknameValue(vehicle.nickname || '') }} className="p-1 text-gray-400 hover:text-gray-600">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button onClick={() => setEditingNickname(true)} className="text-xs text-primary-500 hover:text-primary-600 flex items-center gap-1 bg-primary-50 px-2 py-1 rounded-lg">
+                        <Pencil className="w-3 h-3" />
+                        {vehicle.nickname ? `"${vehicle.nickname}"` : 'Takma ad'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Modification badge */}
+                {selectedSpec?.modification && (
+                  <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                    <Cog className="w-3 h-3" />
+                    {selectedSpec.modification}
+                    {selectedSpec.power_hp && <span className="opacity-70">({selectedSpec.power_hp} HP)</span>}
+                  </span>
                 )}
               </div>
 
               {/* Quick Actions */}
-              <div className="flex flex-wrap gap-2 mt-5">
-                <Link href={partsHref} className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-50 hover:bg-primary-500 text-primary-600 hover:text-white rounded-lg transition-all text-sm font-medium">
+              <div className="flex flex-wrap gap-2 mt-4">
+                <Link href={partsHref} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 hover:bg-primary-500 text-primary-600 hover:text-white rounded-lg transition-all text-sm font-medium">
                   <Search className="w-4 h-4" /> Parca Ara
                 </Link>
-                <a href={getWhatsAppUrl(whatsappMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-4 py-2 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white rounded-lg transition-all text-sm font-medium">
-                  <MessageCircle className="w-4 h-4" /> WhatsApp Talep
+                <a href={getWhatsAppUrl(whatsappMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white rounded-lg transition-all text-sm font-medium">
+                  <MessageCircle className="w-4 h-4" /> WhatsApp
                 </a>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Teknik Özellikler Section */}
-        {(specsLoading || specs.length > 0) && (
-          <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Cog className="w-5 h-5 text-gray-400" /> Teknik Ozellikler
+        {/* ===== 2-Kolon Grid ===== */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* ── Sol Kolon: Araç Bilgileri ── */}
+          <div className="space-y-6">
+            {/* Araç Bilgileri Kartı */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                <Car className="w-5 h-5 text-primary-500" /> Arac Bilgileri
               </h2>
-              {specs.length > 1 && (
-                <button
-                  onClick={() => setShowSpecPicker(!showSpecPicker)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-lg transition-colors"
-                >
-                  <span className="truncate max-w-[200px]">{selectedSpec?.modification || 'Motor secin'}</span>
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSpecPicker ? 'rotate-180' : ''}`} />
-                </button>
-              )}
-            </div>
-
-            {/* Modification Picker */}
-            {showSpecPicker && specs.length > 1 && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500 mb-2">Motor varyantini secin:</p>
-                <div className="flex flex-wrap gap-2">
-                  {specs.map((s) => (
-                    <button
-                      key={s.id}
-                      onClick={() => { setSelectedSpec(s); setShowSpecPicker(false) }}
-                      className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
-                        selectedSpec?.id === s.id
-                          ? 'bg-primary-500 text-white'
-                          : 'bg-white border border-gray-200 text-gray-700 hover:border-primary-300'
-                      }`}
-                    >
-                      {s.modification}
-                      {s.power_hp && <span className="ml-1 opacity-75">({s.power_hp} HP)</span>}
-                    </button>
-                  ))}
+              <div className="space-y-3">
+                {/* Plaka */}
+                <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <CreditCard className="w-4 h-4" /> Plaka
+                  </div>
+                  {editingPlaka ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={plakaValue}
+                        onChange={(e) => setPlakaValue(e.target.value.toUpperCase())}
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-36 uppercase"
+                        placeholder="34 ABC 123"
+                        maxLength={20}
+                      />
+                      <button onClick={handleSavePlaka} disabled={saving} className="p-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => { setEditingPlaka(false); setPlakaValue(vehicle.plaka || '') }} className="p-1 text-gray-400 hover:text-gray-600">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      {vehicle.plaka ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="bg-blue-700 text-white text-[10px] font-bold px-1 py-0.5 rounded leading-none">TR</span>
+                          <span className="font-semibold text-sm text-gray-900">{vehicle.plaka}</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Girilmedi</span>
+                      )}
+                      <button onClick={() => setEditingPlaka(true)} className="p-1 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
 
-            {specsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-              </div>
-            ) : selectedSpec ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                {selectedSpec.engine_cc && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Motor</p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {selectedSpec.engine_cc} cc
-                      {selectedSpec.cylinders && <span className="text-gray-500 font-normal"> / {selectedSpec.cylinders} silindir</span>}
-                    </p>
+                {/* Şase No */}
+                <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Hash className="w-4 h-4" /> Sase No
                   </div>
-                )}
-                {selectedSpec.power_hp && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Guc</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.power_hp} HP</p>
+                  {editingSase ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        value={saseValue}
+                        onChange={(e) => setSaseValue(e.target.value.toUpperCase())}
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-44 uppercase font-mono"
+                        placeholder="WBA12345678901234"
+                        maxLength={17}
+                      />
+                      <button onClick={handleSaveSase} disabled={saving} className="p-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => { setEditingSase(false); setSaseValue(vehicle.sase_no || '') }} className="p-1 text-gray-400 hover:text-gray-600">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      {vehicle.sase_no ? (
+                        <span className="font-mono text-sm text-gray-900">{vehicle.sase_no}</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Girilmedi</span>
+                      )}
+                      <button onClick={() => setEditingSase(true)} className="p-1 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Kilometre */}
+                <div className="flex items-center justify-between py-2 border-b border-gray-50">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <Gauge className="w-4 h-4" /> Kilometre
                   </div>
-                )}
-                {selectedSpec.torque_nm && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Tork</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.torque_nm} Nm</p>
-                  </div>
-                )}
-                {selectedSpec.fuel_type && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Yakit</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.fuel_type}</p>
-                  </div>
-                )}
-                {selectedSpec.transmission && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Sanziman</p>
-                    <p className="text-sm font-semibold text-gray-900 truncate" title={selectedSpec.transmission}>{selectedSpec.transmission}</p>
-                  </div>
-                )}
-                {selectedSpec.drivetrain && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Cekis</p>
-                    <p className="text-sm font-semibold text-gray-900 truncate" title={selectedSpec.drivetrain}>{selectedSpec.drivetrain}</p>
-                  </div>
-                )}
-                {selectedSpec.accel_0_100 && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">0-100 km/s</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.accel_0_100} sn</p>
-                  </div>
-                )}
-                {selectedSpec.top_speed_kmh && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Max Hiz</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.top_speed_kmh} km/s</p>
-                  </div>
-                )}
-                {selectedSpec.fuel_combined && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Yakit Tuketimi</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.fuel_combined} L/100km</p>
-                  </div>
-                )}
-                {(selectedSpec.length_mm || selectedSpec.width_mm || selectedSpec.height_mm) && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Boyutlar (U×G×Y)</p>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {selectedSpec.length_mm || '—'}×{selectedSpec.width_mm || '—'}×{selectedSpec.height_mm || '—'} mm
-                    </p>
-                  </div>
-                )}
-                {selectedSpec.wheelbase_mm && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Aks Araligi</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.wheelbase_mm} mm</p>
-                  </div>
-                )}
-                {selectedSpec.weight_kg && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Agirlik</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.weight_kg} kg</p>
-                  </div>
-                )}
-                {selectedSpec.trunk_liters && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Bagaj</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.trunk_liters} L</p>
-                  </div>
-                )}
-                {selectedSpec.fuel_tank_liters && (
-                  <div className="p-3 bg-gray-50 rounded-lg">
-                    <p className="text-[10px] text-gray-400 uppercase tracking-wider mb-1">Yakit Deposu</p>
-                    <p className="text-sm font-semibold text-gray-900">{selectedSpec.fuel_tank_liters} L</p>
-                  </div>
+                  {editingKm ? (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="number"
+                        value={kmValue}
+                        onChange={(e) => setKmValue(e.target.value)}
+                        className="px-2 py-1 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-28"
+                        placeholder="45000"
+                      />
+                      <span className="text-xs text-gray-400">km</span>
+                      <button onClick={handleSaveKm} disabled={saving || !kmValue} className="p-1 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50">
+                        <Save className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => { setEditingKm(false); setKmValue(vehicle.current_km?.toString() || '') }} className="p-1 text-gray-400 hover:text-gray-600">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      {vehicle.current_km !== null ? (
+                        <span className="font-semibold text-sm text-gray-900">{vehicle.current_km.toLocaleString('tr-TR')} km</span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">Girilmedi</span>
+                      )}
+                      <button onClick={() => setEditingKm(true)} className="p-1 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {vehicle.km_updated_at && !editingKm && (
+                  <p className="text-[10px] text-gray-400 -mt-2 pl-6">Son: {new Date(vehicle.km_updated_at).toLocaleDateString('tr-TR')}</p>
                 )}
               </div>
-            ) : null}
-
-            {selectedSpec && (
-              <p className="text-[10px] text-gray-400 mt-3">
-                {selectedSpec.model} {selectedSpec.generation}
-                {selectedSpec.year_start && ` (${selectedSpec.year_start}${selectedSpec.year_end ? `–${selectedSpec.year_end}` : '–'})`}
-                {' '}&middot; Kaynak: auto-data.net
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* KM Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Gauge className="w-5 h-5 text-gray-400" /> Kilometre
-            </h2>
-          </div>
-          {editingKm ? (
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={kmValue}
-                onChange={(e) => setKmValue(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 w-40"
-                placeholder="orn. 45000"
-              />
-              <span className="text-gray-500 text-sm">km</span>
-              <button onClick={handleSaveKm} disabled={saving || !kmValue} className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 text-sm font-medium disabled:opacity-50">
-                {saving ? '...' : 'Kaydet'}
-              </button>
-              <button onClick={() => { setEditingKm(false); setKmValue(vehicle.current_km?.toString() || '') }} className="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm">
-                Iptal
-              </button>
             </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {vehicle.current_km !== null ? (
-                <span className="text-2xl font-bold text-gray-900">{vehicle.current_km.toLocaleString('tr-TR')} km</span>
+
+            {/* Notlar Kartı */}
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                  <StickyNote className="w-5 h-5 text-amber-500" /> Notlar
+                </h2>
+                {!editingNotes && (
+                  <button onClick={() => setEditingNotes(true)} className="p-1.5 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {editingNotes ? (
+                <div>
+                  <textarea
+                    value={notesValue}
+                    onChange={(e) => setNotesValue(e.target.value)}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-sm"
+                    placeholder="Sigorta tarihi, muayene tarihi vb. notlar..."
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <button onClick={handleSaveNotes} disabled={saving} className="px-3 py-1.5 bg-primary-500 text-white rounded-lg hover:bg-primary-600 text-sm font-medium disabled:opacity-50">
+                      {saving ? '...' : 'Kaydet'}
+                    </button>
+                    <button onClick={() => { setEditingNotes(false); setNotesValue(vehicle.notes || '') }} className="px-3 py-1.5 text-gray-500 hover:text-gray-700 text-sm">
+                      Iptal
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <span className="text-gray-400">Henuz girilmedi</span>
+                <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                  {vehicle.notes || <span className="text-gray-400">Henuz not eklenmedi.</span>}
+                </p>
               )}
-              <button onClick={() => setEditingKm(true)} className="p-1.5 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all">
-                <Pencil className="w-4 h-4" />
-              </button>
             </div>
-          )}
-          {vehicle.km_updated_at && !editingKm && (
-            <p className="text-xs text-gray-400 mt-1">Son guncelleme: {new Date(vehicle.km_updated_at).toLocaleDateString('tr-TR')}</p>
-          )}
-        </div>
+          </div>
 
-        {/* Notes Section */}
-        <div className="bg-white border border-gray-200 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <StickyNote className="w-5 h-5 text-gray-400" /> Notlar
-            </h2>
-            {!editingNotes && (
-              <button onClick={() => setEditingNotes(true)} className="p-1.5 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-all">
-                <Pencil className="w-4 h-4" />
-              </button>
+          {/* ── Sağ Kolon: Teknik Özellikler ── */}
+          <div>
+            {(specsLoading || selectedSpec) && (
+              <div className="bg-white border border-gray-200 rounded-xl p-5">
+                <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                  <Cog className="w-5 h-5 text-gray-500" /> Teknik Ozellikler
+                </h2>
+
+                {specsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : selectedSpec ? (
+                  <div className="space-y-2.5">
+                    {selectedSpec.engine_cc && (
+                      <SpecRow icon={<Cog className="w-4 h-4" />} label="Motor" value={`${selectedSpec.engine_cc} cc${selectedSpec.cylinders ? ` / ${selectedSpec.cylinders} silindir` : ''}`} />
+                    )}
+                    {selectedSpec.power_hp && (
+                      <SpecRow icon={<Zap className="w-4 h-4" />} label="Guc" value={`${selectedSpec.power_hp} HP`} />
+                    )}
+                    {selectedSpec.torque_nm && (
+                      <SpecRow icon={<Zap className="w-4 h-4" />} label="Tork" value={`${selectedSpec.torque_nm} Nm`} />
+                    )}
+                    {selectedSpec.fuel_type && (
+                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakit" value={selectedSpec.fuel_type} />
+                    )}
+                    {selectedSpec.transmission && (
+                      <SpecRow icon={<Settings2 className="w-4 h-4" />} label="Sanziman" value={selectedSpec.transmission} />
+                    )}
+                    {selectedSpec.drivetrain && (
+                      <SpecRow icon={<Settings2 className="w-4 h-4" />} label="Cekis" value={selectedSpec.drivetrain} />
+                    )}
+                    {selectedSpec.accel_0_100 && (
+                      <SpecRow icon={<Gauge className="w-4 h-4" />} label="0-100 km/s" value={`${selectedSpec.accel_0_100} sn`} />
+                    )}
+                    {selectedSpec.top_speed_kmh && (
+                      <SpecRow icon={<Gauge className="w-4 h-4" />} label="Max Hiz" value={`${selectedSpec.top_speed_kmh} km/s`} />
+                    )}
+                    {selectedSpec.fuel_combined && (
+                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakit Tuketimi" value={`${selectedSpec.fuel_combined} L/100km`} />
+                    )}
+                    {(selectedSpec.length_mm || selectedSpec.width_mm || selectedSpec.height_mm) && (
+                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Boyutlar" value={`${selectedSpec.length_mm || '—'}x${selectedSpec.width_mm || '—'}x${selectedSpec.height_mm || '—'} mm`} />
+                    )}
+                    {selectedSpec.wheelbase_mm && (
+                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Aks Araligi" value={`${selectedSpec.wheelbase_mm} mm`} />
+                    )}
+                    {selectedSpec.weight_kg && (
+                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Agirlik" value={`${selectedSpec.weight_kg} kg`} />
+                    )}
+                    {selectedSpec.trunk_liters && (
+                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Bagaj" value={`${selectedSpec.trunk_liters} L`} />
+                    )}
+                    {selectedSpec.fuel_tank_liters && (
+                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakit Deposu" value={`${selectedSpec.fuel_tank_liters} L`} />
+                    )}
+
+                    <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-100">
+                      {selectedSpec.model} {selectedSpec.generation}
+                      {selectedSpec.year_start && ` (${selectedSpec.year_start}${selectedSpec.year_end ? `–${selectedSpec.year_end}` : '–'})`}
+                      {' '}&middot; Kaynak: auto-data.net
+                    </p>
+                  </div>
+                ) : null}
+              </div>
             )}
           </div>
-          {editingNotes ? (
-            <div>
-              <textarea
-                value={notesValue}
-                onChange={(e) => setNotesValue(e.target.value)}
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none text-sm"
-                placeholder="Plaka, sigorta tarihi, muayene tarihi vb. notlar..."
-              />
-              <div className="flex gap-2 mt-2">
-                <button onClick={handleSaveNotes} disabled={saving} className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 text-sm font-medium disabled:opacity-50">
-                  {saving ? '...' : 'Kaydet'}
-                </button>
-                <button onClick={() => { setEditingNotes(false); setNotesValue(vehicle.notes || '') }} className="px-3 py-2 text-gray-500 hover:text-gray-700 text-sm">
-                  Iptal
-                </button>
-              </div>
-            </div>
-          ) : (
-            <p className="text-sm text-gray-600 whitespace-pre-wrap">
-              {vehicle.notes || <span className="text-gray-400">Henuz not eklenmedi. Plaka, sigorta tarihi vb. bilgileri buraya yazabilirsiniz.</span>}
-            </p>
-          )}
         </div>
 
-        {/* Maintenance Section */}
+        {/* ===== Bakım Kayıtları (tam genişlik) ===== */}
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-gray-400" /> Bakim Kayitlari
+            <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-orange-500" /> Bakim Kayitlari
             </h2>
             <button
               onClick={() => { setEditRecord(null); setShowForm(true) }}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-medium transition-all"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-medium transition-all"
             >
               <Plus className="w-4 h-4" /> Bakim Ekle
             </button>
           </div>
 
           {records.length === 0 ? (
-            <div className="text-center py-10">
-              <Wrench className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <div className="text-center py-8">
+              <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-2" />
               <p className="text-gray-500 text-sm">Henuz bakim kaydi yok.</p>
               <p className="text-gray-400 text-xs mt-1">Bakim gecmisini takip etmek icin kayit ekleyin.</p>
             </div>
@@ -591,6 +628,18 @@ export default function GarageDetailPage() {
           onCancel={() => { setShowForm(false); setEditRecord(null) }}
         />
       )}
+    </div>
+  )
+}
+
+function SpecRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+      <div className="flex items-center gap-2 text-sm text-gray-500">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <span className="text-sm font-medium text-gray-900 text-right">{value}</span>
     </div>
   )
 }
