@@ -72,3 +72,100 @@ export function findVehicleImage(
 
   return null
 }
+
+// ==================== Autodata Image Lookup ====================
+
+interface AutodataImageEntry {
+  brand: string
+  model: string
+  generation: string
+  thumb: string
+  image: string
+}
+
+let cachedAutodataImages: AutodataImageEntry[] | null = null
+
+async function loadAutodataImages(): Promise<AutodataImageEntry[]> {
+  if (cachedAutodataImages) return cachedAutodataImages
+  try {
+    const res = await fetch('/data/autodata-images.json')
+    if (!res.ok) return []
+    cachedAutodataImages = await res.json()
+    return cachedAutodataImages!
+  } catch {
+    return []
+  }
+}
+
+function normalize(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
+// Extract parenthesized and non-parenthesized parts
+function extractParts(s: string): string[] {
+  const parts: string[] = []
+  const parenMatch = s.match(/\(([^)]+)\)/g)
+  if (parenMatch) {
+    for (const m of parenMatch) parts.push(m.slice(1, -1).trim())
+  }
+  const withoutParen = s.replace(/\([^)]*\)/g, '').trim()
+  if (withoutParen) parts.push(withoutParen)
+  return parts
+}
+
+export async function findAutodataImage(
+  brandName: string,
+  modelOrGeneration?: string
+): Promise<string | null> {
+  const images = await loadAutodataImages()
+  if (images.length === 0) return null
+
+  const brandNorm = normalize(brandName)
+
+  // Filter to matching brand
+  const brandMatches = images.filter(img => normalize(img.brand) === brandNorm)
+  if (brandMatches.length === 0) return null
+
+  if (!modelOrGeneration) {
+    return brandMatches[0].image
+  }
+
+  const searchNorm = normalize(modelOrGeneration)
+  const searchParts = extractParts(modelOrGeneration).map(normalize)
+
+  // Exact generation match
+  for (const img of brandMatches) {
+    if (normalize(img.generation) === searchNorm) return img.image
+  }
+
+  // Cross-match: search parts against generation parts
+  for (const img of brandMatches) {
+    const genParts = extractParts(img.generation).map(normalize)
+    for (const sp of searchParts) {
+      for (const gp of genParts) {
+        if (sp === gp || sp.includes(gp) || gp.includes(sp)) return img.image
+      }
+    }
+  }
+
+  // Partial model name match
+  for (const img of brandMatches) {
+    const modelNorm = normalize(img.model)
+    if (modelNorm.includes(searchNorm) || searchNorm.includes(modelNorm)) return img.image
+  }
+
+  // Fallback: first word match
+  const firstWord = searchNorm.slice(0, Math.max(3, searchNorm.indexOf(' ') > 0 ? searchNorm.indexOf(' ') : searchNorm.length))
+  for (const img of brandMatches) {
+    if (normalize(img.generation).includes(firstWord) || normalize(img.model).includes(firstWord)) return img.image
+  }
+
+  return null
+}
+
+export async function findAutodataGenerationImage(
+  brandName: string,
+  generationName: string
+): Promise<string | null> {
+  return findAutodataImage(brandName, generationName)
+}

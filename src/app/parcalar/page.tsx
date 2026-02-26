@@ -10,6 +10,7 @@ import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGene
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import type { AutodataGeneration, SlugMatch } from '@/types/api'
 import BrandPicker from '@/components/BrandPicker'
+import PartDiagram from '@/components/PartDiagram'
 
 // All 17 API categories with Turkish names (hardcoded — these don't change)
 const STATIC_API_CATEGORIES: { id: string; name_tr: string }[] = [
@@ -381,6 +382,11 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
           <button onClick={goBack} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors">
             <ChevronLeft className="w-4 h-4" /> {selectedCat?.name_tr || 'Geri'}
           </button>
+
+          {/* Part Diagram */}
+          {selectedNode && (
+            <PartDiagram brand={brand} gen={gen} node={selectedNode.name} nodeLabel={selectedNode.label} />
+          )}
 
           {parts.length > 0 ? (
             <>

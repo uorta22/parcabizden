@@ -355,6 +355,24 @@ export function resolveAutodataSlug(brandSlug: string, model: string, generation
 
 // ==================== Vehicle Specs (Autodata) ====================
 
+// ==================== Diagram Lookup ====================
+
+const diagramCache = new Map<string, Record<string, Record<string, string>>>()
+
+export async function fetchDiagramUrl(brand: string, gen: string, node: string): Promise<string | null> {
+  if (!brand || !gen || !node) return null
+  if (!diagramCache.has(brand)) {
+    try {
+      const res = await fetch(`/data/diagrams/${brand}.json`)
+      if (res.ok) diagramCache.set(brand, await res.json())
+      else return null
+    } catch { return null }
+  }
+  return diagramCache.get(brand)?.[gen]?.[node] || null
+}
+
+// ==================== Vehicle Specs (Autodata) ====================
+
 export function fetchVehicleSpecs(brand: string, generation?: string, year?: number, model?: string, specId?: number) {
   const params: Record<string, string> = { action: 'vehicle_specs', brand }
   if (specId) params.spec_id = String(specId)

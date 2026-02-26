@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { Search, X, ChevronRight, ChevronLeft, Car, Loader2, Calendar, Cog, ArrowUpDown, Plus, Zap } from 'lucide-react'
 import { fetchAutodataBrands, fetchAutodataModels, fetchAutodataGenerations, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
+import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 import type { AutodataBrand, AutodataModel, AutodataGeneration, VehicleSpecRow } from '@/types/api'
 
 // ── Types ──
@@ -110,6 +111,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
   const [pendingGeneration, setPendingGeneration] = useState<AutodataGeneration | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [genImages, setGenImages] = useState<Record<string, string>>({})  // genName → imageUrl
 
   // Load vehicle-tree for images
   useEffect(() => {
@@ -363,6 +365,25 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     }
     return null
   }
+
+  // Fetch autodata images for generation cards
+  useEffect(() => {
+    if (!selectedBrand || generations.length === 0) return
+    setGenImages({})
+    const controller = new AbortController()
+    const fetchImages = async () => {
+      const images: Record<string, string> = {}
+      for (const gen of generations) {
+        if (controller.signal.aborted) return
+        const key = `${gen.name}-${gen.body_type}`
+        const img = await findAutodataGenerationImage(selectedBrand.name, gen.name)
+        if (img) images[key] = img
+      }
+      if (!controller.signal.aborted) setGenImages(images)
+    }
+    fetchImages()
+    return () => controller.abort()
+  }, [selectedBrand, generations])
 
   // Body type tabs derived from generations
   const bodyTypeTabs = useMemo(() => {
@@ -756,14 +777,42 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                       <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
                     </div>
                   ) : (
-                    <div className={`grid gap-3 ${isModal ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
-                      {filteredGenerations.map((gen, index) => (
+                    <div className={`grid gap-3 ${isModal ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'}`}>
+                      {filteredGenerations.map((gen, index) => {
+                        const genKey = `${gen.name}-${gen.body_type}`
+                        const genImg = genImages[genKey]
+                        return (
                         <button
-                          key={`${gen.name}-${gen.body_type}`}
+                          key={genKey}
                           onClick={() => selectGeneration(gen)}
-                          className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-md transition-all duration-200 text-left animate-cardReveal"
+                          className="group bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden hover:border-primary-400 hover:shadow-md transition-all duration-200 text-left animate-cardReveal"
                           style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                         >
+                          {/* Generation image */}
+                          <div className="relative aspect-[16/10] bg-gray-50 overflow-hidden">
+                            {genImg ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={genImg}
+                                alt={gen.name}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                              />
+                            ) : selectedBrand ? (
+                              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                                <Image
+                                  src={`/brands/${getBrandLogo(selectedBrand.name)}`}
+                                  alt={selectedBrand.name}
+                                  width={40}
+                                  height={40}
+                                  className="object-contain opacity-30"
+                                />
+                              </div>
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-50" />
+                            )}
+                          </div>
+                          <div className="p-3">
                           <p className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors mb-2">{gen.name}</p>
                           <div className="flex flex-wrap items-center gap-2">
                             {(gen.year_start || gen.year_end) && (
@@ -777,8 +826,10 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                             )}
                             <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">{gen.mod_count} varyant</span>
                           </div>
+                          </div>
                         </button>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
 

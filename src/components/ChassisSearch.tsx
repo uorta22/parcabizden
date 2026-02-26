@@ -10,8 +10,10 @@ import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts } from '@/lib/api'
 import { BrandLogo } from '@/components/BrandLogos'
 import PartDetailModal from '@/components/PartDetailModal'
+import PartDiagram from '@/components/PartDiagram'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { validateVIN, decodeVIN, translateFuelType, translateTransmission, formatEngine, parseModelYear, cleanModelName } from '@/lib/vehicle'
+import { findAutodataImage } from '@/lib/vehicleImage'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -107,6 +109,7 @@ export default function ChassisSearch() {
   const [brandModels, setBrandModels]             = useState<BrandModel[]>([])
   const [modelSearch, setModelSearch]             = useState('')
   const [selectedModelImage, setSelectedModelImage] = useState('')
+  const [autodataImage, setAutodataImage]           = useState<string | null>(null)
 
   // ── API drill-down state ──
   const [partsView, setPartsView]         = useState<PartsView>('categories')
@@ -142,6 +145,7 @@ export default function ChassisSearch() {
       setBrandModels([])
       setModelSearch('')
       setSelectedModelImage('')
+      setAutodataImage(null)
       resetApiState()
     }
     window.addEventListener('page-reset', resetState)
@@ -304,6 +308,13 @@ export default function ChassisSearch() {
 
       const info = result.data
       setVehicleInfo(info)
+
+      // Fetch autodata vehicle image
+      if (info.make) {
+        findAutodataImage(info.make, info.model || undefined).then(img => {
+          if (img) setAutodataImage(img)
+        })
+      }
 
       const generations = info.generations ?? []
       const bSlug = info.brandSlug ?? ''
@@ -487,12 +498,12 @@ export default function ChassisSearch() {
                 <div className="flex flex-col md:flex-row gap-6 mb-6">
                   {/* Left: Vehicle Image or Brand Logo */}
                   <div className="flex-shrink-0 mx-auto md:mx-0">
-                    {selectedModelImage ? (
-                      <div className="w-40 h-28 md:w-48 md:h-32 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
+                    {(autodataImage || selectedModelImage) ? (
+                      <div className="w-44 h-32 md:w-52 md:h-36 rounded-2xl bg-gray-100 border border-gray-200 flex items-center justify-center overflow-hidden">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={selectedModelImage}
-                          alt={vehicleInfo.model}
+                          src={autodataImage || selectedModelImage}
+                          alt={vehicleInfo.model || vehicleInfo.make}
                           className="w-full h-full object-contain p-2"
                         />
                       </div>
@@ -503,7 +514,7 @@ export default function ChassisSearch() {
                     )}
                   </div>
 
-                  {/* Right: Title + Quick Info */}
+                  {/* Right: Title + Quick Info + Spec Badges */}
                   <div className="flex-1 min-w-0 text-center md:text-left">
                     <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">
                       {vehicleInfo.make}{' '}
@@ -515,11 +526,42 @@ export default function ChassisSearch() {
                         </span>
                       )}
                     </h3>
-                    <p className="text-gray-500 mb-4">
+                    <p className="text-gray-500 mb-3">
                       {[vehicleInfo.year, vehicleInfo.series, vehicleInfo.bodyType]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
+
+                    {/* Spec highlight badges */}
+                    {(vehicleInfo.engineHP || vehicleInfo.displacementL || translateFuelType(vehicleInfo.fuelType) || translateTransmission(vehicleInfo.transmissionType)) && (
+                      <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
+                        {vehicleInfo.engineHP && (
+                          <div className="flex flex-col items-center px-3 py-1.5 bg-red-50 border border-red-100 rounded-lg">
+                            <span className="text-sm font-bold text-red-600">{vehicleInfo.engineHP} HP</span>
+                            <span className="text-[9px] text-red-400 uppercase tracking-wider">Motor</span>
+                          </div>
+                        )}
+                        {vehicleInfo.displacementL && (
+                          <div className="flex flex-col items-center px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-lg">
+                            <span className="text-sm font-bold text-blue-600">{vehicleInfo.displacementL}L</span>
+                            <span className="text-[9px] text-blue-400 uppercase tracking-wider">Hacim</span>
+                          </div>
+                        )}
+                        {translateFuelType(vehicleInfo.fuelType) && (
+                          <div className="flex flex-col items-center px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+                            <span className="text-sm font-bold text-amber-600">{translateFuelType(vehicleInfo.fuelType)}</span>
+                            <span className="text-[9px] text-amber-400 uppercase tracking-wider">Yakit</span>
+                          </div>
+                        )}
+                        {translateTransmission(vehicleInfo.transmissionType) && (
+                          <div className="flex flex-col items-center px-3 py-1.5 bg-purple-50 border border-purple-100 rounded-lg">
+                            <span className="text-sm font-bold text-purple-600">{translateTransmission(vehicleInfo.transmissionType)}</span>
+                            <span className="text-[9px] text-purple-400 uppercase tracking-wider">Sanziman</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                       {!missingModel && (
                         <button
@@ -901,6 +943,11 @@ export default function ChassisSearch() {
                           <ChevronLeft className="w-4 h-4" />
                           {selectedCat?.name_tr || 'Geri'}
                         </button>
+
+                        {/* Part Diagram */}
+                        {selectedNode && selectedGen && brandSlug && (
+                          <PartDiagram brand={brandSlug} gen={selectedGen.slug} node={selectedNode.name} nodeLabel={selectedNode.label} />
+                        )}
 
                         {apiParts.length > 0 ? (
                           <>
