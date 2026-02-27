@@ -275,59 +275,74 @@ export default function ChassisSearch() {
     setBrandSlug(bSlug)
     setLoadingParts(true)
 
-    try {
-      // 1. Try autodata generations
-      const autodataData = await fetchAutodataGenerations(bSlug, cleanModelName(modelName))
-      if (autodataData.generations && autodataData.generations.length > 0) {
-        // Resolve first generation to parts DB slug
-        const firstGen = autodataData.generations[0]
-        const resolveResult = await resolveAutodataSlug(bSlug, cleanModelName(modelName), firstGen.name, firstGen.year_start ?? undefined)
+    const modelClean = cleanModelName(modelName)
 
-        if (resolveResult.auto_selected) {
-          // Single match — load categories directly
-          const genSlug = resolveResult.auto_selected
-          setSelectedGen({ slug: genSlug, name: firstGen.name })
-          await loadCategories(bSlug, genSlug)
-          return
-        } else if (resolveResult.matches && resolveResult.matches.length > 0) {
-          // Multiple matches — set as generations for picker
-          const gens: VehicleGeneration[] = resolveResult.matches.map(m => ({
-            generation_slug: m.generation_slug,
-            generation_name: m.generation_name,
-            part_count: m.part_count,
-          }))
-          setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: gens, brandSlug: bSlug } : prev)
+    // Fetch DB generations for this brand (all models)
+    let dbGens: VehicleGeneration[] = []
+    try {
+      const genData = await fetchGenerations(bSlug)
+      dbGens = (genData.generations || []).map(g => ({
+        generation_slug: g.generation_slug,
+        generation_name: g.generation_name,
+        part_count: g.part_count,
+      }))
+    } catch { /* ignore */ }
+
+    // Try autodata generations for this specific model → resolve in parallel to DB slugs
+    try {
+      const autodataData = await fetchAutodataGenerations(bSlug, modelClean)
+      if (autodataData.generations && autodataData.generations.length > 0) {
+        // Resolve all generations in parallel (max 6)
+        const toResolve = autodataData.generations.slice(0, 6)
+        const results = await Promise.allSettled(
+          toResolve.map(aGen =>
+            resolveAutodataSlug(bSlug, modelClean, aGen.name, aGen.year_start ?? undefined)
+              .then(res => ({ aGen, res }))
+          )
+        )
+
+        const resolvedGens: VehicleGeneration[] = []
+        for (const r of results) {
+          if (r.status !== 'fulfilled') continue
+          const { aGen, res } = r.value
+          if (res.auto_selected && !resolvedGens.some(g => g.generation_slug === res.auto_selected)) {
+            const dbMatch = dbGens.find(g => g.generation_slug === res.auto_selected)
+            resolvedGens.push({
+              generation_slug: res.auto_selected!,
+              generation_name: aGen.name,
+              part_count: dbMatch?.part_count || 0,
+            })
+          }
+        }
+
+        if (resolvedGens.length > 0) {
+          if (resolvedGens.length === 1) {
+            setSelectedGen({ slug: resolvedGens[0].generation_slug, name: resolvedGens[0].generation_name })
+            await loadCategories(bSlug, resolvedGens[0].generation_slug)
+            return
+          }
+          setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: resolvedGens, brandSlug: bSlug } : prev)
           setPartsView('generations')
           setLoadingParts(false)
           return
         }
       }
-    } catch { /* autodata failed, try DB generations */ }
+    } catch { /* autodata failed */ }
 
-    try {
-      // 2. Fallback: fetch generations from parts DB
-      const genData = await fetchGenerations(bSlug)
-      if (genData.generations && genData.generations.length > 0) {
-        const gens: VehicleGeneration[] = genData.generations.map(g => ({
-          generation_slug: g.generation_slug,
-          generation_name: g.generation_name,
-          part_count: g.part_count,
-        }))
-
-        if (gens.length === 1) {
-          setSelectedGen({ slug: gens[0].generation_slug, name: gens[0].generation_name })
-          await loadCategories(bSlug, gens[0].generation_slug)
-          return
-        }
-
-        setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: gens, brandSlug: bSlug } : prev)
-        setPartsView('generations')
-        setLoadingParts(false)
+    // Fallback: show all DB generations for this brand
+    if (dbGens.length > 0) {
+      if (dbGens.length === 1) {
+        setSelectedGen({ slug: dbGens[0].generation_slug, name: dbGens[0].generation_name })
+        await loadCategories(bSlug, dbGens[0].generation_slug)
         return
       }
-    } catch { /* no generations found */ }
+      setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: dbGens, brandSlug: bSlug } : prev)
+      setPartsView('generations')
+      setLoadingParts(false)
+      return
+    }
 
-    // 3. Nothing found — show WhatsApp CTA
+    // Nothing found — apiAvailable stays false, WhatsApp CTA shows
     setLoadingParts(false)
   }
 
