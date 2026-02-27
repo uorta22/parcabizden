@@ -112,6 +112,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [genImages, setGenImages] = useState<Record<string, string>>({})  // genName → imageUrl
+  const [modelImages, setModelImages] = useState<Record<string, string>>({})  // modelName → imageUrl
 
   // Load vehicle-tree for images
   useEffect(() => {
@@ -168,9 +169,18 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     setStep('models')
     setSubLoading(true)
     setSearchQuery('')
+    setModelImages({})
     try {
       const data = await fetchAutodataModels(brand.slug)
       setModels(data.models)
+      // Fetch autodata images for all models in background
+      const imgs: Record<string, string> = {}
+      const promises = data.models.map(m =>
+        findAutodataGenerationImage(brand.name, m.name).then(img => {
+          if (img) imgs[m.name] = img
+        })
+      )
+      Promise.all(promises).then(() => setModelImages({ ...imgs }))
     } catch {
       setModels([])
     } finally {
@@ -663,7 +673,9 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                   ) : (
                     <div className={`grid gap-3 ${isModal ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3'}`}>
                       {sortedModels.map((model, index) => {
-                        const image = findModelImage(selectedBrand.name, model.name)
+                        const autodataImg = modelImages[model.name]
+                        const treeImg = findModelImage(selectedBrand.name, model.name)
+                        const image = autodataImg || treeImg
                         return (
                           <button
                             key={model.name}
@@ -672,10 +684,10 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                             style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                           >
                             {image && (
-                              <div className="relative aspect-[3/2] overflow-hidden bg-gray-50">
+                              <div className={`relative ${autodataImg ? 'aspect-[16/10]' : 'aspect-[3/2]'} overflow-hidden bg-gray-50`}>
                                 <div className="absolute inset-0 bg-primary-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={image} alt={model.name} className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" />
+                                <img src={image} alt={model.name} className={`w-full h-full ${autodataImg ? 'object-cover' : 'object-contain p-1.5'} group-hover:scale-105 transition-transform duration-500 ease-out`} loading="lazy" />
                               </div>
                             )}
                             <div className="px-4 py-3">

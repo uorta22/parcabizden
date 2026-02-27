@@ -329,17 +329,27 @@ export default function ChassisSearch() {
       }
     } catch { /* autodata failed */ }
 
-    // Fallback: show all DB generations for this brand
+    // Fallback: try to find DB generations matching the selected model name
     if (dbGens.length > 0) {
-      if (dbGens.length === 1) {
-        setSelectedGen({ slug: dbGens[0].generation_slug, name: dbGens[0].generation_name })
-        await loadCategories(bSlug, dbGens[0].generation_slug)
+      // Extract base model number/name from selection (e.g. "3008" from "3008 (05.2009->)")
+      const baseModel = modelClean.split(/\s+/)[0].toLowerCase()
+      const matchingGens = dbGens.filter(g => {
+        const genLower = g.generation_name.toLowerCase()
+        return genLower.startsWith(baseModel) || genLower === baseModel
+      })
+
+      if (matchingGens.length === 1) {
+        setSelectedGen({ slug: matchingGens[0].generation_slug, name: matchingGens[0].generation_name })
+        await loadCategories(bSlug, matchingGens[0].generation_slug)
         return
       }
-      setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: dbGens, brandSlug: bSlug } : prev)
-      setPartsView('generations')
-      setLoadingParts(false)
-      return
+      if (matchingGens.length > 1) {
+        setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: matchingGens, brandSlug: bSlug } : prev)
+        setPartsView('generations')
+        setLoadingParts(false)
+        return
+      }
+      // No matching generation for this specific model — don't show unrelated models
     }
 
     // Nothing found — apiAvailable stays false, WhatsApp CTA shows
@@ -415,7 +425,7 @@ export default function ChassisSearch() {
           100,
         )
       } else {
-        // Model exists but no generations from VIN decode — try fetching from DB
+        // Model exists but no generations from VIN decode — try fetching matching from DB
         const derivedSlug = bSlug || info.make.toLowerCase().replace(/\s+/g, '-')
         setBrandSlug(derivedSlug)
         setLoadingParts(true)
@@ -423,18 +433,30 @@ export default function ChassisSearch() {
         try {
           const genData = await fetchGenerations(derivedSlug)
           if (genData.generations && genData.generations.length > 0) {
-            const gens: VehicleGeneration[] = genData.generations.map(g => ({
+            const allGens: VehicleGeneration[] = genData.generations.map(g => ({
               generation_slug: g.generation_slug,
               generation_name: g.generation_name,
               part_count: g.part_count,
             }))
 
-            if (gens.length === 1) {
-              setSelectedGen({ slug: gens[0].generation_slug, name: gens[0].generation_name })
-              await loadCategories(derivedSlug, gens[0].generation_slug)
-            } else {
-              setVehicleInfo(prev => prev ? { ...prev, generations: gens, brandSlug: derivedSlug } : prev)
+            // Filter to generations matching the model name
+            const baseModel = (info.model || '').split(/\s+/)[0].toLowerCase()
+            const matchingGens = baseModel
+              ? allGens.filter(g => {
+                  const genLower = g.generation_name.toLowerCase()
+                  return genLower.startsWith(baseModel) || genLower === baseModel
+                })
+              : allGens
+
+            if (matchingGens.length === 1) {
+              setSelectedGen({ slug: matchingGens[0].generation_slug, name: matchingGens[0].generation_name })
+              await loadCategories(derivedSlug, matchingGens[0].generation_slug)
+            } else if (matchingGens.length > 1) {
+              setVehicleInfo(prev => prev ? { ...prev, generations: matchingGens, brandSlug: derivedSlug } : prev)
               setPartsView('generations')
+              setLoadingParts(false)
+            } else {
+              // No matching generation for this model
               setLoadingParts(false)
             }
           } else {
