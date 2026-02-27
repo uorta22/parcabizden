@@ -7,7 +7,7 @@ import {
 } from 'lucide-react'
 import type { VehicleInfo, VehicleGeneration } from '@/types/vehicle'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchAutodataGenerations, resolveAutodataSlug, fetchGenerations } from '@/lib/api'
 import { BrandLogo } from '@/components/BrandLogos'
 import PartDetailModal from '@/components/PartDetailModal'
 import PartDiagram from '@/components/PartDiagram'
@@ -262,7 +262,7 @@ export default function ChassisSearch() {
   }
 
   // ── Model select (when NHTSA missing model) ───────────────────────────────
-  const handleModelSelect = (modelName: string, image?: string) => {
+  const handleModelSelect = async (modelName: string, image?: string) => {
     if (!vehicleInfo) return
     const updated = { ...vehicleInfo, model: modelName }
     setVehicleInfo(updated)
@@ -270,9 +270,65 @@ export default function ChassisSearch() {
     setModelSearch('')
     if (image) setSelectedModelImage(image)
 
-    // After model select, if no API data available show WhatsApp CTA (no brandSlug)
-    // If brandSlug exists, try API — but at this point the vehicle had no generations
-    // so nothing to load. apiAvailable stays false, showing WhatsApp CTA section.
+    // Try to find generations for this brand + model and connect to parts catalog
+    const bSlug = vehicleInfo.brandSlug || vehicleInfo.make.toLowerCase().replace(/\s+/g, '-')
+    setBrandSlug(bSlug)
+    setLoadingParts(true)
+
+    try {
+      // 1. Try autodata generations
+      const autodataData = await fetchAutodataGenerations(bSlug, cleanModelName(modelName))
+      if (autodataData.generations && autodataData.generations.length > 0) {
+        // Resolve first generation to parts DB slug
+        const firstGen = autodataData.generations[0]
+        const resolveResult = await resolveAutodataSlug(bSlug, cleanModelName(modelName), firstGen.name, firstGen.year_start ?? undefined)
+
+        if (resolveResult.auto_selected) {
+          // Single match — load categories directly
+          const genSlug = resolveResult.auto_selected
+          setSelectedGen({ slug: genSlug, name: firstGen.name })
+          await loadCategories(bSlug, genSlug)
+          return
+        } else if (resolveResult.matches && resolveResult.matches.length > 0) {
+          // Multiple matches — set as generations for picker
+          const gens: VehicleGeneration[] = resolveResult.matches.map(m => ({
+            generation_slug: m.generation_slug,
+            generation_name: m.generation_name,
+            part_count: m.part_count,
+          }))
+          setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: gens, brandSlug: bSlug } : prev)
+          setPartsView('generations')
+          setLoadingParts(false)
+          return
+        }
+      }
+    } catch { /* autodata failed, try DB generations */ }
+
+    try {
+      // 2. Fallback: fetch generations from parts DB
+      const genData = await fetchGenerations(bSlug)
+      if (genData.generations && genData.generations.length > 0) {
+        const gens: VehicleGeneration[] = genData.generations.map(g => ({
+          generation_slug: g.generation_slug,
+          generation_name: g.generation_name,
+          part_count: g.part_count,
+        }))
+
+        if (gens.length === 1) {
+          setSelectedGen({ slug: gens[0].generation_slug, name: gens[0].generation_name })
+          await loadCategories(bSlug, gens[0].generation_slug)
+          return
+        }
+
+        setVehicleInfo(prev => prev ? { ...prev, model: modelName, generations: gens, brandSlug: bSlug } : prev)
+        setPartsView('generations')
+        setLoadingParts(false)
+        return
+      }
+    } catch { /* no generations found */ }
+
+    // 3. Nothing found — show WhatsApp CTA
+    setLoadingParts(false)
   }
 
   // ── Main search handler ───────────────────────────────────────────────────
@@ -282,6 +338,7 @@ export default function ChassisSearch() {
     setMissingModel(false)
     setBrandModels([])
     setSelectedModelImage('')
+    setAutodataImage(null)
     resetApiState()
 
     if (!chassisNumber.trim()) {
@@ -343,8 +400,34 @@ export default function ChassisSearch() {
           100,
         )
       } else {
-        // Model exists but no brandSlug / generations → show WhatsApp CTA
-        // apiAvailable stays false
+        // Model exists but no generations from VIN decode — try fetching from DB
+        const derivedSlug = bSlug || info.make.toLowerCase().replace(/\s+/g, '-')
+        setBrandSlug(derivedSlug)
+        setLoadingParts(true)
+
+        try {
+          const genData = await fetchGenerations(derivedSlug)
+          if (genData.generations && genData.generations.length > 0) {
+            const gens: VehicleGeneration[] = genData.generations.map(g => ({
+              generation_slug: g.generation_slug,
+              generation_name: g.generation_name,
+              part_count: g.part_count,
+            }))
+
+            if (gens.length === 1) {
+              setSelectedGen({ slug: gens[0].generation_slug, name: gens[0].generation_name })
+              await loadCategories(derivedSlug, gens[0].generation_slug)
+            } else {
+              setVehicleInfo(prev => prev ? { ...prev, generations: gens, brandSlug: derivedSlug } : prev)
+              setPartsView('generations')
+              setLoadingParts(false)
+            }
+          } else {
+            setLoadingParts(false)
+          }
+        } catch {
+          setLoadingParts(false)
+        }
       }
     } catch {
       setError('Bir hata oluştu. Lütfen tekrar deneyin.')
