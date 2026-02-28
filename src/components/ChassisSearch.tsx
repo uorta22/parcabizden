@@ -599,7 +599,7 @@ export default function ChassisSearch() {
                     <>
                       <AlertCircle className="w-4 h-4 text-amber-500" />
                       <span className="text-amber-600 text-sm font-medium">
-                        Marka bulundu — model bilgisi eksik
+                        Marka bulundu — lütfen modelinizi seçin
                       </span>
                     </>
                   ) : (
@@ -652,8 +652,8 @@ export default function ChassisSearch() {
                         .join(' · ')}
                     </p>
 
-                    {/* Spec highlight badges */}
-                    {(vehicleInfo.engineHP || vehicleInfo.displacementL || translateFuelType(vehicleInfo.fuelType) || translateTransmission(vehicleInfo.transmissionType)) && (
+                    {/* Spec highlight badges — only when model is resolved */}
+                    {!missingModel && (vehicleInfo.engineHP || vehicleInfo.displacementL || translateFuelType(vehicleInfo.fuelType) || translateTransmission(vehicleInfo.transmissionType)) && (
                       <div className="flex flex-wrap gap-2 mb-4 justify-center md:justify-start">
                         {vehicleInfo.engineHP && (
                           <div className="flex flex-col items-center px-3 py-1.5 bg-red-50 border border-red-100 rounded-lg">
@@ -700,74 +700,66 @@ export default function ChassisSearch() {
                   </div>
                 </div>
 
-                {/* ── Model Selection Panel (NHTSA missing model) ── */}
+                {/* ── Model Selection Panel ── */}
                 {missingModel && brandModels.length > 0 && (
                   <div
                     ref={modelSelectRef}
-                    className="mb-6 p-4 md:p-5 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn"
+                    className="mb-6 animate-fadeIn"
                   >
-                    <p className="text-amber-600 text-sm font-medium mb-1">Aracınızın modelini seçin</p>
-                    <p className="text-gray-500 text-xs mb-3">
-                      NHTSA veritabanında bu VIN için model bilgisi bulunamadı.
-                    </p>
-                    <div className="relative mb-4">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="text-gray-900 text-sm font-semibold">Aracınızın modelini seçin</p>
+                        <p className="text-gray-400 text-xs mt-0.5">
+                          Şase numarasından model tespit edilemedi, lütfen aşağıdan seçin.
+                        </p>
+                      </div>
+                      <span className="text-xs text-gray-400 tabular-nums">{brandModels.length} model</span>
+                    </div>
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <input
                         type="text"
                         value={modelSearch}
                         onChange={(e) => setModelSearch(e.target.value)}
                         placeholder="Model ara..."
-                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors"
+                        className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-gray-900 text-sm placeholder-gray-400 focus:outline-none focus:border-primary-500 transition-colors"
                       />
                     </div>
-                    <div className="max-h-[420px] overflow-y-auto">
-                      <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+                    <div className="max-h-[360px] overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/50 p-2">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-1.5">
                         {brandModels
                           .filter(
                             m =>
                               !modelSearch ||
-                              m.name.toLowerCase().includes(modelSearch.toLowerCase()),
+                              cleanModelName(m.name).toLowerCase().includes(modelSearch.toLowerCase()),
                           )
-                          .map((m, i) => {
-                            const year = parseModelYear(m.name)
-                            return (
+                          .map((m, i) => (
                               <button
                                 key={i}
                                 onClick={() => handleModelSelect(m.name, m.image)}
-                                className="group relative rounded-lg overflow-hidden bg-white border border-gray-200 hover:border-primary-400 hover:shadow-[0_4px_16px_rgba(234,179,8,0.08)] transition-all duration-200 text-left"
+                                className="group flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-white border border-gray-100 hover:border-primary-400 hover:bg-primary-50/50 transition-all duration-150 text-left"
                               >
-                                <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
+                                <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0 overflow-hidden">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
                                   <img
                                     src={m.image}
-                                    alt={m.name}
-                                    className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300"
+                                    alt={cleanModelName(m.name)}
+                                    className="w-full h-full object-contain p-0.5"
                                     loading="lazy"
                                   />
-                                  {year > 0 && (
-                                    <span className="absolute top-1 right-1 text-[8px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-500">
-                                      {year}
-                                    </span>
-                                  )}
-                                  <span className="absolute top-1 left-1 text-[8px] font-medium text-gray-500 bg-white/90 backdrop-blur-sm px-1 py-0.5 rounded">
-                                    {m.bodyType}
-                                  </span>
                                 </div>
-                                <div className="px-2 py-1.5">
-                                  <p className="text-[11px] text-gray-600 group-hover:text-gray-900 transition-colors duration-200 leading-tight line-clamp-1 font-medium">
-                                    {cleanModelName(m.name)}
-                                  </p>
-                                </div>
+                                <span className="text-sm text-gray-700 group-hover:text-gray-900 font-medium truncate">
+                                  {cleanModelName(m.name)}
+                                </span>
                               </button>
-                            )
-                          })}
+                          ))}
                       </div>
                       {brandModels.filter(
                         m =>
                           !modelSearch ||
-                          m.name.toLowerCase().includes(modelSearch.toLowerCase()),
+                          cleanModelName(m.name).toLowerCase().includes(modelSearch.toLowerCase()),
                       ).length === 0 && (
-                        <p className="text-gray-500 text-xs text-center py-6">Sonuç bulunamadı</p>
+                        <p className="text-gray-400 text-xs text-center py-6">Sonuç bulunamadı</p>
                       )}
                     </div>
                   </div>
@@ -776,17 +768,17 @@ export default function ChassisSearch() {
                 {missingModel && brandModels.length === 0 && (
                   <div
                     ref={modelSelectRef}
-                    className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn"
+                    className="mb-6 p-5 bg-gray-50 border border-gray-200 rounded-xl animate-fadeIn text-center"
                   >
-                    <p className="text-amber-600 text-sm font-medium mb-1">
-                      Model bilgisi bulunamadı
+                    <p className="text-gray-600 text-sm font-medium mb-1">
+                      Bu marka için model listesi bulunamadı
                     </p>
-                    <p className="text-gray-500 text-xs mb-3">
-                      Bu marka için veritabanımızda model listesi bulunmuyor.
+                    <p className="text-gray-400 text-xs mb-4">
+                      WhatsApp üzerinden şase numaranızla birlikte bize ulaşabilirsiniz.
                     </p>
                     <button
                       onClick={handleWhatsAppRequest}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors"
                     >
                       <MessageCircle className="w-4 h-4" />
                       WhatsApp ile Sor
@@ -794,8 +786,8 @@ export default function ChassisSearch() {
                   </div>
                 )}
 
-                {/* ── Vehicle Specs Grid ── */}
-                {vehicleFields.length > 0 && (
+                {/* ── Vehicle Specs Grid — only when model is resolved ── */}
+                {!missingModel && vehicleFields.length > 0 && (
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-px bg-gray-100 rounded-xl overflow-hidden border border-gray-200">
                     {vehicleFields.map((field) => (
                       <div key={field.label} className="bg-white px-4 py-3.5">

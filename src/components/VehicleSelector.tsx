@@ -163,6 +163,38 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isModal, isOpen])
 
+  // Extract unique base model names from vehicle-tree for a brand
+  const getTreeModels = useCallback((brandName: string): { name: string; image: string; minYear: number | null; maxYear: number | null }[] => {
+    if (!tree) return []
+    const treeKey = getTreeKey(brandName)
+    const brandData = tree[treeKey]
+    if (!brandData) return []
+
+    // Group by base model name (strip parenthesized codes and year ranges)
+    const modelMap = new Map<string, { image: string; minYear: number | null; maxYear: number | null }>()
+    for (const typeModels of Object.values(brandData.body_types)) {
+      for (const m of typeModels) {
+        // Extract base name: "Tonale (622)(2022->)" → "Tonale"
+        const baseName = m.name.replace(/\s*\([^)]*\)\s*/g, '').replace(/\s*$/, '').trim()
+        if (!baseName) continue
+        const yearMatch = m.name.match(/\((\d{4})->?\)/)
+        const year = yearMatch ? parseInt(yearMatch[1]) : null
+        const existing = modelMap.get(baseName)
+        if (!existing) {
+          modelMap.set(baseName, { image: m.image, minYear: year, maxYear: year })
+        } else {
+          if (year) {
+            existing.minYear = existing.minYear ? Math.min(existing.minYear, year) : year
+            existing.maxYear = existing.maxYear ? Math.max(existing.maxYear, year) : year
+          }
+          // Prefer image from newer entry
+          if (year && existing.maxYear && year >= existing.maxYear) existing.image = m.image
+        }
+      }
+    }
+    return Array.from(modelMap.entries()).map(([name, data]) => ({ name, ...data }))
+  }, [tree])
+
   const selectBrand = useCallback(async (brand: AutodataBrand) => {
     setSelectedBrand(brand)
     setSelectedModel(null)
@@ -172,10 +204,32 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     setModelImages({})
     try {
       const data = await fetchAutodataModels(brand.slug)
-      setModels(data.models)
+      let allModels = data.models
+
+      // Supplement with vehicle-tree models that are missing from autodata
+      const treeModels = getTreeModels(brand.name)
+      if (treeModels.length > 0) {
+        const autodataNames = new Set(allModels.map(m => m.name.toLowerCase()))
+        for (const tm of treeModels) {
+          if (!autodataNames.has(tm.name.toLowerCase())) {
+            allModels.push({
+              name: tm.name,
+              gen_count: 1,
+              min_year: tm.minYear,
+              max_year: tm.maxYear,
+            })
+          }
+        }
+      }
+
+      setModels(allModels)
       // Fetch autodata images for all models in background
       const imgs: Record<string, string> = {}
-      const promises = data.models.map(m =>
+      // Also include tree images as fallback
+      for (const tm of treeModels) {
+        if (tm.image) imgs[tm.name] = tm.image
+      }
+      const promises = allModels.map(m =>
         findAutodataGenerationImage(brand.name, m.name).then(img => {
           if (img) imgs[m.name] = img
         })
@@ -186,7 +240,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     } finally {
       setSubLoading(false)
     }
-  }, [])
+  }, [getTreeModels])
 
   const selectModel = useCallback(async (model: AutodataModel) => {
     if (!selectedBrand) return
