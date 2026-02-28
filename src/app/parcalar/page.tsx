@@ -492,44 +492,83 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   const autodataGen = genSearchParams.get('autodata_gen')
   const autodataYear = genSearchParams.get('autodata_year')
 
-  // Auto-resolve when autodata_gen is present in URL
+  // Helper: filter matches/generations by model name relevance
+  const filterByModel = useCallback((matches: Array<{ generation_slug: string; generation_name: string; part_count: number }>) => {
+    if (!modelName) return matches
+    const baseModel = modelName.split(/\s+/)[0].toLowerCase()
+    if (baseModel.length < 2) return matches
+    return matches.filter(m => {
+      const name = m.generation_name.toLowerCase()
+      return name.startsWith(baseModel) || name.includes(baseModel)
+    })
+  }, [modelName])
+
+  // Auto-resolve when autodata_gen is present in URL — handles everything in one effect
   useEffect(() => {
     if (!autodataGen || !brand || !modelName) return
     setResolving(true)
+    setLoading(false)
     setError('')
-    resolveAutodataSlug(brand, modelName, autodataGen, autodataYear ? parseInt(autodataYear) : undefined)
-      .then(result => {
-        if (result.auto_selected) {
-          setSelectedGen(result.auto_selected)
-        } else if (result.matches.length === 1) {
-          setSelectedGen(result.matches[0].generation_slug)
-        } else {
-          // Could not auto-resolve — fall through to normal generation picking
-          setResolving(false)
-        }
-      })
-      .catch(() => {
-        // Resolve failed — fall through to normal generation picking
-        setResolving(false)
-      })
-  }, [autodataGen, autodataYear, brand, modelName])
 
+    // Run resolve + DB generations in parallel
+    const resolvePromise = resolveAutodataSlug(brand, modelName, autodataGen, autodataYear ? parseInt(autodataYear) : undefined)
+      .catch(() => null)
+    const dbPromise = fetchGenerations(brand)
+      .then(data => data.generations || [])
+      .catch(() => [] as Array<{ generation_slug: string; generation_name: string; part_count: number }>)
+
+    Promise.all([resolvePromise, dbPromise]).then(([result, allDbGens]) => {
+      // Try auto_selected first
+      if (result?.auto_selected) {
+        setSelectedGen(result.auto_selected)
+        return
+      }
+
+      // Filter resolve matches by model name
+      const relevantMatches = result?.matches ? filterByModel(result.matches) : []
+      if (relevantMatches.length === 1) {
+        setSelectedGen(relevantMatches[0].generation_slug)
+        return
+      }
+      if (relevantMatches.length > 1) {
+        setDbGenerations(relevantMatches)
+        setUseAutodata(false)
+        setResolving(false)
+        return
+      }
+
+      // Filter DB generations by model name
+      const relevantDbGens = filterByModel(allDbGens)
+      if (relevantDbGens.length === 1) {
+        setSelectedGen(relevantDbGens[0].generation_slug)
+        return
+      }
+      if (relevantDbGens.length > 1) {
+        setDbGenerations(relevantDbGens)
+        setUseAutodata(false)
+        setResolving(false)
+        return
+      }
+
+      // No relevant generations at all → no parts catalog
+      setError('no_parts')
+      setResolving(false)
+    })
+  }, [autodataGen, autodataYear, brand, modelName, filterByModel])
+
+  // Normal generation loading (no autodata_gen in URL)
   useEffect(() => {
+    if (autodataGen) return
+
     setLoading(true)
     setError('')
 
-    // Always pre-fetch DB generations as fallback, filtered by modelName
+    // Pre-fetch DB generations filtered by modelName
     const dbPromise = fetchGenerations(brand)
       .then(data => {
         let gens = data.generations || []
-        if (modelName) {
-          const baseModel = modelName.split(/\s+/)[0].toLowerCase()
-          const filtered = gens.filter((g: { generation_name: string }) => {
-            const genLower = g.generation_name.toLowerCase()
-            return genLower.startsWith(baseModel) || genLower.includes(baseModel)
-          })
-          if (filtered.length > 0) gens = filtered
-        }
+        const filtered = filterByModel(gens)
+        if (filtered.length > 0) gens = filtered
         setDbGenerations(gens)
         return gens
       })
@@ -544,7 +583,6 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
             setUseAutodata(true)
             setLoading(false)
           } else {
-            // No autodata generations — wait for DB fallback
             const dbGens = await dbPromise
             setUseAutodata(false)
             if (dbGens.length === 1) {
@@ -570,7 +608,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         setLoading(false)
       })
     }
-  }, [brand, modelName])
+  }, [brand, modelName, autodataGen, filterByModel])
 
   // Handle autodata generation selection — resolve to parts DB slug
   const handleAutodataSelect = async (gen: AutodataGeneration) => {
@@ -579,35 +617,52 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     try {
       const result = await resolveAutodataSlug(brand, modelName, gen.name, gen.year_start ?? undefined)
       if (result.auto_selected) {
-        // Best case: exact match found, go directly to parts
         setSelectedGen(result.auto_selected)
       } else if (result.matches.length === 1) {
-        // Single match, auto-select
         setSelectedGen(result.matches[0].generation_slug)
       } else if (result.matches.length > 1) {
-        // Multiple matches — show them as DB generations to pick from
-        setDbGenerations(result.matches)
-        setAutodataGens([])
-        setUseAutodata(false)
-        setResolving(false)
+        // Filter junk matches — only keep model-relevant ones
+        const relevant = filterByModel(result.matches)
+        if (relevant.length === 1) {
+          setSelectedGen(relevant[0].generation_slug)
+        } else if (relevant.length > 1) {
+          setDbGenerations(relevant)
+          setAutodataGens([])
+          setUseAutodata(false)
+          setResolving(false)
+        } else {
+          // All matches irrelevant — check pre-fetched DB gens
+          const relevantDb = filterByModel(dbGenerations)
+          if (relevantDb.length > 0) {
+            setDbGenerations(relevantDb)
+            setAutodataGens([])
+            setUseAutodata(false)
+          } else {
+            setError('no_parts')
+          }
+          setResolving(false)
+        }
       } else {
         // No matches from resolve — use pre-fetched DB generations
-        if (dbGenerations.length > 0) {
+        const relevantDb = filterByModel(dbGenerations)
+        if (relevantDb.length > 0) {
+          setDbGenerations(relevantDb)
           setAutodataGens([])
           setUseAutodata(false)
         } else {
           setError('no_parts')
         }
+        setResolving(false)
       }
     } catch {
-      // resolveAutodataSlug failed — use pre-fetched DB generations
-      if (dbGenerations.length > 0) {
+      const relevantDb = filterByModel(dbGenerations)
+      if (relevantDb.length > 0) {
+        setDbGenerations(relevantDb)
         setAutodataGens([])
         setUseAutodata(false)
       } else {
         setError('no_parts')
       }
-    } finally {
       setResolving(false)
     }
   }
