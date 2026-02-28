@@ -28,13 +28,16 @@ if (file_exists($_ENV_FILE)) {
     }
 }
 
-define('JWT_SECRET', getenv('JWT_SECRET') ?: 'pBzD_s3cr3t_k3y_2024_xK9mP2vL8nQ4wR7j');
+$jwtSecret = getenv('JWT_SECRET');
+if (!$jwtSecret) { http_response_code(500); echo json_encode(['error' => 'Server configuration error']); error_log('FATAL: JWT_SECRET env var is not set'); exit; }
+define('JWT_SECRET', $jwtSecret);
 define('JWT_EXPIRY', 86400);
 
-$DB_HOST = getenv('DB_HOST') ?: 'localhost';
-$DB_NAME = getenv('DB_NAME') ?: 'u2547422_parcabizden';
-$DB_USER = getenv('DB_USER') ?: 'u2547422_uorta';
-$DB_PASS = getenv('DB_PASS') ?: 'iR?]gvlh+l[AB_r2';
+$DB_HOST = getenv('DB_HOST');
+$DB_NAME = getenv('DB_NAME');
+$DB_USER = getenv('DB_USER');
+$DB_PASS = getenv('DB_PASS');
+if (!$DB_HOST || !$DB_NAME || !$DB_USER || !$DB_PASS) { http_response_code(500); echo json_encode(['error' => 'Server configuration error']); error_log('FATAL: DB_HOST/DB_NAME/DB_USER/DB_PASS env vars must all be set'); exit; }
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
@@ -181,8 +184,13 @@ function get_parts($pdo) {
     $stmt->execute([':gen' => $gen, ':brand' => $brand, ':node' => $node]);
     $total = intval($stmt->fetchColumn());
 
-    $stmt2 = $pdo->prepare("SELECT oem_number, MAX(name) as name, GROUP_CONCAT(DISTINCT quantity SEPARATOR ', ') as quantity, GROUP_CONCAT(DISTINCT info SEPARATOR ' | ') as info FROM parts WHERE generation_slug = :gen AND brand_slug = :brand AND node_name_en = :node GROUP BY oem_number ORDER BY oem_number LIMIT " . intval($limit) . " OFFSET " . intval($offset));
-    $stmt2->execute([':gen' => $gen, ':brand' => $brand, ':node' => $node]);
+    $stmt2 = $pdo->prepare("SELECT oem_number, MAX(name) as name, GROUP_CONCAT(DISTINCT quantity SEPARATOR ', ') as quantity, GROUP_CONCAT(DISTINCT info SEPARATOR ' | ') as info FROM parts WHERE generation_slug = :gen AND brand_slug = :brand AND node_name_en = :node GROUP BY oem_number ORDER BY oem_number LIMIT :lim OFFSET :off");
+    $stmt2->bindValue(':gen', $gen, PDO::PARAM_STR);
+    $stmt2->bindValue(':brand', $brand, PDO::PARAM_STR);
+    $stmt2->bindValue(':node', $node, PDO::PARAM_STR);
+    $stmt2->bindValue(':lim', $limit, PDO::PARAM_INT);
+    $stmt2->bindValue(':off', $offset, PDO::PARAM_INT);
+    $stmt2->execute();
     $rows = $stmt2->fetchAll(PDO::FETCH_ASSOC);
 
     $parts = [];
