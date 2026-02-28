@@ -21,8 +21,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${category.name} - Yedek Parça & Çıkma Parça | ParcaBizden`,
-    description: `${category.name}: ${category.description}. Tüm marka ve modellere uygun yedek parça ve çıkma parça seçenekleri.`,
-    keywords: `${category.name.toLowerCase()}, yedek parça, çıkma parça, oto parça`,
+    description: `${category.name}: ${category.description}. Tüm marka ve modellere uygun yedek parça ve çıkma parça seçenekleri. En uygun fiyatlarla hızlı teslimat.`,
+    keywords: `${category.name.toLowerCase()}, yedek parça, çıkma parça, oto parça, ${category.name.toLowerCase()} fiyat, ${category.name.toLowerCase()} yedek`,
+    alternates: {
+      canonical: `/parcalar/${params.category}`,
+    },
   }
 }
 

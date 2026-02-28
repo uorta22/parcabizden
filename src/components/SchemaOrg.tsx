@@ -2,9 +2,10 @@ import { siteConfig } from '@/lib/config'
 
 interface SchemaOrgProps {
   type?: 'website' | 'organization' | 'localBusiness'
+  breadcrumbs?: { name: string; url: string }[]
 }
 
-export default function SchemaOrg({ type = 'localBusiness' }: SchemaOrgProps) {
+export default function SchemaOrg({ type = 'localBusiness', breadcrumbs }: SchemaOrgProps) {
   const schemas = []
 
   // Organization Schema
@@ -13,7 +14,7 @@ export default function SchemaOrg({ type = 'localBusiness' }: SchemaOrgProps) {
     '@type': 'Organization',
     name: siteConfig.name,
     url: siteConfig.url,
-    logo: `${siteConfig.url}/favicon.ico`,
+    logo: `${siteConfig.url}/opengraph-image`,
     description: siteConfig.description,
     contactPoint: {
       '@type': 'ContactPoint',
@@ -53,7 +54,7 @@ export default function SchemaOrg({ type = 'localBusiness' }: SchemaOrgProps) {
         },
       ],
       priceRange: '$$',
-      image: `${siteConfig.url}/favicon.ico`,
+      image: `${siteConfig.url}/opengraph-image`,
       sameAs: [
         siteConfig.social.instagram,
         siteConfig.social.facebook,
@@ -77,6 +78,62 @@ export default function SchemaOrg({ type = 'localBusiness' }: SchemaOrgProps) {
     },
   }
   schemas.push(websiteSchema)
+
+  // BreadcrumbList Schema
+  if (breadcrumbs && breadcrumbs.length > 0) {
+    const breadcrumbSchema = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbs.map((crumb, index) => ({
+        '@type': 'ListItem',
+        position: index + 1,
+        name: crumb.name,
+        item: crumb.url,
+      })),
+    }
+    schemas.push(breadcrumbSchema)
+  }
+
+  // FAQPage Schema
+  const faqSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: [
+      {
+        '@type': 'Question',
+        name: 'Şase numarası ile parça arayabilir miyim?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Evet, şase numaranızı girerek aracınıza uygun yedek ve çıkma parçaları sorgulayabilirsiniz. Şase sorgulama sayfamızdan 17 haneli VIN numaranızı girerek başlayın.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Hangi marka araçlara yedek parça bulabiliyorsunuz?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'BMW, Mercedes, Audi, Volkswagen, Ford, Renault, Toyota, Honda, Hyundai ve daha birçok marka dahil 50\'den fazla marka için yedek ve çıkma parça temin ediyoruz.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Parça fiyatlarını nasıl öğrenebilirim?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Parça fiyatları aracın marka, model ve yılına göre değişiklik göstermektedir. Güncel fiyat ve stok bilgisi için WhatsApp üzerinden 0544 981 91 44 numarasına ulaşabilirsiniz.',
+        },
+      },
+      {
+        '@type': 'Question',
+        name: 'Çıkma parça ile yedek parça arasındaki fark nedir?',
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: 'Yedek parça fabrikadan üretilen sıfır parçadır. Çıkma parça ise başka bir araçtan sökülen, kullanılmış ama çalışır durumda olan parçadır. Çıkma parçalar genellikle daha uygun fiyatlıdır.',
+        },
+      },
+    ],
+  }
+  schemas.push(faqSchema)
 
   return (
     <>

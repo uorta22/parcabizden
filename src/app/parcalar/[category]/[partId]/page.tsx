@@ -23,8 +23,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   return {
     title: `${part.name} - ${part.categoryName} | ParcaBizden`,
-    description: `${part.name}: ${part.description}. ${brandText}. Yedek ve çıkma parça seçenekleri için WhatsApp üzerinden fiyat alın.`,
-    keywords: `${part.name.toLowerCase()}, ${part.categoryName.toLowerCase()}, yedek parça, çıkma parça, oto parça`,
+    description: `${part.name}: ${part.description}. ${brandText}. Yedek ve çıkma parça seçenekleri için WhatsApp üzerinden fiyat alın. Hızlı teslimat.`,
+    keywords: `${part.name.toLowerCase()}, ${part.categoryName.toLowerCase()}, yedek parça, çıkma parça, oto parça, ${part.name.toLowerCase()} fiyat`,
+    alternates: {
+      canonical: `/parcalar/${params.category}/${params.partId}`,
+    },
     openGraph: {
       title: `${part.name} - ${part.categoryName} | ParcaBizden`,
       description: `${part.name}: ${part.description}. ${brandText}.`,

@@ -1,0 +1,21 @@
+{
+  "name": "ParcaBizden - Yedek Parça & Çıkma Parça Talep Platformu",
+  "short_name": "ParcaBizden",
+  "description": "Araç yedek parçası ve çıkma parça ihtiyaçlarınız için doğru adres.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#eab308",
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
