@@ -16,9 +16,17 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
-// ==================== Config (env dosyasından oku) ====================
-$_ENV_FILE = __DIR__ . '/.env.php';
-if (file_exists($_ENV_FILE)) { require $_ENV_FILE; }
+// ==================== Config (.env dosyasından oku) ====================
+$_ENV_FILE = __DIR__ . '/.env';
+if (file_exists($_ENV_FILE)) {
+    foreach (file($_ENV_FILE, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') continue;
+        if (strpos($line, '=') === false) continue;
+        [$key, $val] = explode('=', $line, 2);
+        putenv(trim($key) . '=' . trim($val));
+    }
+}
 
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'pBzD_s3cr3t_k3y_2024_xK9mP2vL8nQ4wR7j');
 define('JWT_EXPIRY', 86400);
@@ -359,9 +367,9 @@ function handle_chat($pdo) {
 }
 
 function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $pageUrl) {
-    $phoneId = getenv('WA_PHONE_ID') ?: '1063884273464246';
-    $token = getenv('WA_TOKEN') ?: '';
-    $adminNumbers = array_filter(explode(',', getenv('WA_ADMIN_NUMBERS') ?: '905449819144'));
+    $phoneId = getenv('WHATSAPP_PHONE_NUMBER_ID') ?: '';
+    $token = getenv('WHATSAPP_ACCESS_TOKEN') ?: '';
+    $adminNumbers = array_filter(explode(',', getenv('WHATSAPP_ADMIN_NUMBERS') ?: ''));
     if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
     $text = "Yeni Talep #$ticketId\n" . ($name ? $name : 'Anonim') . "\n" . ($phone ? "Tel: $phone\n" : "") . ($vehicle ? "Arac: $vehicle\n" : "") . ($vin ? "Sase: $vin\n" : "") . "---\n" . $message;
@@ -382,9 +390,9 @@ function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $page
 }
 
 function send_whatsapp_followup($ticketId, $message, $name) {
-    $phoneId = getenv('WA_PHONE_ID') ?: '1063884273464246';
-    $token = getenv('WA_TOKEN') ?: '';
-    $adminNumbers = array_filter(explode(',', getenv('WA_ADMIN_NUMBERS') ?: '905449819144'));
+    $phoneId = getenv('WHATSAPP_PHONE_NUMBER_ID') ?: '';
+    $token = getenv('WHATSAPP_ACCESS_TOKEN') ?: '';
+    $adminNumbers = array_filter(explode(',', getenv('WHATSAPP_ADMIN_NUMBERS') ?: ''));
     if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
     $text = ($name ?: 'Musteri') . " (#$ticketId):\n$message";
@@ -1556,7 +1564,7 @@ function send_reset_email($email, $name, $token) {
 }
 
 function handle_chat_webhook($pdo) {
-    $verify_token = getenv('WA_WEBHOOK_VERIFY') ?: 'parcabizden_webhook_2024';
+    $verify_token = getenv('WHATSAPP_WEBHOOK_VERIFY') ?: 'parcabizden_webhook_2024';
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $mode = $_GET['hub_mode'] ?? '';
         $token = $_GET['hub_verify_token'] ?? '';
