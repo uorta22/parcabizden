@@ -1,12 +1,13 @@
 <?php
-// Global error handler — tüm hataları JSON olarak döndür
+// Global error handler — production'da detay sızdırma
 set_error_handler(function($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 set_exception_handler(function($e) {
     http_response_code(500);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['error' => 'PHP Hata: ' . $e->getMessage() . ' (satir ' . $e->getLine() . ')']);
+    error_log('PHP Error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    echo json_encode(['error' => 'Sunucu hatası oluştu. Lütfen daha sonra tekrar deneyin.']);
     exit;
 });
 
@@ -15,14 +16,17 @@ header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
-// ==================== JWT & Auth Constants ====================
-define('JWT_SECRET', 'pBzD_s3cr3t_k3y_2024_xK9mP2vL8nQ4wR7j');
-define('JWT_EXPIRY', 86400); // 24 hours
+// ==================== Config (env dosyasından oku) ====================
+$_ENV_FILE = __DIR__ . '/.env.php';
+if (file_exists($_ENV_FILE)) { require $_ENV_FILE; }
 
-$DB_HOST = 'localhost';
-$DB_NAME = 'u2547422_parcabizden';
-$DB_USER = 'u2547422_uorta';
-$DB_PASS = 'iR?]gvlh+l[AB_r2';
+define('JWT_SECRET', getenv('JWT_SECRET') ?: 'pBzD_s3cr3t_k3y_2024_xK9mP2vL8nQ4wR7j');
+define('JWT_EXPIRY', 86400);
+
+$DB_HOST = getenv('DB_HOST') ?: 'localhost';
+$DB_NAME = getenv('DB_NAME') ?: 'u2547422_parcabizden';
+$DB_USER = getenv('DB_USER') ?: 'u2547422_uorta';
+$DB_PASS = getenv('DB_PASS') ?: 'iR?]gvlh+l[AB_r2';
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
@@ -355,9 +359,9 @@ function handle_chat($pdo) {
 }
 
 function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $pageUrl) {
-    $phoneId = '1063884273464246';
-    $token = 'EAAUjcHbTUhgBQ8tBbG7MBV1ZBrggPfrFf099lRBwS8pNxuCm2PvT3ktiR4ZBuMIfZCNyZBc5vfPJBNUGQcJdjRGvbb2qOgcBymcdMHMFN30CG72zEdYtnxCR6EbZC40sh7yInprPSMC8lEJNnRxZAiVPx0yciv4ZBseD5m7zwQRz0qJztQU4fV50bgwku1BV9OV7gZDZD';
-    $adminNumbers = ['905449819144'];
+    $phoneId = getenv('WA_PHONE_ID') ?: '1063884273464246';
+    $token = getenv('WA_TOKEN') ?: '';
+    $adminNumbers = array_filter(explode(',', getenv('WA_ADMIN_NUMBERS') ?: '905449819144'));
     if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
     $text = "Yeni Talep #$ticketId\n" . ($name ? $name : 'Anonim') . "\n" . ($phone ? "Tel: $phone\n" : "") . ($vehicle ? "Arac: $vehicle\n" : "") . ($vin ? "Sase: $vin\n" : "") . "---\n" . $message;
@@ -378,9 +382,9 @@ function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $page
 }
 
 function send_whatsapp_followup($ticketId, $message, $name) {
-    $phoneId = '1063884273464246';
-    $token = 'EAAUjcHbTUhgBQ8tBbG7MBV1ZBrggPfrFf099lRBwS8pNxuCm2PvT3ktiR4ZBuMIfZCNyZBc5vfPJBNUGQcJdjRGvbb2qOgcBymcdMHMFN30CG72zEdYtnxCR6EbZC40sh7yInprPSMC8lEJNnRxZAiVPx0yciv4ZBseD5m7zwQRz0qJztQU4fV50bgwku1BV9OV7gZDZD';
-    $adminNumbers = ['905449819144'];
+    $phoneId = getenv('WA_PHONE_ID') ?: '1063884273464246';
+    $token = getenv('WA_TOKEN') ?: '';
+    $adminNumbers = array_filter(explode(',', getenv('WA_ADMIN_NUMBERS') ?: '905449819144'));
     if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
     $text = ($name ?: 'Musteri') . " (#$ticketId):\n$message";
@@ -894,7 +898,8 @@ function handle_garage_list($pdo) {
         echo json_encode(['vehicles' => $vehicles]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Garaj listesi alinamadi: ' . $e->getMessage()]);
+        error_log('Garaj listesi alinamadi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Garaj bilgileri yüklenirken bir hata oluştu.']);
     }
 }
 
@@ -954,7 +959,8 @@ function handle_garage_add($pdo) {
         echo json_encode(['success' => true, 'id' => $new_id]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Arac eklenemedi: ' . $e->getMessage()]);
+        error_log('Arac eklenemedi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Araç eklenirken bir hata oluştu.']);
     }
 }
 
@@ -979,7 +985,8 @@ function handle_garage_remove($pdo) {
         echo json_encode(['success' => true]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Arac silinemedi: ' . $e->getMessage()]);
+        error_log('Arac silinemedi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Araç silinirken bir hata oluştu.']);
     }
 }
 
@@ -1014,7 +1021,8 @@ function handle_garage_update($pdo) {
         echo json_encode(['success' => true]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Guncelleme hatasi: ' . $e->getMessage()]);
+        error_log('Guncelleme hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Güncelleme sırasında bir hata oluştu.']);
     }
 }
 
@@ -1045,7 +1053,8 @@ function handle_maintenance_list($pdo) {
         echo json_encode(['records' => $records]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Bakim listesi alinamadi: ' . $e->getMessage()]);
+        error_log('Bakim listesi alinamadi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Bakım bilgileri yüklenirken bir hata oluştu.']);
     }
 }
 
@@ -1077,7 +1086,8 @@ function handle_maintenance_add($pdo) {
         echo json_encode(['success' => true, 'id' => $new_id]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Bakim eklenemedi: ' . $e->getMessage()]);
+        error_log('Bakim eklenemedi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Bakım kaydı eklenirken bir hata oluştu.']);
     }
 }
 
@@ -1110,7 +1120,8 @@ function handle_maintenance_update($pdo) {
         echo json_encode(['success' => true]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Bakim guncellenemedi: ' . $e->getMessage()]);
+        error_log('Bakim guncellenemedi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Bakım kaydı güncellenirken bir hata oluştu.']);
     }
 }
 
@@ -1130,14 +1141,43 @@ function handle_maintenance_remove($pdo) {
         echo json_encode(['success' => true]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Bakim silinemedi: ' . $e->getMessage()]);
+        error_log('Bakim silinemedi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Bakım kaydı silinirken bir hata oluştu.']);
     }
+}
+
+// ==================== Rate Limiting ====================
+
+function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+    $ip = explode(',', $ip)[0];
+    $dir = sys_get_temp_dir() . '/parcabizden_rate';
+    if (!is_dir($dir)) @mkdir($dir, 0700, true);
+    $file = $dir . '/' . md5($action . '_' . $ip) . '.json';
+
+    $now = time();
+    $attempts = [];
+    if (file_exists($file)) {
+        $data = json_decode(file_get_contents($file), true);
+        if (is_array($data)) $attempts = array_filter($data, fn($t) => ($now - $t) < ($window_minutes * 60));
+    }
+
+    if (count($attempts) >= $max_attempts) {
+        http_response_code(429);
+        echo json_encode(['error' => 'Cok fazla deneme. Lutfen ' . $window_minutes . ' dakika bekleyin.']);
+        return false;
+    }
+
+    $attempts[] = $now;
+    @file_put_contents($file, json_encode(array_values($attempts)));
+    return true;
 }
 
 // ==================== Auth Handlers ====================
 
 function handle_register($pdo) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    if (!check_rate_limit('register', 5, 15)) return;
 
     try {
         $email = trim($_POST['email'] ?? '');
@@ -1173,12 +1213,14 @@ function handle_register($pdo) {
         ]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Kayit hatasi: ' . $e->getMessage()]);
+        error_log('Kayit hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Kayıt sırasında bir hata oluştu.']);
     }
 }
 
 function handle_login($pdo) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
+    if (!check_rate_limit('login', 10, 15)) return;
     try {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -1204,7 +1246,8 @@ function handle_login($pdo) {
         ]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Login hatasi: ' . $e->getMessage()]);
+        error_log('Login hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Giriş sırasında bir hata oluştu.']);
     }
 }
 
@@ -1221,7 +1264,8 @@ function handle_profile($pdo) {
         echo json_encode(['user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]]);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Profil hatasi: ' . $e->getMessage()]);
+        error_log('Profil hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Profil bilgileri yüklenirken bir hata oluştu.']);
     }
 }
 
@@ -1246,7 +1290,8 @@ function handle_verify_email($pdo) {
         echo json_encode(['success' => true, 'message' => 'E-postaniz basariyla dogrulandi! Artik giris yapabilirsiniz.']);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Dogrulama hatasi: ' . $e->getMessage()]);
+        error_log('Dogrulama hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Doğrulama sırasında bir hata oluştu.']);
     }
 }
 
@@ -1280,7 +1325,8 @@ function handle_resend_verify($pdo) {
         echo json_encode(['success' => true, 'message' => 'Dogrulama e-postasi tekrar gonderildi.']);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Resend hatasi: ' . $e->getMessage()]);
+        error_log('Resend hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'İşlem sırasında bir hata oluştu.']);
     }
 }
 
@@ -1314,7 +1360,8 @@ function handle_forgot_password($pdo) {
         echo json_encode(['success' => true, 'message' => 'Sifre sifirlama linki e-posta adresinize gonderildi.']);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Sifre sifirlama hatasi: ' . $e->getMessage()]);
+        error_log('Sifre sifirlama hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Şifre sıfırlama sırasında bir hata oluştu.']);
     }
 }
 
@@ -1345,16 +1392,17 @@ function handle_reset_password($pdo) {
         echo json_encode(['success' => true, 'message' => 'Sifreniz basariyla degistirildi! Artik giris yapabilirsiniz.']);
     } catch (Exception $e) {
         http_response_code(500);
-        echo json_encode(['error' => 'Sifre degistirme hatasi: ' . $e->getMessage()]);
+        error_log('Sifre degistirme hatasi: ' . $e->getMessage());
+        echo json_encode(['error' => 'Şifre değiştirme sırasında bir hata oluştu.']);
     }
 }
 
 // ==================== E-posta Gönderimi (SMTP AUTH) ====================
 // Natro cPanel'den noreply@parcabizden.com.tr e-posta hesabı oluşturun
-define('SMTP_HOST', 'mail.parcabizden.com.tr');
-define('SMTP_PORT', 587);
-define('SMTP_USER', 'noreply@parcabizden.com.tr');
-define('SMTP_PASS', 'BURAYA_NATRO_EPOSTA_SIFRESI'); // Natro'dan oluşturduğunuz e-posta şifresi
+define('SMTP_HOST', getenv('SMTP_HOST') ?: 'mail.parcabizden.com.tr');
+define('SMTP_PORT', (int)(getenv('SMTP_PORT') ?: 587));
+define('SMTP_USER', getenv('SMTP_USER') ?: 'noreply@parcabizden.com.tr');
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
 define('SMTP_FROM_NAME', 'ParcaBizden');
 
 function smtp_send($to, $subject_text, $html_body) {
@@ -1508,7 +1556,7 @@ function send_reset_email($email, $name, $token) {
 }
 
 function handle_chat_webhook($pdo) {
-    $verify_token = 'parcabizden_webhook_2024';
+    $verify_token = getenv('WA_WEBHOOK_VERIFY') ?: 'parcabizden_webhook_2024';
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $mode = $_GET['hub_mode'] ?? '';
         $token = $_GET['hub_verify_token'] ?? '';
