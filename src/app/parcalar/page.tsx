@@ -515,9 +515,6 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   }, [autodataGen, autodataYear, brand, modelName])
 
   useEffect(() => {
-    // Skip loading generations if autodata_gen auto-resolve is in progress
-    if (autodataGen) return
-
     setLoading(true)
     setError('')
 
@@ -573,7 +570,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         setLoading(false)
       })
     }
-  }, [brand, modelName, autodataGen])
+  }, [brand, modelName])
 
   // Handle autodata generation selection — resolve to parts DB slug
   const handleAutodataSelect = async (gen: AutodataGeneration) => {
