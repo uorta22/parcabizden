@@ -3,12 +3,13 @@
 import { useEffect, useState, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
-import { ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle, Car, Wrench, Info } from 'lucide-react'
+import { ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle, Car, Wrench, Info, CheckCircle2 } from 'lucide-react'
 import { searchOemParts } from '@/lib/api'
 import type { OemSearchResult } from '@/lib/api'
 import { getWhatsAppUrl } from '@/lib/config'
 import { BrandLogo } from '@/components/BrandLogos'
-import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { CategoryIcon } from '@/components/CategoryIcons'
+import { findPartSpec } from '@/data/part-descriptions'
 import { findBrandGroup, formatBrandSlug, parseGenerationSlug } from '@/lib/brand-groups'
 
 // ── OEM Kopyala Butonu ──
@@ -292,9 +293,9 @@ function PartDetailContent() {
                 </div>
 
                 {/* Tablo — Masaüstü */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto max-h-[320px] overflow-y-auto">
                   <table className="w-full">
-                    <thead>
+                    <thead className="sticky top-0 z-10">
                       <tr className="bg-gray-50 border-b border-gray-200">
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Marka</th>
                         <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</th>
@@ -327,7 +328,7 @@ function PartDetailContent() {
                 </div>
 
                 {/* Kartlar — Mobil */}
-                <div className="md:hidden divide-y divide-gray-100">
+                <div className="md:hidden divide-y divide-gray-100 max-h-[320px] overflow-y-auto">
                   {modelRows.map((row, i) => (
                     <div key={`${row.brandSlug}-${row.genSlug}-${i}`} className="px-5 py-4">
                       <div className="flex items-center gap-2 mb-2">
@@ -356,57 +357,62 @@ function PartDetailContent() {
               </div>
             )}
 
-            {/* ── Teknik Özellikler (placeholder) ── */}
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
-                    <Info className="w-4.5 h-4.5 text-purple-600" />
+            {/* ── Teknik Özellikler ── */}
+            {(() => {
+              const spec = findPartSpec(displayPartName, catId || undefined)
+              if (!spec) return (
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                        <Info className="w-4.5 h-4.5 text-purple-600" />
+                      </div>
+                      <h2 className="text-lg font-bold text-gray-900">Teknik Özellikler</h2>
+                    </div>
                   </div>
-                  <h2 className="text-lg font-bold text-gray-900">Teknik Özellikler</h2>
-                </div>
-              </div>
-              <div className="p-6 text-center">
-                <p className="text-gray-500 text-sm mb-3">
-                  Bu parçanın teknik özellikleri için bizimle iletişime geçin.
-                </p>
-                <a
-                  href={getWhatsAppUrl(`Merhaba, ${oem} OEM numaralı "${displayPartName}" parçasının teknik özelliklerini öğrenmek istiyorum.`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white hover:border-green-600 rounded-xl text-sm font-medium transition-all"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp ile Sor
-                </a>
-              </div>
-            </div>
-
-            {/* ── Muadil OEM Numaraları (placeholder) ── */}
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center">
-                    <Copy className="w-4.5 h-4.5 text-amber-600" />
+                  <div className="p-6 text-center">
+                    <p className="text-gray-500 text-sm mb-3">Bu parçanın teknik özellikleri için bizimle iletişime geçin.</p>
+                    <a
+                      href={getWhatsAppUrl(`Merhaba, ${oem} OEM numaralı "${displayPartName}" parçasının teknik özelliklerini öğrenmek istiyorum.`)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white hover:border-green-600 rounded-xl text-sm font-medium transition-all"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      WhatsApp ile Sor
+                    </a>
                   </div>
-                  <h2 className="text-lg font-bold text-gray-900">Muadil OEM Numaraları</h2>
                 </div>
-              </div>
-              <div className="p-6 text-center">
-                <p className="text-gray-500 text-sm mb-3">
-                  Bu parça için alternatif / muadil OEM numaralarını öğrenmek ister misiniz?
-                </p>
-                <a
-                  href={getWhatsAppUrl(`Merhaba, ${oem} OEM numaralı "${displayPartName}" parçasının muadil/alternatif OEM numaralarını öğrenmek istiyorum.`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-green-50 text-green-700 border border-green-200 hover:bg-green-600 hover:text-white hover:border-green-600 rounded-xl text-sm font-medium transition-all"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  WhatsApp ile Sor
-                </a>
-              </div>
-            </div>
+              )
+              return (
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="px-6 py-4 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
+                        <Info className="w-4.5 h-4.5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h2 className="text-lg font-bold text-gray-900">Teknik Özellikler</h2>
+                        <p className="text-xs text-gray-500">{spec.title}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-6 space-y-4">
+                    <p className="text-gray-600 text-sm leading-relaxed">{spec.description}</p>
+                    {spec.specs.length > 0 && (
+                      <ul className="space-y-2">
+                        {spec.specs.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* ── Alt CTA ── */}
             <div className="bg-gradient-to-r from-green-50 to-green-100/50 border border-green-200 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-4">

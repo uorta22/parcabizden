@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, Fragment } from 'react'
 import Link from 'next/link'
 import { Search, ChevronRight, ChevronDown, X, Car, Loader2, Calendar, Cog } from 'lucide-react'
 import { fetchAutodataBrands, fetchAutodataModels } from '@/lib/api'
@@ -123,104 +123,99 @@ export default function BrandPicker() {
       </div>
 
       {/* Brand grid */}
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3 sm:gap-4">
+      <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 gap-2 sm:gap-3">
         {filteredBrands.map(brand => {
           const isExpanded = expandedBrand?.slug === brand.slug
           return (
-            <button
-              key={brand.slug}
-              onClick={() => handleBrandClick(brand)}
-              className={`flex flex-col items-center gap-2.5 p-3 sm:p-4 rounded-xl border transition-all ${
-                isExpanded
-                  ? 'border-primary-500 bg-primary-50 shadow-sm'
-                  : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-sm'
-              }`}
-            >
-              <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getBrandLogoPath(brand.name)}
-                  alt={brand.name}
-                  className="object-contain w-12 h-12 sm:w-14 sm:h-14"
-                  loading="lazy"
-                  onError={(e) => {
-                    const target = e.currentTarget
-                    target.style.display = 'none'
-                    const parent = target.parentElement
-                    if (parent && !parent.querySelector('span')) {
-                      const span = document.createElement('span')
-                      span.className = 'w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-base'
-                      span.textContent = brand.name.charAt(0)
-                      parent.appendChild(span)
-                    }
-                  }}
-                />
-              </div>
-              <span className={`text-xs sm:text-sm font-medium text-center leading-tight ${isExpanded ? 'text-primary-600' : 'text-gray-700'}`}>
-                {brand.name}
-              </span>
-              <span className="text-[10px] text-gray-400 tabular-nums">{brand.model_count} model</span>
-              {isExpanded ? (
-                <ChevronDown className="w-3 h-3 text-primary-500" />
-              ) : (
-                <ChevronRight className="w-3 h-3 text-gray-400" />
+            <Fragment key={brand.slug}>
+              <button
+                onClick={() => handleBrandClick(brand)}
+                className={`flex flex-col items-center gap-1.5 p-2.5 rounded-xl border transition-all ${
+                  isExpanded
+                    ? 'border-primary-500 bg-primary-50 shadow-sm'
+                    : 'border-gray-200 bg-white hover:border-primary-300 hover:shadow-sm'
+                }`}
+              >
+                <div className="w-10 h-10 flex items-center justify-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getBrandLogoPath(brand.name)}
+                    alt={brand.name}
+                    className="object-contain w-10 h-10"
+                    loading="lazy"
+                    onError={(e) => {
+                      const target = e.currentTarget
+                      target.style.display = 'none'
+                      const parent = target.parentElement
+                      if (parent && !parent.querySelector('span')) {
+                        const span = document.createElement('span')
+                        span.className = 'w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-sm'
+                        span.textContent = brand.name.charAt(0)
+                        parent.appendChild(span)
+                      }
+                    }}
+                  />
+                </div>
+                <span className={`text-[11px] font-medium text-center leading-tight ${isExpanded ? 'text-primary-600' : 'text-gray-700'}`}>
+                  {brand.name}
+                </span>
+              </button>
+
+              {/* Inline model panel */}
+              {isExpanded && (
+                <div className="col-span-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Car className="w-4 h-4 text-primary-500" />
+                      <span className="text-sm font-semibold text-gray-900">{expandedBrand!.name}</span>
+                      <span className="text-xs text-gray-400">— {models.length} model</span>
+                    </div>
+                    <button onClick={() => { setExpandedBrand(null); setModels([]) }} className="text-gray-400 hover:text-gray-600">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {modelsLoading ? (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="w-5 h-5 text-primary-500 animate-spin" />
+                    </div>
+                  ) : (
+                    <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+                      {models.map(model => (
+                        <Link
+                          key={model.name}
+                          href={`/parcalar?brand=${encodeURIComponent(expandedBrand!.slug)}&marka=${encodeURIComponent(expandedBrand!.name)}&model_name=${encodeURIComponent(model.name)}`}
+                          className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:border-primary-300 hover:bg-primary-50/50 transition-all group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm text-gray-700 group-hover:text-primary-600 font-medium leading-tight block truncate">
+                              {model.name}
+                            </span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                                <Cog className="w-2.5 h-2.5" /> {model.gen_count} nesil
+                              </span>
+                              {model.min_year && model.max_year && (
+                                <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
+                                  <Calendar className="w-2.5 h-2.5" /> {model.min_year}–{model.max_year}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 flex-shrink-0" />
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
-            </button>
+            </Fragment>
           )
         })}
       </div>
 
       {filteredBrands.length === 0 && (
         <p className="text-gray-400 text-sm text-center py-8">Marka bulunamadi</p>
-      )}
-
-      {/* Model dropdown */}
-      {expandedBrand && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-          <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Car className="w-4 h-4 text-primary-500" />
-              <span className="text-sm font-semibold text-gray-900">{expandedBrand.name}</span>
-              <span className="text-xs text-gray-400">— {models.length} model</span>
-            </div>
-            <button onClick={() => { setExpandedBrand(null); setModels([]) }} className="text-gray-400 hover:text-gray-600">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {modelsLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
-            </div>
-          ) : (
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-80 overflow-y-auto">
-              {models.map(model => (
-                <Link
-                  key={model.name}
-                  href={`/parcalar?brand=${encodeURIComponent(expandedBrand.slug)}&marka=${encodeURIComponent(expandedBrand.name)}&model_name=${encodeURIComponent(model.name)}`}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-primary-300 hover:bg-primary-50/50 transition-all group"
-                >
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-gray-700 group-hover:text-primary-600 font-medium leading-tight block truncate">
-                      {model.name}
-                    </span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                        <Cog className="w-2.5 h-2.5" /> {model.gen_count} nesil
-                      </span>
-                      {model.min_year && model.max_year && (
-                        <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                          <Calendar className="w-2.5 h-2.5" /> {model.min_year}–{model.max_year}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 flex-shrink-0" />
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
       )}
     </div>
   )

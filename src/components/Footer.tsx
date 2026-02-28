@@ -73,38 +73,38 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Categories */}
+          {/* Popular Models */}
           <div>
-            <h3 className="text-gray-900 font-semibold mb-4">Parça Kategorileri</h3>
+            <h3 className="text-gray-900 font-semibold mb-4">Popüler Modeller</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/parcalar/kaporta" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Kaporta Parçaları
+                <Link href="/parcalar?brand=bmw&marka=BMW&model_name=3%20Serisi" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  BMW 3 Serisi
                 </Link>
               </li>
               <li>
-                <Link href="/parcalar/fren" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Fren Sistemi
+                <Link href="/parcalar?brand=mercedes-benz&marka=Mercedes-Benz&model_name=C%20Serisi" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  Mercedes C Serisi
                 </Link>
               </li>
               <li>
-                <Link href="/parcalar/aydinlatma" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Aydınlatma
+                <Link href="/parcalar?brand=volkswagen&marka=Volkswagen&model_name=Golf" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  VW Golf
                 </Link>
               </li>
               <li>
-                <Link href="/parcalar/ic-aksesuar" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  İç Aksesuar
+                <Link href="/parcalar?brand=audi&marka=Audi&model_name=A4" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  Audi A4
                 </Link>
               </li>
               <li>
-                <Link href="/parcalar/sogutma" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Soğutma Sistemi
+                <Link href="/parcalar?brand=toyota&marka=Toyota&model_name=Corolla" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  Toyota Corolla
                 </Link>
               </li>
               <li>
-                <Link href="/parcalar/egzoz" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Egzoz Sistemi
+                <Link href="/parcalar?brand=ford&marka=Ford&model_name=Focus" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  Ford Focus
                 </Link>
               </li>
             </ul>
