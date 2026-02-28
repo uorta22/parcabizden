@@ -26,8 +26,11 @@ yarn-error.log*
 .env*.local
 .env
 
-# API logs
+# API logs & secrets
 /api/logs/
+.env.php
+webhook_log.txt
+email_debug.log
 
 # Vercel
 .vercel
