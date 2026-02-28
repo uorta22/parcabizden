@@ -191,12 +191,21 @@ function InfoForm({
   const [loadingBrands, setLoadingBrands] = useState(false)
   const [submitting, setSubmitting] = useState(false)
 
-  // Load brands from proxy route (always /api/brands, not external URL)
+  // Load brands — try proxy first, fallback to direct API
   useEffect(() => {
     setLoadingBrands(true)
     fetch('/api/brands')
       .then(res => res.json())
-      .then(data => setBrands(data.data || []))
+      .then(data => {
+        if (data.data && data.data.length > 0) return data.data
+        // Proxy empty → direct API
+        return fetch('https://api.parcabizden.com.tr/?action=brands')
+          .then(r => r.json())
+          .then(raw => (raw.brands || []).map((b: { brand_slug: string; brand_name: string }, i: number) => ({
+            id: i + 1, name: b.brand_name, slug: b.brand_slug,
+          })))
+      })
+      .then(brands => setBrands(brands))
       .catch(() => {})
       .finally(() => setLoadingBrands(false))
   }, [])
