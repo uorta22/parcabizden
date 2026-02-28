@@ -487,15 +487,54 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   const [selectedGen, setSelectedGen] = useState<string | null>(null)
   const [useAutodata, setUseAutodata] = useState(false)
 
+  // Read autodata_gen / autodata_year from URL (passed by VehicleSelector on resolve fail)
+  const genSearchParams = useSearchParams()
+  const autodataGen = genSearchParams.get('autodata_gen')
+  const autodataYear = genSearchParams.get('autodata_year')
+
+  // Auto-resolve when autodata_gen is present in URL
   useEffect(() => {
+    if (!autodataGen || !brand || !modelName) return
+    setResolving(true)
+    setError('')
+    resolveAutodataSlug(brand, modelName, autodataGen, autodataYear ? parseInt(autodataYear) : undefined)
+      .then(result => {
+        if (result.auto_selected) {
+          setSelectedGen(result.auto_selected)
+        } else if (result.matches.length === 1) {
+          setSelectedGen(result.matches[0].generation_slug)
+        } else {
+          // Could not auto-resolve — fall through to normal generation picking
+          setResolving(false)
+        }
+      })
+      .catch(() => {
+        // Resolve failed — fall through to normal generation picking
+        setResolving(false)
+      })
+  }, [autodataGen, autodataYear, brand, modelName])
+
+  useEffect(() => {
+    // Skip loading generations if autodata_gen auto-resolve is in progress
+    if (autodataGen) return
+
     setLoading(true)
     setError('')
 
-    // Always pre-fetch DB generations as fallback
+    // Always pre-fetch DB generations as fallback, filtered by modelName
     const dbPromise = fetchGenerations(brand)
       .then(data => {
-        setDbGenerations(data.generations || [])
-        return data.generations || []
+        let gens = data.generations || []
+        if (modelName) {
+          const baseModel = modelName.split(/\s+/)[0].toLowerCase()
+          const filtered = gens.filter((g: { generation_name: string }) => {
+            const genLower = g.generation_name.toLowerCase()
+            return genLower.startsWith(baseModel) || genLower.includes(baseModel)
+          })
+          if (filtered.length > 0) gens = filtered
+        }
+        setDbGenerations(gens)
+        return gens
       })
       .catch(() => [] as Array<{ generation_slug: string; generation_name: string; part_count: number }>)
 
@@ -534,7 +573,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         setLoading(false)
       })
     }
-  }, [brand, modelName])
+  }, [brand, modelName, autodataGen])
 
   // Handle autodata generation selection — resolve to parts DB slug
   const handleAutodataSelect = async (gen: AutodataGeneration) => {

@@ -278,7 +278,9 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
           brand: selectedBrand.slug,
           marka: selectedBrand.name,
           model_name: selectedModel.name,
+          autodata_gen: gen.name,
         })
+        if (gen.year_start) params.set('autodata_year', String(gen.year_start))
         router.push(`/parcalar?${params.toString()}`)
       }
     } catch {
@@ -286,7 +288,9 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
         brand: selectedBrand.slug,
         marka: selectedBrand.name,
         model_name: selectedModel.name,
+        autodata_gen: gen.name,
       })
+      if (gen.year_start) params.set('autodata_year', String(gen.year_start))
       router.push(`/parcalar?${params.toString()}`)
     } finally {
       setResolving(false)
