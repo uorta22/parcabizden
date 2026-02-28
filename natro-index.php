@@ -357,7 +357,7 @@ function handle_chat($pdo) {
 function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $pageUrl) {
     $phoneId = '1032269509965333';
     $token = 'EAAUjcHbTUhgBQwRJVJ9c4fMic6kjjorjfmaSQPy80kNQvgF3ZBlwAHzVXHNUQAYTd9JnVaZBAiYDcKDZCCGxeRFthZBz5IQXSURjMG5wEV5pUKRFphPONP9fPa5q2aZAqa6Dvcw4k635VAw6wyKOr897ZBmLRx1YSGKfZCeFdz9m5AFC7NwXTRF8izJSZCR4IFFe6QZDZD';
-    $adminNumbers = ['905343912013'];
+    $adminNumbers = ['905449819144'];
     if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
     $text = "Yeni Talep #$ticketId\n" . ($name ? $name : 'Anonim') . "\n" . ($phone ? "Tel: $phone\n" : "") . ($vehicle ? "Arac: $vehicle\n" : "") . ($vin ? "Sase: $vin\n" : "") . "---\n" . $message;
@@ -380,7 +380,7 @@ function send_whatsapp($ticketId, $message, $name, $vehicle, $phone, $vin, $page
 function send_whatsapp_followup($ticketId, $message, $name) {
     $phoneId = '1032269509965333';
     $token = 'EAAUjcHbTUhgBQwRJVJ9c4fMic6kjjorjfmaSQPy80kNQvgF3ZBlwAHzVXHNUQAYTd9JnVaZBAiYDcKDZCCGxeRFthZBz5IQXSURjMG5wEV5pUKRFphPONP9fPa5q2aZAqa6Dvcw4k635VAw6wyKOr897ZBmLRx1YSGKfZCeFdz9m5AFC7NwXTRF8izJSZCR4IFFe6QZDZD';
-    $adminNumbers = ['905343912013'];
+    $adminNumbers = ['905449819144'];
     if (!$phoneId || !$token || empty($adminNumbers)) return null;
 
     $text = ($name ?: 'Musteri') . " (#$ticketId):\n$message";
