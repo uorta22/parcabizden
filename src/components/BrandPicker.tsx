@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, Fragment } from 'react'
-import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, ChevronRight, ChevronDown, X, Car, Loader2, Calendar, Cog } from 'lucide-react'
 import { fetchAutodataBrands, fetchAutodataModels } from '@/lib/api'
 import type { AutodataBrand, AutodataModel } from '@/types/api'
@@ -54,6 +54,7 @@ export default function BrandPicker() {
   const [expandedBrand, setExpandedBrand] = useState<AutodataBrand | null>(null)
   const [models, setModels] = useState<AutodataModel[]>([])
   const [modelsLoading, setModelsLoading] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     Promise.all([
@@ -182,10 +183,16 @@ export default function BrandPicker() {
                   ) : (
                     <div className="p-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
                       {models.map(model => (
-                        <Link
+                        <button
                           key={model.name}
-                          href={`/parcalar?brand=${encodeURIComponent(expandedBrand!.slug)}&marka=${encodeURIComponent(expandedBrand!.name)}&model_name=${encodeURIComponent(model.name)}`}
-                          className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:border-primary-300 hover:bg-primary-50/50 transition-all group"
+                          onClick={() => {
+                            const url = `/parcalar?brand=${encodeURIComponent(expandedBrand!.slug)}&marka=${encodeURIComponent(expandedBrand!.name)}&model_name=${encodeURIComponent(model.name)}`
+                            setExpandedBrand(null)
+                            setModels([])
+                            router.push(url)
+                            window.scrollTo({ top: 0, behavior: 'smooth' })
+                          }}
+                          className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:border-primary-300 hover:bg-primary-50/50 transition-all group text-left"
                         >
                           <div className="flex-1 min-w-0">
                             <span className="text-sm text-gray-700 group-hover:text-primary-600 font-medium leading-tight block truncate">
@@ -203,7 +210,7 @@ export default function BrandPicker() {
                             </div>
                           </div>
                           <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 flex-shrink-0" />
-                        </Link>
+                        </button>
                       ))}
                     </div>
                   )}
