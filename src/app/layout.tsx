@@ -6,6 +6,7 @@ import Footer from '@/components/Footer'
 import ChatWidget from '@/components/ChatWidget'
 import SchemaOrg from '@/components/SchemaOrg'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { SpeedInsights } from '@vercel/speed-insights/next'
 import { siteConfig } from '@/lib/config'
 
 const inter = Inter({ subsets: ['latin', 'latin-ext'] })
@@ -72,6 +73,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <ChatWidget />
+          <SpeedInsights />
         </AuthProvider>
       </body>
     </html>
