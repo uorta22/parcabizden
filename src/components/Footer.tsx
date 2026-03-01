@@ -16,9 +16,9 @@ export default function Footer() {
               <Image
                 src="/pb_logo.png"
                 alt="ParcaBizden Logo"
-                width={200}
-                height={109}
-                className="h-14 w-auto"
+                width={240}
+                height={131}
+                className="h-16 w-auto"
               />
             </Link>
             <p className="text-gray-500 text-sm leading-relaxed">

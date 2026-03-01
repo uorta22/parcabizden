@@ -54,9 +54,9 @@ export default function Header() {
             <Image
               src="/pb_logo.png"
               alt="ParcaBizden Logo"
-              width={220}
-              height={120}
-              className="h-14 md:h-16 w-auto"
+              width={280}
+              height={153}
+              className="h-16 md:h-20 w-auto"
               priority
             />
           </Link>
