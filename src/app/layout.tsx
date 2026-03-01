@@ -60,7 +60,7 @@ export default function RootLayout({
     <html lang="tr">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <meta name="theme-color" content="#1a3a5c" />
+        <meta name="theme-color" content="#eab308" />
         <link rel="manifest" href="/site.webmanifest" />
         <SchemaOrg />
       </head>

@@ -1,6 +1,5 @@
 import Link from 'next/link'
-import Image from 'next/image'
-import { Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react'
+import { Car, Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 
 export default function Footer() {
@@ -12,14 +11,13 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Logo & Description */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center">
-              <Image
-                src="/pb_logo.png"
-                alt="ParcaBizden Logo"
-                width={240}
-                height={131}
-                className="h-16 w-auto"
-              />
+            <Link href="/" className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-lg gradient-accent flex items-center justify-center">
+                <Car className="w-6 h-6 text-dark-900" />
+              </div>
+              <span className="text-xl font-bold text-gray-900">
+                Parça<span className="text-primary-500">Bizden</span>
+              </span>
             </Link>
             <p className="text-gray-500 text-sm leading-relaxed">
               Yedek parça ve çıkma parça ihtiyaçlarınız için güvenilir çözüm ortağınız.
