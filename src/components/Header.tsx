@@ -2,8 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { Menu, X, Car, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus, ChevronDown } from 'lucide-react'
+import { Menu, X, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus, ChevronDown } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Header() {
@@ -49,16 +50,15 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
-          <Link href="/" onClick={() => handleNavClick('/')} className="flex items-center gap-2 group">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg gradient-accent flex items-center justify-center">
-              <Car className="w-6 h-6 md:w-7 md:h-7 text-dark-900" />
-            </div>
-            <div>
-              <span className="text-xl md:text-2xl font-bold text-gray-900">
-                Parça<span className="text-primary-500">Bizden</span>
-              </span>
-              <p className="text-[10px] md:text-xs text-gray-500 -mt-1">Yedek & Çıkma Parça</p>
-            </div>
+          <Link href="/" onClick={() => handleNavClick('/')} className="flex items-center group">
+            <Image
+              src="/pb_logo.png"
+              alt="ParcaBizden Logo"
+              width={180}
+              height={98}
+              className="h-10 md:h-12 w-auto"
+              priority
+            />
           </Link>
 
           {/* Desktop Navigation */}
