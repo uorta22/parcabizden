@@ -8,21 +8,14 @@ import GarageCard from '@/components/GarageCard'
 import AddVehicleModal from '@/components/AddVehicleModal'
 import type { GarageVehicleNatro } from '@/types/api'
 import { garageList, garageAdd, garageRemove } from '@/lib/api'
-import { loadVehicleTree, findVehicleImage } from '@/lib/vehicleImage'
-
-type VehicleTree = Awaited<ReturnType<typeof loadVehicleTree>>
+import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 
 export default function GarajPage() {
   const { user, isLoading: authLoading } = useAuth()
   const [vehicles, setVehicles] = useState<GarageVehicleNatro[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
-  const [tree, setTree] = useState<VehicleTree | null>(null)
-
-  useEffect(() => {
-    // Load vehicle tree in parallel with garage list
-    loadVehicleTree().then(setTree).catch(() => {})
-  }, [])
+  const [vehicleImages, setVehicleImages] = useState<Record<number, string | null>>({})
 
   useEffect(() => {
     if (user) {
@@ -63,15 +56,23 @@ export default function GarajPage() {
     return { totalVehicles, totalUpcoming, totalOverdue }
   }, [vehicles])
 
-  // Compute vehicle images
-  const vehicleImages = useMemo(() => {
-    if (!tree) return {}
-    const map: Record<number, string | null> = {}
-    for (const v of vehicles) {
-      map[v.id] = findVehicleImage(tree, v.brand_slug, v.generation_slug)
-    }
-    return map
-  }, [tree, vehicles])
+  // Fetch autodata images (same source as VehicleSelector)
+  useEffect(() => {
+    if (vehicles.length === 0) return
+    let cancelled = false
+    Promise.all(
+      vehicles.map(async (v) => {
+        const img = await findAutodataGenerationImage(v.brand_name, v.generation_name)
+        return { id: v.id, img }
+      })
+    ).then((results) => {
+      if (cancelled) return
+      const map: Record<number, string | null> = {}
+      for (const { id, img } of results) map[id] = img
+      setVehicleImages(map)
+    })
+    return () => { cancelled = true }
+  }, [vehicles])
 
   if (authLoading) {
     return (

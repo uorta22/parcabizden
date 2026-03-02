@@ -20,7 +20,7 @@ import {
   getMaintenanceStatus, getStatusColor, getStatusLabel,
   getMaintenanceLabel,
 } from '@/lib/maintenance'
-import { loadVehicleTree, findVehicleImage } from '@/lib/vehicleImage'
+import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 import { getWhatsAppUrl } from '@/lib/config'
 
 export default function GarageDetailPage() {
@@ -58,10 +58,7 @@ export default function GarageDetailPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [garageRes, treeData] = await Promise.all([
-        garageList(),
-        loadVehicleTree().catch(() => null),
-      ])
+      const garageRes = await garageList()
       const v = garageRes.vehicles.find(v => v.id === garageId)
       if (!v) { router.push('/garaj'); return }
       setVehicle(v)
@@ -71,9 +68,10 @@ export default function GarageDetailPage() {
       setPlakaValue(v.plaka || '')
       setSaseValue(v.sase_no || '')
 
-      if (treeData) {
-        setVehicleImage(findVehicleImage(treeData, v.brand_slug, v.generation_slug))
-      }
+      // Use same autodata image source as VehicleSelector
+      findAutodataGenerationImage(v.brand_name, v.generation_name)
+        .then(img => setVehicleImage(img))
+        .catch(() => {})
 
       const mRes = await maintenanceList(garageId)
       setRecords(mRes.records)
