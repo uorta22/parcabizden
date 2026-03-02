@@ -2,14 +2,15 @@
 
 import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { Search, MessageCircle, Sparkles, AlertCircle, CheckCircle, Wrench, Info, Car, Loader2, Copy, Check, Package, ChevronLeft, Hash, ChevronRight } from 'lucide-react'
 import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import type { VehicleInfo, VehicleGeneration } from '@/types/vehicle'
 import { siteConfig } from '@/lib/config'
 import { validateVIN as validateVINUtil, decodeVIN, translateFuelType, translateTransmission, parseModelYear, cleanModelName } from '@/lib/vehicle'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, searchOemParts } from '@/lib/api'
-import type { VehicleCategory, VehicleNode, VehiclePart, OemSearchResult } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts } from '@/lib/api'
+import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import { getWhatsAppUrl } from '@/lib/config'
 
 interface BrandModelItem {
@@ -41,6 +42,7 @@ const PARTS_PER_PAGE = 20
 type SearchTab = 'vin' | 'oem'
 
 export default function HeroSection() {
+  const router = useRouter()
   const [activeTab, setActiveTab] = useState<SearchTab>('vin')
 
   // VIN state
@@ -56,10 +58,7 @@ export default function HeroSection() {
 
   // OEM state
   const [oemQuery, setOemQuery] = useState('')
-  const [oemResults, setOemResults] = useState<OemSearchResult[]>([])
-  const [oemLoading, setOemLoading] = useState(false)
   const [oemError, setOemError] = useState('')
-  const [oemSearched, setOemSearched] = useState(false)
 
   // API-driven parts state
   const [selectedGen, setSelectedGen] = useState<{ slug: string; name: string } | null>(null)
@@ -100,31 +99,20 @@ export default function HeroSection() {
       setCopiedOem(null)
       setGenerations([])
       setOemQuery('')
-      setOemResults([])
       setOemError('')
-      setOemSearched(false)
     }
     window.addEventListener('page-reset', resetState)
     return () => window.removeEventListener('page-reset', resetState)
   }, [])
 
-  // ── OEM Search ──
-  const handleOemSearch = useCallback(async () => {
+  // ── OEM Search — navigate to detail page ──
+  const handleOemSearch = useCallback(() => {
     const q = oemQuery.trim()
-    if (!q) return
-    setOemLoading(true)
+    if (!q) { setOemError('Lütfen OEM numarası girin'); return }
+    if (q.length < 3) { setOemError('En az 3 karakter girin'); return }
     setOemError('')
-    setOemSearched(true)
-    try {
-      const data = await searchOemParts(q)
-      setOemResults(data.results || [])
-    } catch (e) {
-      setOemError(e instanceof Error ? e.message : 'Arama sırasında hata oluştu')
-      setOemResults([])
-    } finally {
-      setOemLoading(false)
-    }
-  }, [oemQuery])
+    router.push(`/parca/${encodeURIComponent(q)}`)
+  }, [oemQuery, router])
 
   // ── VIN handlers ──
   const loadCategories = useCallback(async (brandSlug: string, genSlug: string, genName: string) => {
@@ -410,14 +398,9 @@ export default function HeroSection() {
                     </div>
                     <button
                       onClick={handleOemSearch}
-                      disabled={oemLoading}
-                      className="px-5 md:px-7 py-3.5 bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white font-bold rounded-xl transition-all flex items-center gap-2 flex-shrink-0"
+                      className="px-5 md:px-7 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-bold rounded-xl transition-all flex items-center gap-2 flex-shrink-0"
                     >
-                      {oemLoading ? (
-                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <Search className="w-5 h-5" />
-                      )}
+                      <Search className="w-5 h-5" />
                       <span className="hidden md:inline">Ara</span>
                     </button>
                   </div>
@@ -426,71 +409,6 @@ export default function HeroSection() {
                     <div className="flex items-center gap-2 mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
                       <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
                       <p className="text-red-600 text-xs">{oemError}</p>
-                    </div>
-                  )}
-
-                  {/* OEM Results — grouped by oem_number */}
-                  {oemSearched && !oemLoading && !oemError && (
-                    <div className="mt-4">
-                      {oemResults.length > 0 ? (() => {
-                        // Group results by oem_number so the same part isn't shown multiple times
-                        const grouped = new Map<string, { name: string; count: number }>()
-                        for (const r of oemResults) {
-                          const existing = grouped.get(r.oem_number)
-                          if (existing) {
-                            existing.count++
-                          } else {
-                            grouped.set(r.oem_number, { name: r.name, count: 1 })
-                          }
-                        }
-                        const entries = Array.from(grouped.entries()).slice(0, 10)
-                        return (
-                          <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200 overflow-hidden max-h-[360px] overflow-y-auto">
-                            {entries.map(([oem, { name, count }]) => (
-                              <Link
-                                key={oem}
-                                href={`/parca/${encodeURIComponent(oem)}`}
-                                className="flex items-center gap-3 p-3.5 hover:bg-gray-100/70 transition-colors"
-                              >
-                                <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-                                  <Package className="w-4 h-4 text-primary-500" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
-                                  <div className="flex items-center gap-2">
-                                    <p className="text-xs text-gray-500 font-mono">{oem}</p>
-                                    {count > 1 && (
-                                      <span className="text-[10px] text-gray-400 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">{count} araç</span>
-                                    )}
-                                  </div>
-                                </div>
-                                <span className="flex items-center gap-1.5 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0">
-                                  Detay
-                                  <ChevronRight className="w-3.5 h-3.5" />
-                                </span>
-                              </Link>
-                            ))}
-                            {grouped.size > 10 && (
-                              <div className="px-4 py-3 bg-gray-100/50 text-center">
-                                <p className="text-xs text-gray-500">{grouped.size - 10} sonuç daha var.</p>
-                              </div>
-                            )}
-                          </div>
-                        )
-                      })() : (
-                        <div className="text-center py-6 bg-gray-50 border border-gray-200 rounded-xl">
-                          <p className="text-gray-500 text-sm mb-2">Sonuç bulunamadı.</p>
-                          <a
-                            href={getWhatsAppUrl(`Merhaba, "${oemQuery}" OEM numaralı parçayı arıyorum. Yardımcı olur musunuz?`)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1.5 text-green-600 hover:text-green-700 text-sm font-medium transition-colors"
-                          >
-                            <MessageCircle className="w-4 h-4" />
-                            WhatsApp ile sorun
-                          </a>
-                        </div>
-                      )}
                     </div>
                   )}
 
