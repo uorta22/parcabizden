@@ -990,35 +990,42 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
                       <span>{gen.mod_count} varyant</span>
                     </div>
 
-                    {/* Spec summary 2x2 grid */}
-                    {specs && (specs.powerRange || specs.fuelTypes) && (
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-gray-100">
-                        {specs.powerRange && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                            <Zap className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                            <span className="truncate">{specs.powerRange}</span>
-                          </div>
-                        )}
-                        {specs.engineRange && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                            <Settings2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                            <span className="truncate">{specs.engineRange}</span>
-                          </div>
-                        )}
-                        {specs.fuelTypes && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                            <Fuel className="w-3 h-3 text-blue-500 flex-shrink-0" />
-                            <span className="truncate">{specs.fuelTypes}</span>
-                          </div>
-                        )}
-                        {specs.transmissions && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                            <Settings2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                            <span className="truncate">{specs.transmissions}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Spec summary — fixed height to prevent layout shift */}
+                    <div className="h-[52px] mt-3 pt-3 border-t border-gray-100">
+                      {specs && (specs.powerRange || specs.fuelTypes) ? (
+                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 animate-fadeIn">
+                          {specs.powerRange && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                              <Zap className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                              <span className="truncate">{specs.powerRange}</span>
+                            </div>
+                          )}
+                          {specs.engineRange && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                              <Settings2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">{specs.engineRange}</span>
+                            </div>
+                          )}
+                          {specs.fuelTypes && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                              <Fuel className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                              <span className="truncate">{specs.fuelTypes}</span>
+                            </div>
+                          )}
+                          {specs.transmissions && (
+                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                              <Settings2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                              <span className="truncate">{specs.transmissions}</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                          <Settings2 className="w-3 h-3 flex-shrink-0" />
+                          <span>{gen.mod_count} varyant mevcut</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </button>
               )
