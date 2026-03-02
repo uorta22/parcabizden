@@ -747,10 +747,10 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                             style={{ animationDelay: `${Math.min(index * 30, 300)}ms` }}
                           >
                             {image && (
-                              <div className={`relative ${autodataImg ? 'aspect-[16/10]' : 'aspect-[3/2]'} overflow-hidden bg-gray-50`}>
+                              <div className="relative aspect-[16/10] overflow-hidden bg-gray-50">
                                 <div className="absolute inset-0 bg-primary-50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={image} alt={model.name} className={`w-full h-full ${autodataImg ? 'object-cover' : 'object-contain p-1.5'} group-hover:scale-105 transition-transform duration-500 ease-out`} loading="lazy" />
+                                <img src={image} alt={model.name} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500 ease-out" loading="lazy" />
                               </div>
                             )}
                             <div className="px-4 py-3">
