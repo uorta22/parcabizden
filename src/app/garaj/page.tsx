@@ -192,7 +192,7 @@ export default function GarajPage() {
             </button>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
             {vehicles.map((vehicle) => (
               <GarageCard
                 key={vehicle.id}

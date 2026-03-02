@@ -539,9 +539,9 @@ export default function HeroSection() {
                             return (
                               <button key={i} onClick={() => handleModelSelect(m.name, m.image)}
                                 className="group relative rounded-lg overflow-hidden bg-white border border-gray-200 hover:border-primary-500/40 hover:shadow-md transition-all duration-200 text-left">
-                                <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
+                                <div className="relative aspect-[16/10] bg-gray-50 overflow-hidden">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={m.image} alt={m.name} className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+                                  <img src={m.image} alt={m.name} className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" loading="lazy" />
                                   {year > 0 && <span className="absolute top-1 right-1 text-[8px] font-semibold tabular-nums px-1.5 py-0.5 rounded bg-white/80 backdrop-blur-sm border border-gray-200 text-gray-600">{year}</span>}
                                   <span className="absolute top-1 left-1 text-[8px] font-medium text-gray-500 bg-white/80 backdrop-blur-sm px-1 py-0.5 rounded">{m.bodyType}</span>
                                 </div>

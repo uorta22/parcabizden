@@ -492,12 +492,17 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     return gens
   }, [generations, activeBodyType, sortOrder])
 
+  // Sort brands alphabetically (matches BrandPicker ordering)
+  const sortedBrands = useMemo(() =>
+    [...brands].sort((a, b) => a.name.localeCompare(b.name, 'tr')),
+  [brands])
+
   // Filter brands
   const filteredBrands = searchQuery && step === 'brands'
-    ? brands.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : brands
+    ? sortedBrands.filter(b => b.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : sortedBrands
 
-  const popularBrands = brands.filter(b => POPULAR_BRANDS_SLUGS.includes(b.slug))
+  const popularBrands = sortedBrands.filter(b => POPULAR_BRANDS_SLUGS.includes(b.slug))
 
   // For modal mode: don't render if not open
   if (isModal && !isOpen) return null
@@ -852,7 +857,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                       <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
                     </div>
                   ) : (
-                    <div className={`grid gap-3 ${isModal ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'}`}>
+                    <div className={`grid gap-3 ${isModal ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-3 xl:grid-cols-4'}`}>
                       {filteredGenerations.map((gen, index) => {
                         const genKey = `${gen.name}-${gen.body_type}`
                         const genImg = genImages[genKey]
@@ -870,7 +875,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                               <img
                                 src={genImg}
                                 alt={gen.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
                                 loading="lazy"
                               />
                             ) : selectedBrand ? (

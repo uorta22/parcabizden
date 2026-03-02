@@ -34,11 +34,11 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
   return (
     <Link href={detailHref} className="block bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary-400 hover:shadow-md transition-all group flex flex-col cursor-pointer">
       {/* Vehicle Image */}
-      <div className="relative h-36 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="relative aspect-[16/10] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
         {vehicleImage ? (
-          <Image src={vehicleImage} alt={`${vehicle.brand_name} ${vehicle.generation_name}`} fill className="object-contain p-4" sizes="(max-width: 768px) 100vw, 33vw" />
+          <Image src={vehicleImage} alt={`${vehicle.brand_name} ${vehicle.generation_name}`} fill className="object-contain p-2" sizes="(max-width: 768px) 100vw, 33vw" />
         ) : (
-          <Car className="w-16 h-16 text-gray-300" />
+          <Car className="w-12 h-12 text-gray-300" />
         )}
         <button
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRemove(vehicle.id) }}

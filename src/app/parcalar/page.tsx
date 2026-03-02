@@ -963,7 +963,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
                       <img
                         src={genImg}
                         alt={gen.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
                         loading="lazy"
                       />
                     ) : (

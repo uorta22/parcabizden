@@ -63,11 +63,15 @@ export default function BrandPicker() {
     ]).finally(() => setLoading(false))
   }, [])
 
+  const sortedBrands = useMemo(() =>
+    [...brands].sort((a, b) => a.name.localeCompare(b.name, 'tr')),
+  [brands])
+
   const filteredBrands = useMemo(() => {
-    if (!search.trim()) return brands
+    if (!search.trim()) return sortedBrands
     const q = search.toLowerCase()
-    return brands.filter(b => b.name.toLowerCase().includes(q))
-  }, [brands, search])
+    return sortedBrands.filter(b => b.name.toLowerCase().includes(q))
+  }, [sortedBrands, search])
 
   const handleBrandClick = async (brand: AutodataBrand) => {
     if (expandedBrand?.slug === brand.slug) {
