@@ -429,37 +429,55 @@ export default function HeroSection() {
                     </div>
                   )}
 
-                  {/* OEM Results */}
+                  {/* OEM Results — grouped by oem_number */}
                   {oemSearched && !oemLoading && !oemError && (
                     <div className="mt-4">
-                      {oemResults.length > 0 ? (
-                        <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200 overflow-hidden max-h-[360px] overflow-y-auto">
-                          {oemResults.slice(0, 10).map((r, i) => (
-                            <Link
-                              key={`${r.oem_number}-${i}`}
-                              href={`/parca/${encodeURIComponent(r.oem_number)}`}
-                              className="flex items-center gap-3 p-3.5 hover:bg-gray-100/70 transition-colors"
-                            >
-                              <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-                                <Package className="w-4 h-4 text-primary-500" />
+                      {oemResults.length > 0 ? (() => {
+                        // Group results by oem_number so the same part isn't shown multiple times
+                        const grouped = new Map<string, { name: string; count: number }>()
+                        for (const r of oemResults) {
+                          const existing = grouped.get(r.oem_number)
+                          if (existing) {
+                            existing.count++
+                          } else {
+                            grouped.set(r.oem_number, { name: r.name, count: 1 })
+                          }
+                        }
+                        const entries = Array.from(grouped.entries()).slice(0, 10)
+                        return (
+                          <div className="bg-gray-50 border border-gray-200 rounded-xl divide-y divide-gray-200 overflow-hidden max-h-[360px] overflow-y-auto">
+                            {entries.map(([oem, { name, count }]) => (
+                              <Link
+                                key={oem}
+                                href={`/parca/${encodeURIComponent(oem)}`}
+                                className="flex items-center gap-3 p-3.5 hover:bg-gray-100/70 transition-colors"
+                              >
+                                <div className="w-8 h-8 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
+                                  <Package className="w-4 h-4 text-primary-500" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium text-gray-900 truncate">{name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="text-xs text-gray-500 font-mono">{oem}</p>
+                                    {count > 1 && (
+                                      <span className="text-[10px] text-gray-400 bg-gray-100 border border-gray-200 rounded px-1.5 py-0.5">{count} araç</span>
+                                    )}
+                                  </div>
+                                </div>
+                                <span className="flex items-center gap-1.5 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0">
+                                  Detay
+                                  <ChevronRight className="w-3.5 h-3.5" />
+                                </span>
+                              </Link>
+                            ))}
+                            {grouped.size > 10 && (
+                              <div className="px-4 py-3 bg-gray-100/50 text-center">
+                                <p className="text-xs text-gray-500">{grouped.size - 10} sonuç daha var.</p>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">{r.name}</p>
-                                <p className="text-xs text-gray-500 font-mono">{r.oem_number}</p>
-                              </div>
-                              <span className="flex items-center gap-1.5 px-3 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-semibold rounded-lg transition-colors flex-shrink-0">
-                                Detay
-                                <ChevronRight className="w-3.5 h-3.5" />
-                              </span>
-                            </Link>
-                          ))}
-                          {oemResults.length > 10 && (
-                            <div className="px-4 py-3 bg-gray-100/50 text-center">
-                              <p className="text-xs text-gray-500">{oemResults.length - 10} sonuç daha var.</p>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
+                            )}
+                          </div>
+                        )
+                      })() : (
                         <div className="text-center py-6 bg-gray-50 border border-gray-200 rounded-xl">
                           <p className="text-gray-500 text-sm mb-2">Sonuç bulunamadı.</p>
                           <a
