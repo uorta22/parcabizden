@@ -557,47 +557,29 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     })
   }, [modelName])
 
-  // Fetch generation images (mirrors VehicleSelector:437-454 pattern)
+  // Fetch generation images in parallel (per-brand file is cached after first fetch)
   useEffect(() => {
     if (!marka || autodataGens.length === 0) return
     setGenImages({})
-    const controller = new AbortController()
+    let cancelled = false
     const fetchImages = async () => {
+      const results = await Promise.all(
+        autodataGens.map(async (gen) => {
+          const key = `${gen.name}-${gen.body_type}`
+          const img = await findAutodataGenerationImage(marka, gen.name)
+          return { key, img }
+        })
+      )
+      if (cancelled) return
       const images: Record<string, string> = {}
-      for (const gen of autodataGens) {
-        if (controller.signal.aborted) return
-        const key = `${gen.name}-${gen.body_type}`
-        const img = await findAutodataGenerationImage(marka, gen.name)
+      for (const { key, img } of results) {
         if (img) images[key] = img
       }
-      if (!controller.signal.aborted) setGenImages(images)
+      setGenImages(images)
     }
     fetchImages()
-    return () => controller.abort()
+    return () => { cancelled = true }
   }, [marka, autodataGens])
-
-  // Prefetch specs for first 4 generations eagerly
-  useEffect(() => {
-    if (!brand || autodataGens.length === 0 || !modelName) return
-    const controller = new AbortController()
-    const eagerGens = autodataGens.slice(0, 4)
-    const fetchSpecs = async () => {
-      for (const gen of eagerGens) {
-        if (controller.signal.aborted) return
-        const key = `${gen.name}-${gen.body_type}`
-        if (fetchedSpecsRef.current.has(key)) continue
-        fetchedSpecsRef.current.add(key)
-        try {
-          const data = await fetchVehicleSpecs(brand, gen.name, gen.year_start ?? undefined, modelName)
-          if (controller.signal.aborted) return
-          const summary = summarizeSpecs(data.specs)
-          if (summary) setGenSpecs(prev => ({ ...prev, [key]: summary }))
-        } catch { /* ignore */ }
-      }
-    }
-    fetchSpecs()
-    return () => controller.abort()
-  }, [brand, autodataGens, modelName])
 
   // Lazy fetch specs on hover/focus
   const prefetchSpec = useCallback((gen: AutodataGeneration) => {

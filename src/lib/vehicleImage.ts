@@ -83,16 +83,27 @@ interface AutodataImageEntry {
   image: string
 }
 
-let cachedAutodataImages: AutodataImageEntry[] | null = null
+const brandImageCache = new Map<string, AutodataImageEntry[]>()
 
-async function loadAutodataImages(): Promise<AutodataImageEntry[]> {
-  if (cachedAutodataImages) return cachedAutodataImages
+function brandSlug(brand: string): string {
+  return brand
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+}
+
+async function loadBrandImages(brandName: string): Promise<AutodataImageEntry[]> {
+  const slug = brandSlug(brandName)
+  const cached = brandImageCache.get(slug)
+  if (cached) return cached
   try {
-    const res = await fetch('/data/autodata-images.json')
-    if (!res.ok) return []
-    cachedAutodataImages = await res.json()
-    return cachedAutodataImages!
+    const res = await fetch(`/data/images/${slug}.json`)
+    if (!res.ok) { brandImageCache.set(slug, []); return [] }
+    const data: AutodataImageEntry[] = await res.json()
+    brandImageCache.set(slug, data)
+    return data
   } catch {
+    brandImageCache.set(slug, [])
     return []
   }
 }
@@ -117,13 +128,7 @@ export async function findAutodataImage(
   brandName: string,
   modelOrGeneration?: string
 ): Promise<string | null> {
-  const images = await loadAutodataImages()
-  if (images.length === 0) return null
-
-  const brandNorm = normalize(brandName)
-
-  // Filter to matching brand
-  const brandMatches = images.filter(img => normalize(img.brand) === brandNorm)
+  const brandMatches = await loadBrandImages(brandName)
   if (brandMatches.length === 0) return null
 
   if (!modelOrGeneration) {

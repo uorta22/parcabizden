@@ -25,6 +25,18 @@ const nextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
+      {
+        source: '/data/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, s-maxage=604800' },
+        ],
+      },
+      {
+        source: '/brands/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, immutable' },
+        ],
+      },
     ]
   },
 }

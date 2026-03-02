@@ -9,7 +9,7 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { siteConfig } from '@/lib/config'
 
-const inter = Inter({ subsets: ['latin', 'latin-ext'] })
+const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
 export const metadata: Metadata = {
   title: {

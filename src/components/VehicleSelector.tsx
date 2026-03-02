@@ -434,23 +434,28 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     return null
   }
 
-  // Fetch autodata images for generation cards
+  // Fetch autodata images for generation cards in parallel
   useEffect(() => {
     if (!selectedBrand || generations.length === 0) return
     setGenImages({})
-    const controller = new AbortController()
+    let cancelled = false
     const fetchImages = async () => {
+      const results = await Promise.all(
+        generations.map(async (gen) => {
+          const key = `${gen.name}-${gen.body_type}`
+          const img = await findAutodataGenerationImage(selectedBrand.name, gen.name)
+          return { key, img }
+        })
+      )
+      if (cancelled) return
       const images: Record<string, string> = {}
-      for (const gen of generations) {
-        if (controller.signal.aborted) return
-        const key = `${gen.name}-${gen.body_type}`
-        const img = await findAutodataGenerationImage(selectedBrand.name, gen.name)
+      for (const { key, img } of results) {
         if (img) images[key] = img
       }
-      if (!controller.signal.aborted) setGenImages(images)
+      setGenImages(images)
     }
     fetchImages()
-    return () => controller.abort()
+    return () => { cancelled = true }
   }, [selectedBrand, generations])
 
   // Body type tabs derived from generations
