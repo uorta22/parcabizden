@@ -1,14 +1,15 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, Suspense } from 'react'
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar } from 'lucide-react'
+import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2 } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, resolveAutodataSlug } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
-import type { AutodataGeneration, SlugMatch } from '@/types/api'
+import type { AutodataGeneration, SlugMatch, VehicleSpecRow } from '@/types/api'
+import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 import BrandPicker from '@/components/BrandPicker'
 import PartDiagram from '@/components/PartDiagram'
 
@@ -475,6 +476,52 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   )
 }
 
+// ── Spec summary type for generation cards ──
+interface GenSpecSummary {
+  powerRange: string
+  engineRange: string
+  fuelTypes: string
+  transmissions: string
+}
+
+function getBrandLogoPath(name: string): string {
+  const overrides: Record<string, string> = {
+    'Alfa Romeo': 'alfa-romeo.png', 'Aston Martin': 'aston-martin.png',
+    'Land Rover': 'land-rover.png', 'Mercedes-Benz': 'mercedes-benz.png',
+    'Rolls-Royce': 'rolls-royce.png',
+  }
+  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.png'}`
+}
+
+function summarizeSpecs(specs: VehicleSpecRow[]): GenSpecSummary | null {
+  if (!specs || specs.length === 0) return null
+  const powers = specs.map(s => s.power_hp).filter((v): v is number => v != null && v > 0)
+  const engines = specs.map(s => s.engine_cc).filter((v): v is number => v != null && v > 0)
+  const fuels = Array.from(new Set(specs.map(s => s.fuel_type).filter(Boolean) as string[]))
+  const trans = Array.from(new Set(specs.map(s => {
+    const t = s.transmission
+    if (!t) return null
+    const lower = t.toLowerCase()
+    if (lower.includes('otomatik') || lower.includes('automatic') || lower.includes('auto')) return 'Otomatik'
+    if (lower.includes('manuel') || lower.includes('manual')) return 'Manuel'
+    if (lower.includes('cvt')) return 'CVT'
+    if (lower.includes('robot')) return 'Robot'
+    return t.split(' ')[0]
+  }).filter(Boolean) as string[]))
+
+  const minP = powers.length ? Math.min(...powers) : 0
+  const maxP = powers.length ? Math.max(...powers) : 0
+  const minE = engines.length ? Math.min(...engines) : 0
+  const maxE = engines.length ? Math.max(...engines) : 0
+
+  return {
+    powerRange: powers.length === 0 ? '' : minP === maxP ? `${minP} HP` : `${minP}–${maxP} HP`,
+    engineRange: engines.length === 0 ? '' : minE === maxE ? `${minE} cc` : `${minE}–${maxE} cc`,
+    fuelTypes: fuels.join(', '),
+    transmissions: trans.join(', '),
+  }
+}
+
 // ── Generation Picker (when brand is known but gen is missing) ──
 function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: string; modelName: string }) {
   // Autodata generations (richer data)
@@ -486,6 +533,13 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   const [error, setError] = useState('')
   const [selectedGen, setSelectedGen] = useState<string | null>(null)
   const [useAutodata, setUseAutodata] = useState(false)
+
+  // New states for enhanced UX
+  const [genImages, setGenImages] = useState<Record<string, string>>({})
+  const [genSpecs, setGenSpecs] = useState<Record<string, GenSpecSummary>>({})
+  const [selectedGenDisplay, setSelectedGenDisplay] = useState<{ name: string; yearRange: string; image?: string; specs?: GenSpecSummary } | null>(null)
+  const [activeBodyType, setActiveBodyType] = useState('__all__')
+  const fetchedSpecsRef = useRef<Set<string>>(new Set())
 
   // Read autodata_gen / autodata_year from URL (passed by VehicleSelector on resolve fail)
   const genSearchParams = useSearchParams()
@@ -502,6 +556,79 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       return name.startsWith(baseModel) || name.includes(baseModel)
     })
   }, [modelName])
+
+  // Fetch generation images (mirrors VehicleSelector:437-454 pattern)
+  useEffect(() => {
+    if (!marka || autodataGens.length === 0) return
+    setGenImages({})
+    const controller = new AbortController()
+    const fetchImages = async () => {
+      const images: Record<string, string> = {}
+      for (const gen of autodataGens) {
+        if (controller.signal.aborted) return
+        const key = `${gen.name}-${gen.body_type}`
+        const img = await findAutodataGenerationImage(marka, gen.name)
+        if (img) images[key] = img
+      }
+      if (!controller.signal.aborted) setGenImages(images)
+    }
+    fetchImages()
+    return () => controller.abort()
+  }, [marka, autodataGens])
+
+  // Prefetch specs for first 4 generations eagerly
+  useEffect(() => {
+    if (!brand || autodataGens.length === 0 || !modelName) return
+    const controller = new AbortController()
+    const eagerGens = autodataGens.slice(0, 4)
+    const fetchSpecs = async () => {
+      for (const gen of eagerGens) {
+        if (controller.signal.aborted) return
+        const key = `${gen.name}-${gen.body_type}`
+        if (fetchedSpecsRef.current.has(key)) continue
+        fetchedSpecsRef.current.add(key)
+        try {
+          const data = await fetchVehicleSpecs(brand, gen.name, gen.year_start ?? undefined, modelName)
+          if (controller.signal.aborted) return
+          const summary = summarizeSpecs(data.specs)
+          if (summary) setGenSpecs(prev => ({ ...prev, [key]: summary }))
+        } catch { /* ignore */ }
+      }
+    }
+    fetchSpecs()
+    return () => controller.abort()
+  }, [brand, autodataGens, modelName])
+
+  // Lazy fetch specs on hover/focus
+  const prefetchSpec = useCallback((gen: AutodataGeneration) => {
+    const key = `${gen.name}-${gen.body_type}`
+    if (fetchedSpecsRef.current.has(key) || !brand || !modelName) return
+    fetchedSpecsRef.current.add(key)
+    fetchVehicleSpecs(brand, gen.name, gen.year_start ?? undefined, modelName)
+      .then(data => {
+        const summary = summarizeSpecs(data.specs)
+        if (summary) setGenSpecs(prev => ({ ...prev, [key]: summary }))
+      })
+      .catch(() => {})
+  }, [brand, modelName])
+
+  // Body type tabs derived from autodata generations
+  const bodyTypeTabs = useMemo(() => {
+    if (autodataGens.length < 3) return []
+    const counts = new Map<string, number>()
+    for (const gen of autodataGens) {
+      const bt = gen.body_type || 'Diger'
+      counts.set(bt, (counts.get(bt) || 0) + 1)
+    }
+    if (counts.size < 2) return []
+    return Array.from(counts.entries()).map(([type, count]) => ({ type, count }))
+  }, [autodataGens])
+
+  // Filtered generations by body type
+  const filteredAutodataGens = useMemo(() => {
+    if (activeBodyType === '__all__') return autodataGens
+    return autodataGens.filter(g => (g.body_type || 'Diger') === activeBodyType)
+  }, [autodataGens, activeBodyType])
 
   // Auto-resolve when autodata_gen is present in URL — handles everything in one effect
   useEffect(() => {
@@ -612,6 +739,14 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
 
   // Handle autodata generation selection — resolve to parts DB slug
   const handleAutodataSelect = async (gen: AutodataGeneration) => {
+    const genKey = `${gen.name}-${gen.body_type}`
+    const yearRange = `${gen.year_start || '?'}–${gen.year_end || 'gunumuz'}`
+    setSelectedGenDisplay({
+      name: gen.name,
+      yearRange,
+      image: genImages[genKey],
+      specs: genSpecs[genKey],
+    })
     setResolving(true)
     setError('')
     try {
@@ -630,6 +765,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           setAutodataGens([])
           setUseAutodata(false)
           setResolving(false)
+          setSelectedGenDisplay(null)
         } else {
           // All matches irrelevant — check pre-fetched DB gens
           const relevantDb = filterByModel(dbGenerations)
@@ -641,6 +777,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
             setError('no_parts')
           }
           setResolving(false)
+          setSelectedGenDisplay(null)
         }
       } else {
         // No matches from resolve — use pre-fetched DB generations
@@ -653,6 +790,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           setError('no_parts')
         }
         setResolving(false)
+        setSelectedGenDisplay(null)
       }
     } catch {
       const relevantDb = filterByModel(dbGenerations)
@@ -664,6 +802,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         setError('no_parts')
       }
       setResolving(false)
+      setSelectedGenDisplay(null)
     }
   }
 
@@ -672,29 +811,91 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} />
   }
 
+  const whatsappText = `Merhaba, ${marka} ${modelName} aracim icin parca ariyorum.`
+
   return (
     <>
-      {/* Vehicle Banner */}
+      {/* Vehicle Banner — enhanced with logo, badge, and WhatsApp CTA */}
       <div className="mb-8 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="px-6 py-3 bg-primary-50 border-b border-primary-100">
-          <div className="flex items-center gap-2">
-            <Car className="w-4 h-4 text-primary-500" />
-            <span className="text-primary-600 text-sm font-medium">Secili Arac</span>
+        <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-5">
+          {/* Brand logo */}
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={getBrandLogoPath(marka)} alt={marka} className="w-full h-full object-contain" />
           </div>
-        </div>
-        <div className="p-5 md:p-6 flex items-center gap-4">
-          <div className="flex-1">
+          <div className="flex-1 text-center sm:text-left min-w-0">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka} {modelName}</h2>
-            <p className="text-sm text-gray-500 mt-1">Aracinizin nesil/donemini secin.</p>
+            <div className="flex items-center justify-center sm:justify-start gap-2 mt-1.5">
+              <p className="text-sm text-gray-500">Aracinizin nesil/donemini secin</p>
+              {!loading && useAutodata && autodataGens.length > 0 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 border border-primary-200 rounded-full text-xs font-medium text-primary-600">
+                  {autodataGens.length} nesil
+                </span>
+              )}
+            </div>
           </div>
+          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all flex-shrink-0 text-sm">
+            <MessageCircle className="w-4 h-4" />
+            Parca Talep Et
+          </a>
         </div>
       </div>
 
-      {(loading || resolving) && (
+      {/* Resolving overlay — visual confirmation card */}
+      {resolving && (
+        <div className="mb-8">
+          <div className="bg-white border border-primary-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-6 flex flex-col sm:flex-row items-center gap-5">
+              {selectedGenDisplay?.image ? (
+                <div className="w-32 h-20 sm:w-40 sm:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selectedGenDisplay.image} alt={selectedGenDisplay.name} className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-32 h-20 sm:w-40 sm:h-24 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={getBrandLogoPath(marka)} alt={marka} className="w-10 h-10 object-contain opacity-30" />
+                </div>
+              )}
+              <div className="flex-1 text-center sm:text-left min-w-0">
+                {selectedGenDisplay ? (
+                  <>
+                    <h3 className="text-lg font-bold text-gray-900">{selectedGenDisplay.name}</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">{selectedGenDisplay.yearRange}</p>
+                    {selectedGenDisplay.specs && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
+                        {selectedGenDisplay.specs.powerRange && (
+                          <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-500" />{selectedGenDisplay.specs.powerRange}</span>
+                        )}
+                        {selectedGenDisplay.specs.fuelTypes && (
+                          <span className="flex items-center gap-1"><Fuel className="w-3 h-3 text-blue-500" />{selectedGenDisplay.specs.fuelTypes}</span>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-gray-600 font-medium">Parca katalogu eslestiriliyor...</p>
+                )}
+              </div>
+              <div className="flex-shrink-0 flex flex-col items-center gap-2">
+                <Loader2 className="w-7 h-7 text-primary-500 animate-spin" />
+                <span className="text-xs text-gray-400">Yukleniyor...</span>
+              </div>
+            </div>
+            {/* Animated progress bar */}
+            <div className="h-1 bg-primary-100 overflow-hidden">
+              <div className="h-full bg-primary-500 rounded-r-full animate-pulse" style={{ width: '60%', animation: 'pulse 1.5s ease-in-out infinite, slideRight 2s ease-in-out infinite' }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading state (initial) */}
+      {loading && !resolving && (
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <Loader2 className="w-8 h-8 text-primary-500 animate-spin mx-auto" />
-            {resolving && <p className="text-gray-500 text-sm mt-3">Parca katalogu eslestiriliyor...</p>}
           </div>
         </div>
       )}
@@ -708,7 +909,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           <p className="text-gray-500 text-sm mb-5 max-w-md mx-auto">
             {marka} {modelName} icin parca katalogu henuz sistemimizde bulunmuyor. WhatsApp uzerinden talep olusturabilirsiniz.
           </p>
-          <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} icin parca ariyorum.`)} target="_blank" rel="noopener noreferrer"
+          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors">
             <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Et
           </a>
@@ -722,45 +923,129 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         </div>
       )}
 
-      {/* Autodata generations (richer cards) */}
+      {/* Autodata generations — visual cards with images and specs */}
       {!loading && !resolving && !error && useAutodata && autodataGens.length > 0 && (
         <div>
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-              <Car className="w-5 h-5 text-primary-500" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">{autodataGens.length} nesil bulundu</h3>
-              <p className="text-gray-500 text-xs">Dogru nesil/donem secimi daha iyi parca listesi saglar</p>
-            </div>
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {autodataGens.map((gen) => (
+          {/* Body Type Tabs */}
+          {bodyTypeTabs.length > 0 && (
+            <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-5 pb-1">
               <button
-                key={`${gen.name}-${gen.body_type}`}
-                onClick={() => handleAutodataSelect(gen)}
-                className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-5 text-left transition-all duration-200"
+                onClick={() => setActiveBodyType('__all__')}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  activeBodyType === '__all__'
+                    ? 'bg-primary-50 text-primary-600 border border-primary-300 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
+                }`}
               >
-                <p className="text-gray-900 font-semibold text-sm group-hover:text-primary-600 transition-colors mb-2 leading-snug">{gen.name}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  {(gen.year_start || gen.year_end) && (
-                    <span className="inline-flex items-center gap-1 text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
-                      <Calendar className="w-3 h-3" />
-                      {gen.year_start || '?'}–{gen.year_end || 'gunumuz'}
-                    </span>
-                  )}
-                  {gen.body_type && (
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">{gen.body_type}</span>
-                  )}
-                  <span className="text-xs text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md">{gen.mod_count} varyant</span>
-                </div>
+                Tumu
+                <span className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded-md ${
+                  activeBodyType === '__all__' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'
+                }`}>{autodataGens.length}</span>
               </button>
-            ))}
+              {bodyTypeTabs.map(({ type, count }) => (
+                <button
+                  key={type}
+                  onClick={() => setActiveBodyType(type)}
+                  className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeBodyType === type
+                      ? 'bg-primary-50 text-primary-600 border border-primary-300 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
+                  }`}
+                >
+                  {type}
+                  <span className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded-md ${
+                    activeBodyType === type ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'
+                  }`}>{count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredAutodataGens.map((gen) => {
+              const genKey = `${gen.name}-${gen.body_type}`
+              const genImg = genImages[genKey]
+              const specs = genSpecs[genKey]
+              return (
+                <button
+                  key={genKey}
+                  onClick={() => handleAutodataSelect(gen)}
+                  onMouseEnter={() => prefetchSpec(gen)}
+                  onFocus={() => prefetchSpec(gen)}
+                  className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl overflow-hidden text-left transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  {/* Generation image */}
+                  <div className="relative aspect-[16/10] bg-gray-50 overflow-hidden">
+                    {genImg ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={genImg}
+                        alt={gen.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={getBrandLogoPath(marka)} alt={marka} className="w-10 h-10 object-contain opacity-20" />
+                      </div>
+                    )}
+                    {/* Year badge */}
+                    {(gen.year_start || gen.year_end) && (
+                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[11px] font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md">
+                        <Calendar className="w-3 h-3" />
+                        {gen.year_start || '?'}–{gen.year_end || 'gunumuz'}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Card body */}
+                  <div className="p-3.5">
+                    <p className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors leading-snug">{gen.name}</p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-gray-500">
+                      {gen.body_type && <span>{gen.body_type}</span>}
+                      {gen.body_type && gen.mod_count && <span className="text-gray-300">|</span>}
+                      <span>{gen.mod_count} varyant</span>
+                    </div>
+
+                    {/* Spec summary 2x2 grid */}
+                    {specs && (specs.powerRange || specs.fuelTypes) && (
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 mt-3 pt-3 border-t border-gray-100">
+                        {specs.powerRange && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <Zap className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                            <span className="truncate">{specs.powerRange}</span>
+                          </div>
+                        )}
+                        {specs.engineRange && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <Settings2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                            <span className="truncate">{specs.engineRange}</span>
+                          </div>
+                        )}
+                        {specs.fuelTypes && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <Fuel className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                            <span className="truncate">{specs.fuelTypes}</span>
+                          </div>
+                        )}
+                        {specs.transmissions && (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                            <Settings2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                            <span className="truncate">{specs.transmissions}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
           </div>
         </div>
       )}
 
-      {/* DB generations fallback (simpler cards) */}
+      {/* DB generations fallback — enhanced cards */}
       {!loading && !resolving && !error && !useAutodata && dbGenerations.length > 0 && (
         <div>
           <div className="flex items-center gap-3 mb-5">
@@ -772,17 +1057,19 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
               <p className="text-gray-500 text-xs">Dogru nesil/donem secimi daha iyi parca listesi saglar</p>
             </div>
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {dbGenerations.map((gen) => (
               <button
                 key={gen.generation_slug}
                 onClick={() => setSelectedGen(gen.generation_slug)}
-                className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-5 text-left transition-all duration-200"
+                className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5"
               >
                 <p className="text-gray-900 font-semibold text-sm group-hover:text-primary-600 transition-colors mb-2 leading-snug">{gen.generation_name}</p>
-                <div className="flex items-center gap-1.5">
-                  <Package className="w-3.5 h-3.5 text-gray-400" />
-                  <span className="text-gray-500 text-xs tabular-nums">{gen.part_count.toLocaleString('tr-TR')} parca</span>
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 border border-primary-100 rounded-lg text-xs font-medium text-primary-600 tabular-nums">
+                    <Package className="w-3 h-3" />
+                    {gen.part_count.toLocaleString('tr-TR')} parca
+                  </span>
                 </div>
               </button>
             ))}
@@ -793,7 +1080,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       {!loading && !resolving && !error && (useAutodata ? autodataGens.length === 0 : dbGenerations.length === 0) && (
         <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
           <p className="text-gray-600 mb-4">Bu marka icin nesil bilgisi bulunamadi.</p>
-          <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} icin parca ariyorum.`)} target="_blank" rel="noopener noreferrer"
+          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
             <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
           </a>
