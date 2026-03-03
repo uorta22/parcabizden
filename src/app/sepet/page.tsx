@@ -18,14 +18,14 @@ export default function SepetPage() {
           <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-6">
             <ShoppingCart className="w-10 h-10 text-gray-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Sepetiniz Bos</h1>
-          <p className="text-gray-500 mb-8">Henuz sepetinize urun eklemediniz.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">Sepetiniz Boş</h1>
+          <p className="text-gray-500 mb-8">Henüz sepetinize ürün eklemediniz.</p>
           <Link
             href="/urunler"
             className="inline-flex items-center gap-2 px-8 py-4 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-xl transition-colors"
           >
             <Package className="w-5 h-5" />
-            Urunlere Goz At
+            Ürünlere Göz At
           </Link>
         </div>
       </div>
@@ -43,7 +43,7 @@ export default function SepetPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Sepetim</h1>
-              <p className="text-sm text-gray-500">{items.length} urun</p>
+              <p className="text-sm text-gray-500">{items.length} ürün</p>
             </div>
           </div>
           <button
@@ -61,7 +61,7 @@ export default function SepetPage() {
             {pricedItems.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
                 <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
-                  <span className="text-sm font-semibold text-gray-900">Fiyatli Urunler ({pricedItems.length})</span>
+                  <span className="text-sm font-semibold text-gray-900">Fiyatlı Ürünler ({pricedItems.length})</span>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {pricedItems.map(item => (
@@ -131,7 +131,7 @@ export default function SepetPage() {
                         <Link href={`/urun/${item.product_slug}`} className="text-sm font-semibold text-gray-900 hover:text-primary-600 transition-colors line-clamp-1">
                           {item.product_name}
                         </Link>
-                        <p className="text-xs text-amber-600 mt-0.5">Fiyat WhatsApp uzerinden bildirilecek</p>
+                        <p className="text-xs text-amber-600 mt-0.5">Fiyat WhatsApp üzerinden bildirilecek</p>
                       </div>
                       <div className="flex items-center border border-gray-200 rounded-lg">
                         <button onClick={() => updateQuantity(item.product_id, item.quantity - 1)} className="p-1.5 hover:bg-gray-50 transition-colors">
@@ -158,13 +158,13 @@ export default function SepetPage() {
             <div className="lg:sticky lg:top-24">
               <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="p-5 border-b border-gray-100">
-                  <h2 className="text-lg font-bold text-gray-900">Siparis Ozeti</h2>
+                  <h2 className="text-lg font-bold text-gray-900">Sipariş Özeti</h2>
                 </div>
                 <div className="p-5 space-y-4">
                   {/* Priced summary */}
                   {pricedItems.length > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Fiyatli urunler ({pricedItems.reduce((s, i) => s + i.quantity, 0)} adet)</span>
+                      <span className="text-gray-600">Fiyatlı ürünler ({pricedItems.reduce((s, i) => s + i.quantity, 0)} adet)</span>
                       <span className="font-semibold text-gray-900">{formatPrice(totalPrice)}</span>
                     </div>
                   )}
@@ -172,7 +172,7 @@ export default function SepetPage() {
                   {/* Unpriced note */}
                   {unpricedItems.length > 0 && (
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-amber-600">{unpricedItems.length} urun fiyat sorulacak</span>
+                      <span className="text-amber-600">{unpricedItems.length} ürün fiyat sorulacak</span>
                     </div>
                   )}
 
@@ -184,7 +184,7 @@ export default function SepetPage() {
                     <div className="text-right">
                       <span className="text-2xl font-bold text-gray-900">{formatPrice(totalPrice)}</span>
                       {unpricedItems.length > 0 && (
-                        <p className="text-[11px] text-amber-600">+ fiyat sorulacak urunler</p>
+                        <p className="text-[11px] text-amber-600">+ fiyat sorulacak ürünler</p>
                       )}
                     </div>
                   </div>
@@ -197,11 +197,11 @@ export default function SepetPage() {
                     className="w-full flex items-center justify-center gap-2 py-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors text-sm"
                   >
                     <MessageCircle className="w-5 h-5" />
-                    WhatsApp ile Siparis Olustur
+                    WhatsApp ile Sipariş Oluştur
                   </a>
 
                   <p className="text-[11px] text-gray-400 text-center">
-                    Siparisiniz WhatsApp uzerinden iletilecek ve ekibimiz sizinle iletisime gececektir.
+                    Siparişiniz WhatsApp üzerinden iletilecek ve ekibimiz sizinle iletişime geçecektir.
                   </p>
                 </div>
               </div>
