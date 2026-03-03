@@ -40,10 +40,10 @@ export default function ProductDetailPage() {
               .catch(() => {})
           }
         } else {
-          setError('Urun bulunamadi')
+          setError('Ürün bulunamadı')
         }
       })
-      .catch(() => setError('Urun yuklenirken hata olustu'))
+      .catch(() => setError('Ürün yüklenirken hata oluştu'))
       .finally(() => setLoading(false))
   }, [slug])
 
@@ -67,7 +67,7 @@ export default function ProductDetailPage() {
   }
 
   const whatsappMsg = product
-    ? `Merhaba, asagidaki urun icin bilgi almak istiyorum:\n\nUrun: ${product.name}${product.oem_number ? `\nOEM: ${product.oem_number}` : ''}${hasPrice ? `\nFiyat: ${formatPrice(displayPrice)}` : ''}\nAdet: ${quantity}`
+    ? `Merhaba, aşağıdaki ürün için bilgi almak istiyorum:\n\nÜrün: ${product.name}${product.oem_number ? `\nOEM: ${product.oem_number}` : ''}${hasPrice ? `\nFiyat: ${formatPrice(displayPrice)}` : ''}\nAdet: ${quantity}`
     : ''
 
   if (loading) {
@@ -85,10 +85,10 @@ export default function ProductDetailPage() {
           <div className="w-16 h-16 rounded-2xl bg-red-50 flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">{error || 'Urun bulunamadi'}</h1>
-          <p className="text-gray-500 mb-6">Bu urun mevcut degil veya kaldirilmis olabilir.</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">{error || 'Ürün bulunamadı'}</h1>
+          <p className="text-gray-500 mb-6">Bu ürün mevcut değil veya kaldırılmış olabilir.</p>
           <Link href="/urunler" className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-xl transition-colors">
-            Urunlere Don
+            Ürünlere Dön
           </Link>
         </div>
       </div>
@@ -102,7 +102,7 @@ export default function ProductDetailPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8 flex-wrap">
           <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4 flex-shrink-0" />
-          <Link href="/urunler" className="hover:text-gray-900 transition-colors">Urunler</Link>
+          <Link href="/urunler" className="hover:text-gray-900 transition-colors">Ürünler</Link>
           <ChevronRight className="w-4 h-4 flex-shrink-0" />
           <span className="text-gray-900 font-medium">{product.name}</span>
         </nav>
@@ -153,7 +153,7 @@ export default function ProductDetailPage() {
             {Object.keys(product.specs).length > 0 && (
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                  <h3 className="text-sm font-semibold text-gray-900">Teknik Ozellikler</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">Teknik Özellikler</h3>
                 </div>
                 <div className="divide-y divide-gray-100">
                   {Object.entries(product.specs).map(([key, value]) => (
@@ -171,7 +171,7 @@ export default function ProductDetailPage() {
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
                   <Car className="w-4 h-4 text-gray-400" />
-                  <h3 className="text-sm font-semibold text-gray-900">Uyumlu Araclar</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">Uyumlu Araçlar</h3>
                 </div>
                 <div className="p-4 space-y-3">
                   {product.compatible_vehicles.map(v => (
@@ -197,11 +197,11 @@ export default function ProductDetailPage() {
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
                   <Package className="w-4 h-4 text-gray-400" />
-                  <h3 className="text-sm font-semibold text-gray-900">Parca Katalogu Uyumlulugu</h3>
+                  <h3 className="text-sm font-semibold text-gray-900">Parça Kataloğu Uyumluluğu</h3>
                   <span className="ml-auto text-xs text-gray-400">{oemResults.length} kayit</span>
                 </div>
                 <div className="p-4">
-                  <p className="text-xs text-gray-500 mb-2">Bu OEM numarasi asagidaki araclarda da kullanilmaktadir:</p>
+                  <p className="text-xs text-gray-500 mb-2">Bu OEM numarası aşağıdaki araçlarda da kullanılmaktadır:</p>
                   <div className="flex flex-wrap gap-2">
                     {Array.from(new Set(oemResults.map(r => r.brand_slug))).slice(0, 8).map(slug => (
                       <span key={slug} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
@@ -216,7 +216,7 @@ export default function ProductDetailPage() {
                       href={`/parca/${encodeURIComponent(product.oem_number)}`}
                       className="inline-flex items-center gap-1 mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium transition-colors"
                     >
-                      Tum uyumlu araclari gor <ChevronRight className="w-3 h-3" />
+                      Tüm uyumlu araçları gör <ChevronRight className="w-3 h-3" />
                     </Link>
                   )}
                 </div>
@@ -252,8 +252,8 @@ export default function ProductDetailPage() {
                     </div>
                   ) : (
                     <div>
-                      <p className="text-lg font-semibold text-gray-700">Fiyat bilgisi icin sorun</p>
-                      <p className="text-xs text-gray-400 mt-1">WhatsApp ile hizli bilgi alin</p>
+                      <p className="text-lg font-semibold text-gray-700">Fiyat bilgisi için sorun</p>
+                      <p className="text-xs text-gray-400 mt-1">WhatsApp ile hızlı bilgi alın</p>
                     </div>
                   )}
 
@@ -329,7 +329,7 @@ export default function ProductDetailPage() {
                     className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors text-sm"
                   >
                     <MessageCircle className="w-5 h-5" />
-                    {hasPrice ? 'WhatsApp ile Siparis' : 'WhatsApp ile Fiyat Sor'}
+                    {hasPrice ? 'WhatsApp ile Sipariş' : 'WhatsApp ile Fiyat Sor'}
                   </a>
                 </div>
               </div>
