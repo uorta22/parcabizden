@@ -1,51 +1,53 @@
 import type { ShopProduct } from '@/types/shop'
+import { productList, productDetail, productSearch as apiProductSearch } from '@/lib/api'
 
-let cachedProducts: ShopProduct[] | null = null
-
-export async function loadProducts(): Promise<ShopProduct[]> {
-  if (cachedProducts) return cachedProducts
+export async function fetchProducts(params?: {
+  category?: string
+  search?: string
+  brand?: string
+  vehicle_id?: number
+  page?: number
+  per_page?: number
+}): Promise<{ products: ShopProduct[]; total: number; page: number; per_page: number }> {
   try {
-    const res = await fetch('/data/products.json')
-    if (!res.ok) return []
-    const data: ShopProduct[] = await res.json()
-    cachedProducts = data
-    return data
+    return await productList(params)
+  } catch {
+    return { products: [], total: 0, page: 1, per_page: 20 }
+  }
+}
+
+export async function fetchProductDetail(slug: string): Promise<ShopProduct | null> {
+  try {
+    const res = await productDetail(slug)
+    return res.product
+  } catch {
+    return null
+  }
+}
+
+export async function searchProducts(query: string): Promise<ShopProduct[]> {
+  try {
+    const res = await apiProductSearch(query)
+    return res.products
   } catch {
     return []
   }
 }
 
-export async function getProductBySlug(slug: string): Promise<ShopProduct | null> {
-  const products = await loadProducts()
-  return products.find(p => p.slug === slug) || null
+export function getProductsByCategory(products: ShopProduct[], category: string): ShopProduct[] {
+  return products.filter(p => p.category === category)
 }
 
 export async function getProductByOem(oem: string): Promise<ShopProduct | null> {
-  const products = await loadProducts()
-  const oemNorm = oem.replace(/[\s\-]/g, '').toUpperCase()
-  return products.find(p => {
-    if (!p.oem_number) return false
-    return p.oem_number.replace(/[\s\-]/g, '').toUpperCase() === oemNorm
-  }) || null
-}
-
-export async function searchProducts(query: string): Promise<ShopProduct[]> {
-  const products = await loadProducts()
-  if (!query.trim()) return products
-
-  const q = query.toLowerCase()
-  return products.filter(p =>
-    p.name.toLowerCase().includes(q) ||
-    p.description.toLowerCase().includes(q) ||
-    (p.oem_number && p.oem_number.toLowerCase().includes(q)) ||
-    (p.brand_name && p.brand_name.toLowerCase().includes(q)) ||
-    (p.tags && p.tags.some(t => t.toLowerCase().includes(q))) ||
-    p.category.toLowerCase().includes(q)
-  )
-}
-
-export function getProductsByCategory(products: ShopProduct[], category: string): ShopProduct[] {
-  return products.filter(p => p.category === category)
+  try {
+    const res = await apiProductSearch(oem)
+    const match = res.products.find(
+      (p: ShopProduct) => p.oem_number === oem || p.name.includes(oem)
+    )
+    return match || null
+  } catch {
+    return null
+  }
 }
 
 export function formatPrice(price: number): string {

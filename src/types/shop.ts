@@ -1,5 +1,5 @@
 export interface ShopProduct {
-  id: string
+  id: number | string
   name: string
   slug: string
   oem_number?: string
@@ -16,6 +16,8 @@ export interface ShopProduct {
   in_stock: boolean
   is_consumable: boolean
   tags?: string[]
+  created_at?: string
+  updated_at?: string
 }
 
 export interface CartItem {

@@ -8,6 +8,10 @@ import type {
   GarageVehicleNatro,
   MaintenanceRecord,
   User,
+  UserProfile,
+  UserAddress,
+  Order,
+  FavoriteProduct,
   VehicleSpecRow,
   VehicleSpecModel,
   AutodataBrand,
@@ -15,6 +19,7 @@ import type {
   AutodataGeneration,
   SlugMatch,
 } from '@/types/api'
+import type { ShopProduct } from '@/types/shop'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
@@ -380,4 +385,152 @@ export function fetchVehicleSpecs(brand: string, generation?: string, year?: num
   if (year) params.year = String(year)
   if (model) params.model = model
   return actionFetch<{ specs: VehicleSpecRow[]; models: VehicleSpecModel[]; brand: string }>(params)
+}
+
+// ==================== Profile ====================
+
+export async function profileUpdate(data: {
+  name?: string
+  phone?: string
+  gsm?: string
+  address_line1?: string
+  address_line2?: string
+  city?: string
+  district?: string
+  postal_code?: string
+}): Promise<{ success: boolean; user: UserProfile }> {
+  const params: Record<string, string> = { action: 'profile_update' }
+  if (data.name !== undefined) params.name = data.name
+  if (data.phone !== undefined) params.phone = data.phone
+  if (data.gsm !== undefined) params.gsm = data.gsm
+  if (data.address_line1 !== undefined) params.address_line1 = data.address_line1
+  if (data.address_line2 !== undefined) params.address_line2 = data.address_line2
+  if (data.city !== undefined) params.city = data.city
+  if (data.district !== undefined) params.district = data.district
+  if (data.postal_code !== undefined) params.postal_code = data.postal_code
+  return actionPost<{ success: boolean; user: UserProfile }>(params)
+}
+
+export async function getProfileFull(): Promise<UserProfile> {
+  const res = await actionPost<{ user: UserProfile }>({ action: 'profile' })
+  return res.user
+}
+
+// ==================== Addresses ====================
+
+export async function addressList(): Promise<{ addresses: UserAddress[] }> {
+  return actionPost<{ addresses: UserAddress[] }>({ action: 'address_list' })
+}
+
+export async function addressAdd(data: Omit<UserAddress, 'id'>): Promise<{ address: UserAddress }> {
+  const params: Record<string, string> = {
+    action: 'address_add',
+    title: data.title,
+    full_name: data.full_name,
+    phone: data.phone,
+    address_line1: data.address_line1,
+    city: data.city,
+    district: data.district,
+    postal_code: data.postal_code,
+    is_default: data.is_default ? '1' : '0',
+  }
+  if (data.address_line2) params.address_line2 = data.address_line2
+  return actionPost<{ address: UserAddress }>(params)
+}
+
+export async function addressUpdate(id: number, data: Partial<Omit<UserAddress, 'id'>>): Promise<{ address: UserAddress }> {
+  const params: Record<string, string> = { action: 'address_update', id: String(id) }
+  if (data.title !== undefined) params.title = data.title
+  if (data.full_name !== undefined) params.full_name = data.full_name
+  if (data.phone !== undefined) params.phone = data.phone
+  if (data.address_line1 !== undefined) params.address_line1 = data.address_line1
+  if (data.address_line2 !== undefined) params.address_line2 = data.address_line2
+  if (data.city !== undefined) params.city = data.city
+  if (data.district !== undefined) params.district = data.district
+  if (data.postal_code !== undefined) params.postal_code = data.postal_code
+  if (data.is_default !== undefined) params.is_default = data.is_default ? '1' : '0'
+  return actionPost<{ address: UserAddress }>(params)
+}
+
+export async function addressRemove(id: number): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'address_remove', id: String(id) })
+}
+
+// ==================== Orders ====================
+
+export async function orderList(): Promise<{ orders: Order[] }> {
+  return actionPost<{ orders: Order[] }>({ action: 'order_list' })
+}
+
+export async function orderDetail(id: number): Promise<{ order: Order }> {
+  return actionPost<{ order: Order }>({ action: 'order_detail', id: String(id) })
+}
+
+export async function orderCreate(data: {
+  items: { product_id: string | number; quantity: number; unit_price: number; has_price: boolean }[]
+  address_id: number
+  notes?: string
+}): Promise<{ order: Order }> {
+  return actionPost<{ order: Order }>({
+    action: 'order_create',
+    items: JSON.stringify(data.items),
+    address_id: String(data.address_id),
+    ...(data.notes ? { notes: data.notes } : {}),
+  })
+}
+
+// ==================== Favorites ====================
+
+export async function favoriteList(): Promise<{ favorites: FavoriteProduct[]; products: ShopProduct[] }> {
+  return actionPost<{ favorites: FavoriteProduct[]; products: ShopProduct[] }>({ action: 'favorite_list' })
+}
+
+export async function favoriteAdd(productId: string | number): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'favorite_add', product_id: String(productId) })
+}
+
+export async function favoriteRemove(productId: string | number): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'favorite_remove', product_id: String(productId) })
+}
+
+// ==================== Products (API-driven) ====================
+
+export async function productList(params?: {
+  category?: string
+  search?: string
+  brand?: string
+  vehicle_id?: number
+  page?: number
+  per_page?: number
+}): Promise<{ products: ShopProduct[]; total: number; page: number; per_page: number }> {
+  const p: Record<string, string> = { action: 'product_list' }
+  if (params?.category) p.category = params.category
+  if (params?.search) p.search = params.search
+  if (params?.brand) p.brand = params.brand
+  if (params?.vehicle_id) p.vehicle_id = String(params.vehicle_id)
+  if (params?.page) p.page = String(params.page)
+  if (params?.per_page) p.per_page = String(params.per_page)
+  return actionPost<{ products: ShopProduct[]; total: number; page: number; per_page: number }>(p)
+}
+
+export async function productDetail(slug: string): Promise<{ product: ShopProduct }> {
+  return actionPost<{ product: ShopProduct }>({ action: 'product_detail', slug })
+}
+
+export async function productSearch(query: string): Promise<{ products: ShopProduct[] }> {
+  return actionPost<{ products: ShopProduct[] }>({ action: 'product_search', q: query })
+}
+
+// ==================== Password Change ====================
+
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  return actionPost<{ success: boolean; message: string }>({
+    action: 'change_password',
+    current_password: currentPassword,
+    new_password: newPassword,
+  })
+}
+
+export async function deleteAccount(password: string): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'delete_account', password })
 }

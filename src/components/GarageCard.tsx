@@ -15,7 +15,7 @@ interface GarageCardProps {
 
 function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
   const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
-  const detailHref = `/garaj/${vehicle.id}`
+  const detailHref = `/hesabim/garaj/${vehicle.id}`
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
 
   const formatKm = (km: number) => km.toLocaleString('tr-TR')

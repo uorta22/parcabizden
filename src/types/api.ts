@@ -178,3 +178,59 @@ export interface AuthResponse {
   token: string
   user: User
 }
+
+// ==================== Extended User & Account ====================
+
+export interface UserProfile extends User {
+  gsm?: string | null
+  address_line1?: string | null
+  address_line2?: string | null
+  city?: string | null
+  district?: string | null
+  postal_code?: string | null
+  tc_no?: string | null
+}
+
+export interface UserAddress {
+  id: number
+  title: string
+  full_name: string
+  phone: string
+  address_line1: string
+  address_line2?: string
+  city: string
+  district: string
+  postal_code: string
+  is_default: boolean
+}
+
+// ==================== Orders ====================
+
+export interface Order {
+  id: number
+  order_no: string
+  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled'
+  items: OrderItem[]
+  total_price: number
+  address?: UserAddress
+  notes?: string
+  created_at: string
+  updated_at: string
+}
+
+export interface OrderItem {
+  product_id: string
+  product_name: string
+  product_image?: string
+  quantity: number
+  unit_price: number
+  has_price: boolean
+}
+
+// ==================== Favorites ====================
+
+export interface FavoriteProduct {
+  id: number
+  product_id: string
+  added_at: string
+}

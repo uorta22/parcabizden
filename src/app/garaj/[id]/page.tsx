@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  ChevronRight, Car, Search, MessageCircle, Wrench, Plus,
+  ChevronRight, Car, Search, MessageCircle, Wrench, Plus, ShoppingBag,
   Gauge, StickyNote, Pencil, Trash2, Save, Cog, Zap, Fuel,
   Settings2, Ruler, Hash, CreditCard, X,
 } from 'lucide-react'
@@ -60,7 +60,7 @@ export default function GarageDetailPage() {
     try {
       const garageRes = await garageList()
       const v = garageRes.vehicles.find(v => v.id === garageId)
-      if (!v) { router.push('/garaj'); return }
+      if (!v) { router.push('/hesabim/garaj'); return }
       setVehicle(v)
       setKmValue(v.current_km?.toString() || '')
       setNotesValue(v.notes || '')
@@ -106,7 +106,7 @@ export default function GarageDetailPage() {
         setSpecsLoading(false)
       }
     } catch {
-      router.push('/garaj')
+      router.push('/hesabim/garaj')
     } finally {
       setLoading(false)
     }
@@ -242,7 +242,7 @@ export default function GarageDetailPage() {
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 flex-wrap">
           <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <Link href="/garaj" className="hover:text-gray-900 transition-colors">Garajim</Link>
+          <Link href="/hesabim/garaj" className="hover:text-gray-900 transition-colors">Garajım</Link>
           <ChevronRight className="w-4 h-4" />
           <span className="text-gray-900">{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.brand_name} {vehicle.generation_name}</span>
         </nav>
@@ -305,8 +305,11 @@ export default function GarageDetailPage() {
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2 mt-4">
+                <Link href={`/urunler?vehicle=${vehicle.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white rounded-lg transition-all text-sm font-medium">
+                  <ShoppingBag className="w-4 h-4" /> Uyumlu Ürünler
+                </Link>
                 <Link href={partsHref} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 hover:bg-primary-500 text-primary-600 hover:text-white rounded-lg transition-all text-sm font-medium">
-                  <Search className="w-4 h-4" /> Parca Ara
+                  <Search className="w-4 h-4" /> Parça Ara
                 </Link>
                 <a href={getWhatsAppUrl(whatsappMsg)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 hover:bg-green-500 text-green-600 hover:text-white rounded-lg transition-all text-sm font-medium">
                   <MessageCircle className="w-4 h-4" /> WhatsApp
