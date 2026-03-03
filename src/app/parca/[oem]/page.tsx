@@ -243,7 +243,7 @@ function PartDetailContent() {
                     <Package className="w-6 h-6 text-primary-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-primary-700 font-semibold text-sm mb-0.5">Bu urun e-magazamizda mevcut!</p>
+                    <p className="text-primary-700 font-semibold text-sm mb-0.5">Bu ürün e-mağazamızda mevcut!</p>
                     <p className="text-primary-600/70 text-xs">{shopProduct.name}{shopProduct.price ? ` — ${shopProduct.discount_price || shopProduct.price} TL` : ''}</p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0 transition-colors" />

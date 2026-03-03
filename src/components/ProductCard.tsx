@@ -113,7 +113,7 @@ export default function ProductCard({ product }: { product: ShopProduct }) {
             </button>
           ) : (
             <a
-              href={getWhatsAppUrl(`Merhaba, "${product.name}" urun icin fiyat bilgisi almak istiyorum.${product.oem_number ? `\nOEM: ${product.oem_number}` : ''}`)}
+              href={getWhatsAppUrl(`Merhaba, "${product.name}" ürün için fiyat bilgisi almak istiyorum.${product.oem_number ? `\nOEM: ${product.oem_number}` : ''}`)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={e => e.stopPropagation()}
