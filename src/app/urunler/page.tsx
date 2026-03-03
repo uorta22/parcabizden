@@ -12,21 +12,21 @@ import type { ShopProduct } from '@/types/shop'
 const CATEGORIES = [
   { id: 'engine', name: 'Motor' },
   { id: 'turbo_intake', name: 'Turbo & Emme' },
-  { id: 'fuel', name: 'Yakit Sistemi' },
+  { id: 'fuel', name: 'Yakıt Sistemi' },
   { id: 'exhaust', name: 'Egzoz' },
-  { id: 'transmission', name: 'Sanziman' },
+  { id: 'transmission', name: 'Şanzıman' },
   { id: 'brake', name: 'Fren' },
-  { id: 'suspension', name: 'Suspansiyon' },
+  { id: 'suspension', name: 'Süspansiyon' },
   { id: 'wheel_tyre', name: 'Jant & Lastik' },
-  { id: 'body_exterior', name: 'Kaporta & Dis' },
+  { id: 'body_exterior', name: 'Kaporta & Dış' },
   { id: 'glass_mirror', name: 'Cam & Ayna' },
-  { id: 'lighting', name: 'Aydinlatma' },
+  { id: 'lighting', name: 'Aydınlatma' },
   { id: 'electrical', name: 'Elektrik' },
-  { id: 'climate', name: 'Klima & Isitma' },
-  { id: 'interior', name: 'Ic Aksam' },
+  { id: 'climate', name: 'Klima & Isıtma' },
+  { id: 'interior', name: 'İç Aksam' },
   { id: 'audio_media', name: 'Ses & Medya' },
-  { id: 'tow_transport', name: 'Ceki & Tasima' },
-  { id: 'other', name: 'Diger' },
+  { id: 'tow_transport', name: 'Çeki & Taşıma' },
+  { id: 'other', name: 'Diğer' },
 ]
 
 type SortOption = 'default' | 'price_asc' | 'price_desc'
@@ -118,7 +118,7 @@ function UrunlerContent() {
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
           <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900 font-medium">Urunler</span>
+          <span className="text-gray-900 font-medium">Ürünler</span>
           {activeCategory && (
             <>
               <ChevronRight className="w-4 h-4" />
@@ -140,7 +140,7 @@ function UrunlerContent() {
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Urun adi, OEM..."
+                    placeholder="Ürün adı, OEM..."
                     className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 transition-colors"
                   />
                 </div>
@@ -156,7 +156,7 @@ function UrunlerContent() {
                       !activeCategory ? 'bg-primary-50 text-primary-600 font-medium' : 'text-gray-600 hover:bg-gray-50'
                     }`}
                   >
-                    Tumu ({products.length})
+                    Tümü ({products.length})
                   </button>
                   {CATEGORIES.filter(c => categoryCounts[c.id]).map(cat => (
                     <button
@@ -176,15 +176,15 @@ function UrunlerContent() {
 
               {/* Sort */}
               <div>
-                <label className="text-sm font-semibold text-gray-900 mb-2 block">Siralama</label>
+                <label className="text-sm font-semibold text-gray-900 mb-2 block">Sıralama</label>
                 <select
                   value={sortBy}
                   onChange={e => setSortBy(e.target.value as SortOption)}
                   className="w-full px-3 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-700 focus:outline-none focus:border-primary-400 transition-colors"
                 >
-                  <option value="default">Varsayilan</option>
-                  <option value="price_asc">Fiyat: Dusukten Yuksege</option>
-                  <option value="price_desc">Fiyat: Yuksekten Dusuge</option>
+                  <option value="default">Varsayılan</option>
+                  <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
+                  <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
                 </select>
               </div>
             </div>
@@ -200,7 +200,7 @@ function UrunlerContent() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Urun ara..."
+                  placeholder="Ürün ara..."
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 transition-colors"
                 />
               </div>
@@ -223,7 +223,7 @@ function UrunlerContent() {
                       !activeCategory ? 'bg-primary-500 text-dark-900' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    Tumu
+                    Tümü
                   </button>
                   {CATEGORIES.filter(c => categoryCounts[c.id]).map(cat => (
                     <button
@@ -242,9 +242,9 @@ function UrunlerContent() {
                   onChange={e => setSortBy(e.target.value as SortOption)}
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-700"
                 >
-                  <option value="default">Varsayilan Siralama</option>
-                  <option value="price_asc">Fiyat: Dusukten Yuksege</option>
-                  <option value="price_desc">Fiyat: Yuksekten Dusuge</option>
+                  <option value="default">Varsayılan Sıralama</option>
+                  <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
+                  <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
                 </select>
               </div>
             )}
@@ -252,7 +252,7 @@ function UrunlerContent() {
             {/* Results header */}
             <div className="flex items-center justify-between mb-6">
               <p className="text-sm text-gray-500">
-                {filteredProducts.length} urun{searchQuery ? ` — "${searchQuery}"` : ''}
+                {filteredProducts.length} ürün{searchQuery ? ` — "${searchQuery}"` : ''}
               </p>
             </div>
 

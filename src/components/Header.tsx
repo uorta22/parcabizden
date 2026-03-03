@@ -51,11 +51,11 @@ export default function Header() {
 
   const navLinks = [
     { href: '/', label: 'Ana Sayfa' },
-    { href: '/urunler', label: 'Urunler', shopIcon: true },
-    { href: '/parcalar', label: 'Parcalar' },
+    { href: '/urunler', label: 'Ürünler', shopIcon: true },
+    { href: '/parcalar', label: 'Parçalar' },
     { href: '/ai-asistan', label: 'AI Asistan', icon: true },
-    { href: '/hakkimizda', label: 'Hakkimizda' },
-    { href: '/iletisim', label: 'Iletisim' },
+    { href: '/hakkimizda', label: 'Hakkımızda' },
+    { href: '/iletisim', label: 'İletişim' },
   ]
 
   return (
@@ -70,9 +70,9 @@ export default function Header() {
               </div>
               <div>
                 <span className="text-xl md:text-2xl font-bold text-gray-900">
-                  Parca<span className="text-primary-500">Bizden</span>
+                  Parça<span className="text-primary-500">Bizden</span>
                 </span>
-                <p className="text-[10px] md:text-xs text-gray-500 -mt-1">Yedek & Cikma Parca</p>
+                <p className="text-[10px] md:text-xs text-gray-500 -mt-1">Yedek & Çıkma Parça</p>
               </div>
             </Link>
 
@@ -84,7 +84,7 @@ export default function Header() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Urun veya OEM numarasi ara..."
+                  placeholder="Ürün veya OEM numarası ara..."
                   className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:bg-white transition-all"
                 />
               </div>
@@ -141,7 +141,7 @@ export default function Header() {
                         className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       >
                         <Warehouse className="w-4 h-4 text-gray-400" />
-                        Garajim
+                        Garajım
                       </Link>
                       <div className="h-px bg-gray-100 mx-2" />
                       <button
@@ -149,7 +149,7 @@ export default function Header() {
                         className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 transition-colors"
                       >
                         <LogOut className="w-4 h-4" />
-                        Cikis Yap
+                        Çıkış Yap
                       </button>
                     </div>
                   )}
@@ -161,14 +161,14 @@ export default function Header() {
                     className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all text-sm font-medium"
                   >
                     <LogIn className="w-4 h-4" />
-                    Giris Yap
+                    Giriş Yap
                   </Link>
                   <Link
                     href="/kayit"
                     className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white transition-all text-sm font-medium"
                   >
                     <UserPlus className="w-4 h-4" />
-                    Kayit Ol
+                    Kayıt Ol
                   </Link>
                 </>
               )}
@@ -180,7 +180,7 @@ export default function Header() {
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="p-2 text-gray-600 hover:text-gray-900"
-                aria-label={isMenuOpen ? 'Menuyu kapat' : 'Menuyu ac'}
+                aria-label={isMenuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
               >
                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -202,7 +202,7 @@ export default function Header() {
                     type="text"
                     value={searchQuery}
                     onChange={e => setSearchQuery(e.target.value)}
-                    placeholder="Urun veya OEM numarasi ara..."
+                    placeholder="Ürün veya OEM numarası ara..."
                     className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:bg-white transition-all"
                   />
                 </div>
@@ -241,7 +241,7 @@ export default function Header() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <Warehouse className="w-4 h-4" />
-                      Garajim
+                      Garajım
                     </Link>
                     <div className="px-4 py-2 flex items-center gap-2">
                       <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center">
@@ -254,7 +254,7 @@ export default function Header() {
                       className="flex items-center gap-2 px-4 py-3 text-left text-red-500 hover:bg-red-50 rounded-lg transition-all text-sm"
                     >
                       <LogOut className="w-4 h-4" />
-                      Cikis Yap
+                      Çıkış Yap
                     </button>
                   </>
                 ) : (
@@ -265,7 +265,7 @@ export default function Header() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <LogIn className="w-4 h-4" />
-                      Giris Yap
+                      Giriş Yap
                     </Link>
                     <Link
                       href="/kayit"
@@ -273,7 +273,7 @@ export default function Header() {
                       onClick={() => setIsMenuOpen(false)}
                     >
                       <UserPlus className="w-4 h-4" />
-                      Kayit Ol
+                      Kayıt Ol
                     </Link>
                   </div>
                 )}
