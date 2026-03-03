@@ -1,0 +1,312 @@
+[
+  {
+    "id": "motor-yagi-5w30-4l",
+    "name": "Motor Yağı 5W-30 4L",
+    "slug": "motor-yagi-5w30-4l",
+    "category": "engine",
+    "price": 850,
+    "discount_price": 749,
+    "images": [],
+    "thumbnail": null,
+    "specs": {
+      "Viskozite": "5W-30",
+      "Hacim": "4 Litre",
+      "Standart": "API SN/CF, ACEA C3",
+      "Tip": "Tam Sentetik"
+    },
+    "description": "Yüksek performanslı tam sentetik motor yağı. Uzun değişim aralığı ve üstün motor koruması sağlar.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Tüm modeller"] },
+      { "brand": "BMW", "brand_slug": "bmw", "models": ["Tüm modeller"] },
+      { "brand": "Mercedes-Benz", "brand_slug": "mercedes-benz", "models": ["Tüm modeller"] },
+      { "brand": "Audi", "brand_slug": "audi", "models": ["Tüm modeller"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["motor yağı", "5w30", "sentetik"]
+  },
+  {
+    "id": "motor-yagi-5w40-4l",
+    "name": "Motor Yağı 5W-40 4L",
+    "slug": "motor-yagi-5w40-4l",
+    "category": "engine",
+    "price": 820,
+    "images": [],
+    "specs": {
+      "Viskozite": "5W-40",
+      "Hacim": "4 Litre",
+      "Standart": "API SN/CF, ACEA A3/B4",
+      "Tip": "Tam Sentetik"
+    },
+    "description": "Çok amaçlı tam sentetik motor yağı. Geniş araç uyumluluğu.",
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["motor yağı", "5w40", "sentetik"]
+  },
+  {
+    "id": "yag-filtresi-volkswagen",
+    "name": "Yağ Filtresi - VW/Audi/Skoda/Seat",
+    "slug": "yag-filtresi-volkswagen",
+    "oem_number": "03C115561H",
+    "brand_name": "Filtron",
+    "category": "engine",
+    "price": 185,
+    "images": [],
+    "specs": {
+      "OEM No": "03C115561H",
+      "Uyumluluk": "VAG Grubu 1.2/1.4 TSI",
+      "Marka": "Filtron",
+      "Tip": "Yağ Filtresi"
+    },
+    "description": "VAG grubu 1.2 ve 1.4 TSI motorlara uyumlu yağ filtresi.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Golf", "Polo", "Passat", "Jetta"] },
+      { "brand": "Audi", "brand_slug": "audi", "models": ["A1", "A3"] },
+      { "brand": "Skoda", "brand_slug": "skoda", "models": ["Octavia", "Fabia", "Rapid"] },
+      { "brand": "Seat", "brand_slug": "seat", "models": ["Leon", "Ibiza"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["yağ filtresi", "filtron", "VAG"]
+  },
+  {
+    "id": "hava-filtresi-bmw-f30",
+    "name": "Hava Filtresi - BMW F30/F31/F34",
+    "slug": "hava-filtresi-bmw-f30",
+    "oem_number": "13718507320",
+    "brand_name": "Mann Filter",
+    "category": "turbo_intake",
+    "price": 320,
+    "images": [],
+    "specs": {
+      "OEM No": "13718507320",
+      "Uyumluluk": "BMW 3 Serisi F30/F31/F34",
+      "Marka": "Mann Filter",
+      "Tip": "Hava Filtresi"
+    },
+    "description": "BMW 3 Serisi F30, F31 ve F34 kasalara uyumlu hava filtresi.",
+    "compatible_vehicles": [
+      { "brand": "BMW", "brand_slug": "bmw", "models": ["3 Serisi F30", "3 Serisi F31", "3 Serisi GT F34"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["hava filtresi", "bmw", "mann"]
+  },
+  {
+    "id": "fren-balatasi-on-vw-golf7",
+    "name": "Ön Fren Balata Seti - VW Golf 7/Passat B8",
+    "slug": "fren-balatasi-on-vw-golf7",
+    "oem_number": "5Q0698151B",
+    "brand_name": "TRW",
+    "category": "brake",
+    "price": 690,
+    "discount_price": 599,
+    "images": [],
+    "specs": {
+      "OEM No": "5Q0698151B",
+      "Konum": "Ön",
+      "Marka": "TRW",
+      "Tip": "Disk Balata Seti"
+    },
+    "description": "VW Golf 7, Passat B8 ve MQB platformu araçlara uyumlu ön fren balata seti.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Golf 7", "Passat B8", "Tiguan"] },
+      { "brand": "Audi", "brand_slug": "audi", "models": ["A3 8V", "Q2"] },
+      { "brand": "Skoda", "brand_slug": "skoda", "models": ["Octavia 3", "Superb 3"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["fren balatası", "TRW", "ön balata"]
+  },
+  {
+    "id": "cam-suyu-4l",
+    "name": "Cam Suyu Konsantre 4L (-40°C)",
+    "slug": "cam-suyu-4l",
+    "category": "glass_mirror",
+    "price": 95,
+    "images": [],
+    "specs": {
+      "Hacim": "4 Litre",
+      "Donma Noktası": "-40°C (konsantre)",
+      "Tip": "Kışlık Konsantre"
+    },
+    "description": "Kışlık konsantre cam suyu. -40°C'ye kadar donma koruması sağlar.",
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["cam suyu", "kışlık", "konsantre"]
+  },
+  {
+    "id": "antifriz-3l",
+    "name": "Antifriz G12+ Konsantre 3L",
+    "slug": "antifriz-3l",
+    "category": "climate",
+    "price": 280,
+    "images": [],
+    "specs": {
+      "Hacim": "3 Litre",
+      "Standart": "G12+",
+      "Renk": "Pembe/Kırmızı",
+      "Donma Noktası": "-37°C (1:1 karışım)"
+    },
+    "description": "G12+ standardında konsantre antifriz. Uzun ömürlü motor koruma.",
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["antifriz", "G12", "soğutma"]
+  },
+  {
+    "id": "polen-filtresi-vag",
+    "name": "Polen Filtresi (Karbonlu) - VAG Grubu",
+    "slug": "polen-filtresi-vag",
+    "oem_number": "5Q0819653",
+    "brand_name": "Mann Filter",
+    "category": "climate",
+    "price": 245,
+    "images": [],
+    "specs": {
+      "OEM No": "5Q0819653",
+      "Marka": "Mann Filter",
+      "Tip": "Aktif Karbonlu Polen Filtresi",
+      "Uyumluluk": "MQB Platform"
+    },
+    "description": "Aktif karbonlu polen filtresi. Koku ve zararlı gazları da filtreler.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Golf 7/8", "Passat B8", "Tiguan", "T-Roc"] },
+      { "brand": "Audi", "brand_slug": "audi", "models": ["A3 8V/8Y", "Q2", "Q3"] },
+      { "brand": "Skoda", "brand_slug": "skoda", "models": ["Octavia 3/4", "Superb 3", "Karoq"] },
+      { "brand": "Seat", "brand_slug": "seat", "models": ["Leon 3/4", "Ateca"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["polen filtresi", "kabin filtresi", "karbonlu"]
+  },
+  {
+    "id": "silecek-seti-600-475",
+    "name": "Silecek Seti 600/475mm (VW Golf 7/Passat)",
+    "slug": "silecek-seti-600-475",
+    "brand_name": "Bosch",
+    "category": "glass_mirror",
+    "price": 350,
+    "discount_price": 299,
+    "images": [],
+    "specs": {
+      "Boyut": "600mm + 475mm",
+      "Marka": "Bosch",
+      "Tip": "Aerotwin Düz Silecek"
+    },
+    "description": "Bosch Aerotwin düz silecek seti. Sessiz ve etkili silme performansı.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Golf 7", "Passat B8"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["silecek", "bosch", "aerotwin"]
+  },
+  {
+    "id": "aku-72ah",
+    "name": "Akü 72Ah 680A (Start-Stop)",
+    "slug": "aku-72ah",
+    "category": "electrical",
+    "price": 3200,
+    "discount_price": 2850,
+    "images": [],
+    "specs": {
+      "Kapasite": "72 Ah",
+      "Akım": "680A (EN)",
+      "Tip": "AGM Start-Stop",
+      "Boyut": "278x175x190mm"
+    },
+    "description": "Start-Stop sistemli araçlara uygun AGM akü. Yüksek başlatma gücü.",
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["akü", "start-stop", "AGM", "72ah"]
+  },
+  {
+    "id": "buji-seti-4lu-vag",
+    "name": "Buji Seti (4'lü) - VAG 1.4 TSI",
+    "slug": "buji-seti-4lu-vag",
+    "oem_number": "04E905612C",
+    "brand_name": "NGK",
+    "category": "engine",
+    "price": 420,
+    "images": [],
+    "specs": {
+      "OEM No": "04E905612C",
+      "Marka": "NGK",
+      "Adet": "4'lü Set",
+      "Uyumluluk": "VAG 1.4 TSI (EA211)"
+    },
+    "description": "NGK iridyum buji seti. VAG 1.4 TSI EA211 motorlara uyumlu.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Golf 7", "Polo", "Jetta"] },
+      { "brand": "Audi", "brand_slug": "audi", "models": ["A1", "A3"] },
+      { "brand": "Skoda", "brand_slug": "skoda", "models": ["Octavia", "Fabia", "Rapid"] },
+      { "brand": "Seat", "brand_slug": "seat", "models": ["Leon", "Ibiza"] }
+    ],
+    "in_stock": true,
+    "is_consumable": true,
+    "tags": ["buji", "NGK", "iridyum"]
+  },
+  {
+    "id": "far-sol-on-bmw-f30",
+    "name": "Sol Ön Far - BMW 3 Serisi F30 (Xenon)",
+    "slug": "far-sol-on-bmw-f30",
+    "oem_number": "63117338709",
+    "category": "lighting",
+    "images": [],
+    "specs": {
+      "OEM No": "63117338709",
+      "Konum": "Sol Ön",
+      "Tip": "Xenon Adaptif",
+      "Uyumluluk": "BMW F30/F31 LCI"
+    },
+    "description": "BMW 3 Serisi F30/F31 LCI modellere uyumlu sol ön xenon adaptif far.",
+    "compatible_vehicles": [
+      { "brand": "BMW", "brand_slug": "bmw", "models": ["3 Serisi F30 LCI", "3 Serisi F31 LCI"] }
+    ],
+    "in_stock": false,
+    "is_consumable": false,
+    "tags": ["far", "xenon", "bmw", "f30"]
+  },
+  {
+    "id": "amortisör-on-sag-passat-b8",
+    "name": "Ön Sağ Amortisör - VW Passat B8",
+    "slug": "amortisor-on-sag-passat-b8",
+    "oem_number": "3Q0413031GK",
+    "category": "suspension",
+    "price": null,
+    "images": [],
+    "specs": {
+      "OEM No": "3Q0413031GK",
+      "Konum": "Ön Sağ",
+      "Tip": "Gazlı Amortisör"
+    },
+    "description": "VW Passat B8 ön sağ amortisör. Orijinal kalitede muadil.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Passat B8"] }
+    ],
+    "in_stock": true,
+    "is_consumable": false,
+    "tags": ["amortisör", "süspansiyon", "passat"]
+  },
+  {
+    "id": "arka-tampon-vw-golf-7",
+    "name": "Arka Tampon - VW Golf 7",
+    "slug": "arka-tampon-vw-golf-7",
+    "oem_number": "5G6807421GRU",
+    "category": "body_exterior",
+    "images": [],
+    "specs": {
+      "OEM No": "5G6807421GRU",
+      "Konum": "Arka",
+      "Renk": "Boyasız",
+      "Uyumluluk": "VW Golf 7 (2013-2017)"
+    },
+    "description": "VW Golf 7 arka tampon. Boyasız, boya gerektirir.",
+    "compatible_vehicles": [
+      { "brand": "Volkswagen", "brand_slug": "volkswagen", "models": ["Golf 7 (2013-2017)"] }
+    ],
+    "in_stock": false,
+    "is_consumable": false,
+    "tags": ["tampon", "kaporta", "golf"]
+  }
+]

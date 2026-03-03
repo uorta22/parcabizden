@@ -153,16 +153,18 @@ export async function findAutodataImage(
     }
   }
 
-  // Partial model name match
+  // Partial model name match — stricter: must startsWith
   for (const img of brandMatches) {
     const modelNorm = normalize(img.model)
-    if (modelNorm.includes(searchNorm) || searchNorm.includes(modelNorm)) return img.image
+    if (modelNorm.startsWith(searchNorm) || searchNorm.startsWith(modelNorm)) return img.image
   }
 
-  // Fallback: first word match
-  const firstWord = searchNorm.slice(0, Math.max(3, searchNorm.indexOf(' ') > 0 ? searchNorm.indexOf(' ') : searchNorm.length))
-  for (const img of brandMatches) {
-    if (normalize(img.generation).includes(firstWord) || normalize(img.model).includes(firstWord)) return img.image
+  // Fallback: first word match — minimum 4 chars + startsWith
+  const firstWord = searchNorm.slice(0, Math.max(4, searchNorm.indexOf(' ') > 0 ? searchNorm.indexOf(' ') : searchNorm.length))
+  if (firstWord.length >= 4) {
+    for (const img of brandMatches) {
+      if (normalize(img.model).startsWith(firstWord) || normalize(img.generation).startsWith(firstWord)) return img.image
+    }
   }
 
   return null
@@ -172,5 +174,20 @@ export async function findAutodataGenerationImage(
   brandName: string,
   generationName: string
 ): Promise<string | null> {
-  return findAutodataImage(brandName, generationName)
+  // 1. Try autodata per-brand JSON
+  const autodataResult = await findAutodataImage(brandName, generationName)
+  if (autodataResult) return autodataResult
+
+  // 2. Fallback to vehicle-tree.json
+  try {
+    const tree = await loadVehicleTree()
+    const slug = brandSlug(brandName)
+    const genSlug = brandSlug(generationName)
+    const result = findVehicleImage(tree, slug, genSlug)
+    if (result) return result
+  } catch {
+    // tree load failed, ignore
+  }
+
+  return null
 }

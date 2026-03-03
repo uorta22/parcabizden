@@ -7,6 +7,8 @@ import { ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle
 import { searchOemParts } from '@/lib/api'
 import type { OemSearchResult } from '@/lib/api'
 import { getWhatsAppUrl } from '@/lib/config'
+import { getProductByOem } from '@/lib/products'
+import type { ShopProduct } from '@/types/shop'
 import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon } from '@/components/CategoryIcons'
 import { findPartSpec } from '@/data/part-descriptions'
@@ -75,16 +77,20 @@ function PartDetailContent() {
   const [error, setError] = useState('')
   const [allResults, setAllResults] = useState<OemSearchResult[]>([])
   const [partName, setPartName] = useState('')
+  const [shopProduct, setShopProduct] = useState<ShopProduct | null>(null)
 
-  // searchOemParts ile tüm uyumlu araçları getir
+  // searchOemParts ile tüm uyumlu araçları getir + shop product check
   useEffect(() => {
     setLoading(true)
     setError('')
-    searchOemParts(oem)
-      .then(data => {
+    Promise.all([
+      searchOemParts(oem).catch(() => ({ results: [] })),
+      getProductByOem(oem).catch(() => null),
+    ])
+      .then(([data, product]) => {
         const results = data.results || []
         setAllResults(results)
-        // Parça adını bul
+        setShopProduct(product)
         const match = results.find(r => r.oem_number === oem)
         if (match) {
           setPartName(match.name)
@@ -225,6 +231,25 @@ function PartDetailContent() {
                 </div>
               </div>
             </div>
+
+            {/* ── E-Magaza Baglantisi ── */}
+            {shopProduct && (
+              <Link
+                href={`/urun/${shopProduct.slug}`}
+                className="block bg-gradient-to-r from-primary-50 to-primary-100/50 border border-primary-200 rounded-2xl p-5 hover:border-primary-400 transition-all group"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-500/30 transition-colors">
+                    <Package className="w-6 h-6 text-primary-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-primary-700 font-semibold text-sm mb-0.5">Bu urun e-magazamizda mevcut!</p>
+                    <p className="text-primary-600/70 text-xs">{shopProduct.name}{shopProduct.price ? ` — ${shopProduct.discount_price || shopProduct.price} TL` : ''}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0 transition-colors" />
+                </div>
+              </Link>
+            )}
 
             {/* ── Uyumlu Markalar ── */}
             {brandSlugs.length > 0 && (

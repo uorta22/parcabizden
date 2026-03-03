@@ -10,7 +10,6 @@ import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGene
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import type { AutodataGeneration, SlugMatch, VehicleSpecRow } from '@/types/api'
 import { findAutodataGenerationImage } from '@/lib/vehicleImage'
-import BrandPicker from '@/components/BrandPicker'
 import PartDiagram from '@/components/PartDiagram'
 
 // All 17 API categories with Turkish names (hardcoded — these don't change)
@@ -52,69 +51,23 @@ function OemBadge({ oem }: { oem: string }) {
   )
 }
 
-// ── Static view (no vehicle selected) ──
+// ── Static view (no vehicle selected) — redirect to homepage ──
 function StaticCategoriesView() {
-  const brandPickerRef = useRef<HTMLDivElement>(null)
-  const [toast, setToast] = useState<string | null>(null)
-
-  const handleCategorySelect = (cat: { id: string; name_tr: string }) => {
-    sessionStorage.setItem('preselect_cat', cat.id)
-    setToast(`${cat.name_tr} parçalarını görmek için araç seçin`)
-    brandPickerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
-
   return (
-    <>
-      {/* Brand Picker — API-first approach */}
-      <div ref={brandPickerRef}>
-        <BrandPicker />
+    <div className="max-w-lg mx-auto text-center py-16">
+      <div className="w-20 h-20 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-6">
+        <Car className="w-10 h-10 text-primary-500" />
       </div>
-
-      {/* Toast / info banner */}
-      {toast && (
-        <div className="mb-6 flex items-center gap-3 p-4 bg-primary-50 border border-primary-200 rounded-xl animate-in fade-in">
-          <Car className="w-5 h-5 text-primary-500 flex-shrink-0" />
-          <p className="text-primary-700 text-sm font-medium">{toast}</p>
-          <button onClick={() => setToast(null)} className="ml-auto text-primary-400 hover:text-primary-600 text-lg leading-none">&times;</button>
-        </div>
-      )}
-
-      <div className="max-w-2xl mx-auto">
-        <Link href="/sase-sorgula" className="flex items-center gap-4 p-6 bg-white border border-gray-200 shadow-sm rounded-2xl hover:border-primary-500/50 transition-all group">
-          <div className="w-14 h-14 rounded-xl bg-primary-500/20 flex items-center justify-center group-hover:bg-primary-500/30 transition-colors">
-            <Search className="w-7 h-7 text-primary-500" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-gray-900 font-semibold text-lg mb-1">Şase Numarası ile Ara</h3>
-            <p className="text-gray-500 text-sm">Aracınıza uygun parçaları bulmak için şase numaranızı girin</p>
-          </div>
-          <ChevronRight className="w-6 h-6 text-gray-400 group-hover:text-primary-500 transition-colors" />
-        </Link>
-      </div>
-
-      {/* API Category Grid */}
-      <div className="mt-10">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Parça Kategorileri</h2>
-        <p className="text-sm text-gray-500 mb-5">Kategori seçmek için önce yukarıdan araç belirleyin.</p>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-          {STATIC_API_CATEGORIES.map(cat => {
-            const color = getCategoryColor(cat.id)
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleCategorySelect(cat)}
-                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all text-left"
-              >
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform`}>
-                  <CategoryIcon id={cat.id} className="text-white" size={20} stroke={2} />
-                </div>
-                <h3 className="text-gray-900 font-medium text-sm group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
-              </button>
-            )
-          })}
-        </div>
-      </div>
-    </>
+      <h2 className="text-2xl font-bold text-gray-900 mb-3">Parça aramak için araç seçin</h2>
+      <p className="text-gray-500 mb-8">Ana sayfadan aracınızı seçerek parça kataloğuna ulaşabilirsiniz.</p>
+      <Link
+        href="/"
+        className="inline-flex items-center gap-2 px-8 py-4 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-xl transition-all text-lg"
+      >
+        <Car className="w-5 h-5" />
+        Ana Sayfaya Git
+      </Link>
+    </div>
   )
 }
 
