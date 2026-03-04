@@ -63,15 +63,12 @@ function jsonResponse($data, $code = 200) {
     exit;
 }
 
-// Include e-commerce & admin modules
-require_once __DIR__ . '/products.php';
-require_once __DIR__ . '/orders.php';
-require_once __DIR__ . '/addresses.php';
-require_once __DIR__ . '/favorites.php';
-require_once __DIR__ . '/profile.php';
-require_once __DIR__ . '/password.php';
-require_once __DIR__ . '/admin-products.php';
-require_once __DIR__ . '/admin-orders.php';
+// Include e-commerce & admin modules (safe — skip if file not found)
+$_pb_modules = ['products.php', 'orders.php', 'addresses.php', 'favorites.php', 'profile.php', 'password.php', 'admin-products.php', 'admin-orders.php'];
+foreach ($_pb_modules as $_m) {
+    $__f = __DIR__ . '/' . $_m;
+    if (file_exists($__f)) require_once $__f;
+}
 
 $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
