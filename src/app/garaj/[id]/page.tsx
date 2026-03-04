@@ -214,7 +214,7 @@ export default function GarageDetailPage() {
   }
 
   const handleDeleteMaintenance = async (id: number) => {
-    if (!confirm('Bu bakim kaydini silmek istediginize emin misiniz?')) return
+    if (!confirm('Bu bakım kaydını silmek istediğinize emin misiniz?')) return
     await maintenanceRemove(id)
     setRecords(prev => prev.filter(r => r.id !== id))
     const gRes = await garageList()
@@ -233,7 +233,7 @@ export default function GarageDetailPage() {
   if (!vehicle) return null
 
   const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
-  const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
+  const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracım için yardım istiyorum.`
 
   return (
     <div className="min-h-screen py-6 md:py-10">
@@ -326,7 +326,7 @@ export default function GarageDetailPage() {
             {/* Araç Bilgileri Kartı */}
             <div className="bg-white border border-gray-200 rounded-xl p-5">
               <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <Car className="w-5 h-5 text-primary-500" /> Arac Bilgileri
+                <Car className="w-5 h-5 text-primary-500" /> Araç Bilgileri
               </h2>
               <div className="space-y-3">
                 {/* Plaka */}
@@ -371,7 +371,7 @@ export default function GarageDetailPage() {
                 {/* Şase No */}
                 <div className="flex items-center justify-between py-2 border-b border-gray-50">
                   <div className="flex items-center gap-2 text-sm text-gray-500">
-                    <Hash className="w-4 h-4" /> Sase No
+                    <Hash className="w-4 h-4" /> Şase No
                   </div>
                   {editingSase ? (
                     <div className="flex items-center gap-1.5">
@@ -471,13 +471,13 @@ export default function GarageDetailPage() {
                       {saving ? '...' : 'Kaydet'}
                     </button>
                     <button onClick={() => { setEditingNotes(false); setNotesValue(vehicle.notes || '') }} className="px-3 py-1.5 text-gray-500 hover:text-gray-700 text-sm">
-                      Iptal
+                      İptal
                     </button>
                   </div>
                 </div>
               ) : (
                 <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                  {vehicle.notes || <span className="text-gray-400">Henuz not eklenmedi.</span>}
+                  {vehicle.notes || <span className="text-gray-400">Henüz not eklenmedi.</span>}
                 </p>
               )}
             </div>
@@ -488,7 +488,7 @@ export default function GarageDetailPage() {
             {(specsLoading || selectedSpec) && (
               <div className="bg-white border border-gray-200 rounded-xl p-5">
                 <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                  <Cog className="w-5 h-5 text-gray-500" /> Teknik Ozellikler
+                  <Cog className="w-5 h-5 text-gray-500" /> Teknik Özellikler
                 </h2>
 
                 {specsLoading ? (
@@ -501,43 +501,43 @@ export default function GarageDetailPage() {
                       <SpecRow icon={<Cog className="w-4 h-4" />} label="Motor" value={`${selectedSpec.engine_cc} cc${selectedSpec.cylinders ? ` / ${selectedSpec.cylinders} silindir` : ''}`} />
                     )}
                     {selectedSpec.power_hp && (
-                      <SpecRow icon={<Zap className="w-4 h-4" />} label="Guc" value={`${selectedSpec.power_hp} HP`} />
+                      <SpecRow icon={<Zap className="w-4 h-4" />} label="Güç" value={`${selectedSpec.power_hp} HP`} />
                     )}
                     {selectedSpec.torque_nm && (
                       <SpecRow icon={<Zap className="w-4 h-4" />} label="Tork" value={`${selectedSpec.torque_nm} Nm`} />
                     )}
                     {selectedSpec.fuel_type && (
-                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakit" value={selectedSpec.fuel_type} />
+                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakıt" value={selectedSpec.fuel_type} />
                     )}
                     {selectedSpec.transmission && (
-                      <SpecRow icon={<Settings2 className="w-4 h-4" />} label="Sanziman" value={selectedSpec.transmission} />
+                      <SpecRow icon={<Settings2 className="w-4 h-4" />} label="Şanzıman" value={selectedSpec.transmission} />
                     )}
                     {selectedSpec.drivetrain && (
-                      <SpecRow icon={<Settings2 className="w-4 h-4" />} label="Cekis" value={selectedSpec.drivetrain} />
+                      <SpecRow icon={<Settings2 className="w-4 h-4" />} label="Çekiş" value={selectedSpec.drivetrain} />
                     )}
                     {selectedSpec.accel_0_100 && (
                       <SpecRow icon={<Gauge className="w-4 h-4" />} label="0-100 km/s" value={`${selectedSpec.accel_0_100} sn`} />
                     )}
                     {selectedSpec.top_speed_kmh && (
-                      <SpecRow icon={<Gauge className="w-4 h-4" />} label="Max Hiz" value={`${selectedSpec.top_speed_kmh} km/s`} />
+                      <SpecRow icon={<Gauge className="w-4 h-4" />} label="Max Hız" value={`${selectedSpec.top_speed_kmh} km/s`} />
                     )}
                     {selectedSpec.fuel_combined && (
-                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakit Tuketimi" value={`${selectedSpec.fuel_combined} L/100km`} />
+                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakıt Tüketimi" value={`${selectedSpec.fuel_combined} L/100km`} />
                     )}
                     {(selectedSpec.length_mm || selectedSpec.width_mm || selectedSpec.height_mm) && (
                       <SpecRow icon={<Ruler className="w-4 h-4" />} label="Boyutlar" value={`${selectedSpec.length_mm || '—'}x${selectedSpec.width_mm || '—'}x${selectedSpec.height_mm || '—'} mm`} />
                     )}
                     {selectedSpec.wheelbase_mm && (
-                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Aks Araligi" value={`${selectedSpec.wheelbase_mm} mm`} />
+                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Aks Aralığı" value={`${selectedSpec.wheelbase_mm} mm`} />
                     )}
                     {selectedSpec.weight_kg && (
-                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Agirlik" value={`${selectedSpec.weight_kg} kg`} />
+                      <SpecRow icon={<Ruler className="w-4 h-4" />} label="Ağırlık" value={`${selectedSpec.weight_kg} kg`} />
                     )}
                     {selectedSpec.trunk_liters && (
                       <SpecRow icon={<Ruler className="w-4 h-4" />} label="Bagaj" value={`${selectedSpec.trunk_liters} L`} />
                     )}
                     {selectedSpec.fuel_tank_liters && (
-                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakit Deposu" value={`${selectedSpec.fuel_tank_liters} L`} />
+                      <SpecRow icon={<Fuel className="w-4 h-4" />} label="Yakıt Deposu" value={`${selectedSpec.fuel_tank_liters} L`} />
                     )}
 
                     <p className="text-[10px] text-gray-400 pt-2 border-t border-gray-100">
@@ -555,21 +555,21 @@ export default function GarageDetailPage() {
         <div className="bg-white border border-gray-200 rounded-xl p-5">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
-              <Wrench className="w-5 h-5 text-orange-500" /> Bakim Kayitlari
+              <Wrench className="w-5 h-5 text-orange-500" /> Bakım Kayıtları
             </h2>
             <button
               onClick={() => { setEditRecord(null); setShowForm(true) }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-medium transition-all"
             >
-              <Plus className="w-4 h-4" /> Bakim Ekle
+              <Plus className="w-4 h-4" /> Bakım Ekle
             </button>
           </div>
 
           {records.length === 0 ? (
             <div className="text-center py-8">
               <Wrench className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">Henuz bakim kaydi yok.</p>
-              <p className="text-gray-400 text-xs mt-1">Bakim gecmisini takip etmek icin kayit ekleyin.</p>
+              <p className="text-gray-500 text-sm">Henüz bakım kaydı yok.</p>
+              <p className="text-gray-400 text-xs mt-1">Bakım geçmişini takip etmek için kayıt ekleyin.</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -586,7 +586,7 @@ export default function GarageDetailPage() {
                           </span>
                         </div>
                         <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
-                          {record.done_km !== null && <span>Yapildigi: {record.done_km.toLocaleString('tr-TR')} km</span>}
+                          {record.done_km !== null && <span>Yapıldığı: {record.done_km.toLocaleString('tr-TR')} km</span>}
                           {record.done_date && <span>{new Date(record.done_date).toLocaleDateString('tr-TR')}</span>}
                           {record.next_km !== null && <span>Sonraki: {record.next_km.toLocaleString('tr-TR')} km</span>}
                           {record.next_date && <span>{new Date(record.next_date).toLocaleDateString('tr-TR')}</span>}
@@ -597,7 +597,7 @@ export default function GarageDetailPage() {
                         <button
                           onClick={() => { setEditRecord(record); setShowForm(true) }}
                           className="p-1.5 text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-all"
-                          title="Duzenle"
+                          title="Düzenle"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
