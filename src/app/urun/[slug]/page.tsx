@@ -135,7 +135,7 @@ export default function ProductDetailPage() {
                 {product.thumbnail || (product.images && product.images.length > 0) ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img
-                    src={product.thumbnail || product.images[0]}
+                    src={product.thumbnail || (product.images.length > 0 ? product.images[0] : undefined)}
                     alt={product.name}
                     className="w-full h-full object-contain"
                   />

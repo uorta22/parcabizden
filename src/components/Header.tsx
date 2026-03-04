@@ -79,7 +79,7 @@ export default function Header() {
             </form>
 
             {/* Right Actions */}
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-2">
               {/* Products link */}
               <Link
                 href="/urunler"

@@ -65,7 +65,7 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
         {product.thumbnail || (product.images && product.images.length > 0) ? (
           /* eslint-disable-next-line @next/next/no-img-element */
           <img
-            src={product.thumbnail || product.images[0]}
+            src={product.thumbnail || (product.images.length > 0 ? product.images[0] : undefined)}
             alt={product.name}
             className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
             loading="lazy"
@@ -95,9 +95,7 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
           <button
             onClick={handleToggleFav}
             disabled={favLoading}
-            className={`absolute top-2 right-2 p-1.5 rounded-full transition-all ${
-              product.in_stock ? 'mt-0' : 'mt-8'
-            } ${
+            className={`absolute ${!product.in_stock ? 'top-10' : 'top-2'} right-2 p-1.5 rounded-full transition-all ${
               (isFav || onRemoveFavorite)
                 ? 'bg-red-50 text-red-500 hover:bg-red-100'
                 : 'bg-white/70 text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100'

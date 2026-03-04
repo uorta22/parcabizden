@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState, useMemo, useCallback, Suspense } from 'react'
+import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Search, ChevronRight, ChevronLeft, Loader2, Package, SlidersHorizontal, Car } from 'lucide-react'
 import { fetchProducts } from '@/lib/products'
-import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { CategoryIcon } from '@/components/CategoryIcons'
 import ProductCard from '@/components/ProductCard'
 import type { ShopProduct } from '@/types/shop'
 
@@ -50,36 +50,48 @@ function UrunlerContent() {
   const [sortBy, setSortBy] = useState<SortOption>('default')
   const [showFilters, setShowFilters] = useState(false)
   const [currentPage, setCurrentPage] = useState(pageParam)
+  const [debouncedSearch, setDebouncedSearch] = useState(qParam)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const loadData = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await fetchProducts({
-        category: activeCategory || undefined,
-        search: searchQuery.trim() || undefined,
-        brand: brandParam || undefined,
-        vehicle_id: vehicleParam ? parseInt(vehicleParam) : undefined,
-        page: currentPage,
-        per_page: PER_PAGE,
-      })
-      setProducts(res.products)
-      setTotal(res.total)
-    } catch {
-      setProducts([])
-      setTotal(0)
-    } finally {
-      setLoading(false)
-    }
-  }, [activeCategory, searchQuery, brandParam, vehicleParam, currentPage])
-
+  // Debounce search input
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+    }, 400)
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
+  }, [searchQuery])
 
+  // Sync URL params to local state
   useEffect(() => {
-    if (qParam) setSearchQuery(qParam)
+    if (qParam) { setSearchQuery(qParam); setDebouncedSearch(qParam) }
     if (catParam) setActiveCategory(catParam)
   }, [qParam, catParam])
+
+  // Fetch products when filters change
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetchProducts({
+      category: activeCategory || undefined,
+      search: debouncedSearch.trim() || undefined,
+      brand: brandParam || undefined,
+      vehicle_id: vehicleParam ? parseInt(vehicleParam) : undefined,
+      page: currentPage,
+      per_page: PER_PAGE,
+    }).then(res => {
+      if (cancelled) return
+      setProducts(res.products)
+      setTotal(res.total)
+    }).catch(() => {
+      if (cancelled) return
+      setProducts([])
+      setTotal(0)
+    }).finally(() => {
+      if (!cancelled) setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [activeCategory, debouncedSearch, brandParam, vehicleParam, currentPage])
 
   const totalPages = Math.ceil(total / PER_PAGE)
 
@@ -100,7 +112,7 @@ function UrunlerContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     setCurrentPage(1)
-    loadData()
+    setDebouncedSearch(searchQuery)
   }
 
   const handlePageChange = (page: number) => {

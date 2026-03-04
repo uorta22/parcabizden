@@ -52,6 +52,8 @@ export default function GarageDetailPage() {
   const [selectedSpec, setSelectedSpec] = useState<VehicleSpecRow | null>(null)
   const [specsLoading, setSpecsLoading] = useState(false)
 
+  const [saveError, setSaveError] = useState('')
+
   // Maintenance form
   const [showForm, setShowForm] = useState(false)
   const [editRecord, setEditRecord] = useState<MaintenanceRecord | null>(null)
@@ -120,50 +122,65 @@ export default function GarageDetailPage() {
   const handleSaveKm = async () => {
     if (!kmValue || !vehicle) return
     setSaving(true)
+    setSaveError('')
     try {
       await garageUpdate({ id: garageId, current_km: parseInt(kmValue) })
       setVehicle({ ...vehicle, current_km: parseInt(kmValue), km_updated_at: new Date().toISOString() })
       setEditingKm(false)
+    } catch {
+      setSaveError('Kilometre kaydedilemedi.')
     } finally { setSaving(false) }
   }
 
   const handleSaveNotes = async () => {
     if (!vehicle) return
     setSaving(true)
+    setSaveError('')
     try {
       await garageUpdate({ id: garageId, notes: notesValue })
       setVehicle({ ...vehicle, notes: notesValue || null })
       setEditingNotes(false)
+    } catch {
+      setSaveError('Notlar kaydedilemedi.')
     } finally { setSaving(false) }
   }
 
   const handleSaveNickname = async () => {
     if (!vehicle) return
     setSaving(true)
+    setSaveError('')
     try {
       await garageUpdate({ id: garageId, nickname: nicknameValue })
       setVehicle({ ...vehicle, nickname: nicknameValue || null })
       setEditingNickname(false)
+    } catch {
+      setSaveError('Takma ad kaydedilemedi.')
     } finally { setSaving(false) }
   }
 
   const handleSavePlaka = async () => {
     if (!vehicle) return
     setSaving(true)
+    setSaveError('')
     try {
       await garageUpdate({ id: garageId, plaka: plakaValue })
       setVehicle({ ...vehicle, plaka: plakaValue || null })
       setEditingPlaka(false)
+    } catch {
+      setSaveError('Plaka kaydedilemedi.')
     } finally { setSaving(false) }
   }
 
   const handleSaveSase = async () => {
     if (!vehicle) return
     setSaving(true)
+    setSaveError('')
     try {
       await garageUpdate({ id: garageId, sase_no: saseValue })
       setVehicle({ ...vehicle, sase_no: saseValue || null })
       setEditingSase(false)
+    } catch {
+      setSaveError('Şase no kaydedilemedi.')
     } finally { setSaving(false) }
   }
 
@@ -176,13 +193,18 @@ export default function GarageDetailPage() {
     next_date?: string
     notes?: string
   }) => {
-    await maintenanceAdd(data)
-    const mRes = await maintenanceList(garageId)
-    setRecords(mRes.records)
-    setShowForm(false)
-    const gRes = await garageList()
-    const v = gRes.vehicles.find(v => v.id === garageId)
-    if (v) setVehicle(v)
+    setSaveError('')
+    try {
+      await maintenanceAdd(data)
+      const mRes = await maintenanceList(garageId)
+      setRecords(mRes.records)
+      setShowForm(false)
+      const gRes = await garageList()
+      const v = gRes.vehicles.find(v => v.id === garageId)
+      if (v) setVehicle(v)
+    } catch {
+      setSaveError('Bakım kaydı eklenemedi.')
+    }
   }
 
   const handleUpdateMaintenance = async (data: {
@@ -195,31 +217,41 @@ export default function GarageDetailPage() {
     notes?: string
   }) => {
     if (!editRecord) return
-    await maintenanceUpdate({
-      id: editRecord.id,
-      maintenance_type: data.maintenance_type,
-      done_km: data.done_km ?? null,
-      done_date: data.done_date ?? null,
-      next_km: data.next_km ?? null,
-      next_date: data.next_date ?? null,
-      notes: data.notes ?? null,
-    })
-    const mRes = await maintenanceList(garageId)
-    setRecords(mRes.records)
-    setEditRecord(null)
-    setShowForm(false)
-    const gRes = await garageList()
-    const v = gRes.vehicles.find(v => v.id === garageId)
-    if (v) setVehicle(v)
+    setSaveError('')
+    try {
+      await maintenanceUpdate({
+        id: editRecord.id,
+        maintenance_type: data.maintenance_type,
+        done_km: data.done_km ?? null,
+        done_date: data.done_date ?? null,
+        next_km: data.next_km ?? null,
+        next_date: data.next_date ?? null,
+        notes: data.notes ?? null,
+      })
+      const mRes = await maintenanceList(garageId)
+      setRecords(mRes.records)
+      setEditRecord(null)
+      setShowForm(false)
+      const gRes = await garageList()
+      const v = gRes.vehicles.find(v => v.id === garageId)
+      if (v) setVehicle(v)
+    } catch {
+      setSaveError('Bakım kaydı güncellenemedi.')
+    }
   }
 
   const handleDeleteMaintenance = async (id: number) => {
     if (!confirm('Bu bakım kaydını silmek istediğinize emin misiniz?')) return
-    await maintenanceRemove(id)
-    setRecords(prev => prev.filter(r => r.id !== id))
-    const gRes = await garageList()
-    const v = gRes.vehicles.find(v => v.id === garageId)
-    if (v) setVehicle(v)
+    setSaveError('')
+    try {
+      await maintenanceRemove(id)
+      setRecords(prev => prev.filter(r => r.id !== id))
+      const gRes = await garageList()
+      const v = gRes.vehicles.find(v => v.id === garageId)
+      if (v) setVehicle(v)
+    } catch {
+      setSaveError('Bakım kaydı silinemedi.')
+    }
   }
 
   if (loading || authLoading) {
@@ -246,6 +278,15 @@ export default function GarageDetailPage() {
           <ChevronRight className="w-4 h-4" />
           <span className="text-gray-900">{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.brand_name} {vehicle.generation_name}</span>
         </nav>
+
+        {saveError && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center justify-between">
+            <span>{saveError}</span>
+            <button onClick={() => setSaveError('')} className="text-red-400 hover:text-red-600 ml-3">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* ===== Araç Başlık Kartı (tam genişlik) ===== */}
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden mb-6">

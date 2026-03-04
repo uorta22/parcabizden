@@ -1,28 +1,20 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Heart, Trash2 } from 'lucide-react'
+import { Heart } from 'lucide-react'
 import { favoriteList, favoriteRemove } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
 import type { ShopProduct } from '@/types/shop'
 
 export default function FavorilerPage() {
   const [products, setProducts] = useState<ShopProduct[]>([])
-  const [favoriteIds, setFavoriteIds] = useState<Record<string, number>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
-  const [removing, setRemoving] = useState<string | null>(null)
 
   useEffect(() => {
     favoriteList()
       .then((res) => {
         setProducts(res.products)
-        // Build productId -> favoriteId map for removal
-        const map: Record<string, number> = {}
-        for (const fav of res.favorites) {
-          map[String(fav.product_id)] = fav.id
-        }
-        setFavoriteIds(map)
       })
       .catch(() => setError('Favoriler yüklenemedi. Lütfen tekrar deneyin.'))
       .finally(() => setIsLoading(false))
@@ -30,19 +22,11 @@ export default function FavorilerPage() {
 
   const handleRemove = async (productId: string | number) => {
     const pid = String(productId)
-    setRemoving(pid)
     try {
       await favoriteRemove(pid)
       setProducts((prev) => prev.filter((p) => String(p.id) !== pid))
-      setFavoriteIds((prev) => {
-        const next = { ...prev }
-        delete next[pid]
-        return next
-      })
     } catch {
       // silently fail
-    } finally {
-      setRemoving(null)
     }
   }
 
@@ -83,28 +67,9 @@ export default function FavorilerPage() {
         </div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          {products.map((product) => {
-            const pid = String(product.id)
-            const isRemoving = removing === pid
-            return (
-              <div key={pid} className="relative group">
-                <ProductCard product={product} />
-                {/* Remove button overlay */}
-                <button
-                  onClick={() => handleRemove(pid)}
-                  disabled={isRemoving}
-                  title="Favorilerden çıkar"
-                  className="absolute top-2 right-2 z-10 w-7 h-7 flex items-center justify-center rounded-full bg-white border border-gray-200 shadow-sm text-red-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                >
-                  {isRemoving ? (
-                    <div className="w-3 h-3 border border-red-400 border-t-transparent rounded-full animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
-                  )}
-                </button>
-              </div>
-            )
-          })}
+          {products.map((product) => (
+            <ProductCard key={String(product.id)} product={product} onRemoveFavorite={handleRemove} />
+          ))}
         </div>
       )}
     </div>

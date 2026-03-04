@@ -201,6 +201,9 @@ export default function AyarlarPage() {
         </div>
 
         <div className="space-y-4 max-w-md">
+          <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            Bildirim tercihleri yakında aktif olacaktır.
+          </p>
           <Toggle
             label="Sipariş Bildirimleri"
             description="Sipariş durumu güncellemeleri hakkında bildirim alın"

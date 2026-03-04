@@ -220,6 +220,20 @@ export default function SepetPage() {
               </div>
             )}
 
+            {/* Login prompt for guests */}
+            {!user && (
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex items-center gap-4">
+                <MapPin className="w-8 h-8 text-blue-400 flex-shrink-0" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900">Sipariş vermek için giriş yapın</p>
+                  <p className="text-xs text-blue-600 mt-0.5">Adres seçimi ve sipariş takibi için hesabınıza giriş yapmanız gerekiyor.</p>
+                </div>
+                <Link href="/giris" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors flex-shrink-0">
+                  Giriş Yap
+                </Link>
+              </div>
+            )}
+
             {/* Address Selection (only if logged in) */}
             {user && (
               <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">

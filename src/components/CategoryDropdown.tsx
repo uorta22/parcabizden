@@ -54,9 +54,10 @@ export default function CategoryDropdown() {
 
       {isOpen && (
         <div
-          className="absolute left-0 top-full mt-1 w-[520px] bg-white border border-gray-200 rounded-xl shadow-xl py-3 z-50 animate-fadeIn"
+          className="absolute left-0 top-full pt-1 w-[520px] z-50"
           onMouseLeave={() => setIsOpen(false)}
         >
+        <div className="bg-white border border-gray-200 rounded-xl shadow-xl py-3 animate-fadeIn">
           <div className="grid grid-cols-2 gap-0.5">
             {CATEGORIES.map(cat => (
               <Link
@@ -70,6 +71,7 @@ export default function CategoryDropdown() {
               </Link>
             ))}
           </div>
+        </div>
         </div>
       )}
     </div>
