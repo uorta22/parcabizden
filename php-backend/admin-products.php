@@ -57,6 +57,8 @@ function handleAdminProductAdd($db, $userId) {
 
     $productId = (int)$db->lastInsertId();
 
+    admin_audit_log($db, $userId, 'product_add', $productId, json_encode(['name' => $name, 'slug' => $slug]));
+
     $stmt = $db->prepare('SELECT * FROM products WHERE id = :id');
     $stmt->execute([':id' => $productId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -146,6 +148,8 @@ function handleAdminProductUpdate($db, $userId) {
     $sql = 'UPDATE products SET ' . implode(', ', $fields) . ' WHERE id = :id';
     $db->prepare($sql)->execute($params);
 
+    admin_audit_log($db, $userId, 'product_update', $id, json_encode(array_keys($fields)));
+
     $stmt = $db->prepare('SELECT * FROM products WHERE id = :id');
     $stmt->execute([':id' => $id]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -167,6 +171,8 @@ function handleAdminProductDelete($db, $userId) {
     if ($stmt->rowCount() === 0) {
         jsonResponse(['error' => 'Urun bulunamadi'], 404);
     }
+
+    admin_audit_log($db, $userId, 'product_delete', $id);
 
     jsonResponse(['success' => true]);
 }

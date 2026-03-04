@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Menu, X } from 'lucide-react'
@@ -12,11 +12,36 @@ const NAV_ITEMS = [
   { href: '/admin/siparisler', label: 'Siparişler', icon: ShoppingCart },
 ]
 
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000 // 30 dakika
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth()
+  const { user, isLoading, logout } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const resetInactivityTimer = useCallback(() => {
+    if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    inactivityTimer.current = setTimeout(() => {
+      logout()
+      router.replace('/')
+    }, INACTIVITY_TIMEOUT)
+  }, [logout, router])
+
+  // 30dk inactivity timeout
+  useEffect(() => {
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart']
+    const handler = () => resetInactivityTimer()
+
+    events.forEach(e => document.addEventListener(e, handler))
+    resetInactivityTimer()
+
+    return () => {
+      events.forEach(e => document.removeEventListener(e, handler))
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current)
+    }
+  }, [resetInactivityTimer])
 
   useEffect(() => {
     if (!isLoading && (!user || !user.is_admin)) {

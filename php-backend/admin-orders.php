@@ -82,5 +82,7 @@ function handleAdminOrderUpdateStatus($db, $userId) {
         jsonResponse(['error' => 'Siparis bulunamadi'], 404);
     }
 
+    admin_audit_log($db, $userId, 'order_status_update', $id, json_encode(['new_status' => $status]));
+
     jsonResponse(['success' => true]);
 }

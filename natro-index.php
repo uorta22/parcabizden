@@ -14,6 +14,11 @@ set_exception_handler(function($e) {
 header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
+header('Strict-Transport-Security: max-age=31536000');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(200); exit(); }
 
 // ==================== Config (.env dosyasından oku) ====================
@@ -31,7 +36,7 @@ if (file_exists($_ENV_FILE)) {
 $jwtSecret = getenv('JWT_SECRET');
 if (!$jwtSecret) { http_response_code(500); echo json_encode(['error' => 'Server configuration error']); error_log('FATAL: JWT_SECRET env var is not set'); exit; }
 define('JWT_SECRET', $jwtSecret);
-define('JWT_EXPIRY', 86400);
+define('JWT_EXPIRY', 28800); // 8 saat
 
 $DB_HOST = getenv('DB_HOST');
 $DB_NAME = getenv('DB_NAME');
@@ -69,6 +74,9 @@ foreach ($_pb_modules as $_m) {
     $__f = __DIR__ . '/' . $_m;
     if (file_exists($__f)) require_once $__f;
 }
+
+// IP kara liste kontrolu
+if (!check_ip_blacklist($pdo)) { exit; }
 
 $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
@@ -157,23 +165,28 @@ switch ($action) {
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
         handleDeleteAccount($pdo, $uid); break;
 
-    // ── Admin: Products (auth + admin) ──
+    // ── Admin: Products (auth + admin + rate limit) ──
     case 'admin_product_add':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        if (!check_rate_limit('admin_product_write', 30, 15)) break;
         handleAdminProductAdd($pdo, $uid); break;
     case 'admin_product_update':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        if (!check_rate_limit('admin_product_write', 30, 15)) break;
         handleAdminProductUpdate($pdo, $uid); break;
     case 'admin_product_delete':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        if (!check_rate_limit('admin_product_write', 30, 15)) break;
         handleAdminProductDelete($pdo, $uid); break;
 
-    // ── Admin: Orders (auth + admin) ──
+    // ── Admin: Orders (auth + admin + rate limit) ──
     case 'admin_order_list':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        if (!check_rate_limit('admin_order_list', 60, 15)) break;
         handleAdminOrderList($pdo, $uid); break;
     case 'admin_order_update_status':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        if (!check_rate_limit('admin_order_update', 30, 15)) break;
         handleAdminOrderUpdateStatus($pdo, $uid); break;
 
     default: echo json_encode(['error' => 'Invalid action']);
@@ -1252,9 +1265,13 @@ function handle_maintenance_remove($pdo) {
 
 // ==================== Rate Limiting ====================
 
-function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
+function get_client_ip(): string {
     $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    $ip = explode(',', $ip)[0];
+    return trim(explode(',', $ip)[0]);
+}
+
+function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
+    $ip = get_client_ip();
     $dir = sys_get_temp_dir() . '/parcabizden_rate';
     if (!is_dir($dir)) @mkdir($dir, 0700, true);
     $file = $dir . '/' . md5($action . '_' . $ip) . '.json';
@@ -1275,6 +1292,90 @@ function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
     $attempts[] = $now;
     @file_put_contents($file, json_encode(array_values($attempts)));
     return true;
+}
+
+// ==================== IP Kara Liste Sistemi ====================
+
+function check_ip_blacklist($pdo): bool {
+    $ip = get_client_ip();
+    try {
+        $stmt = $pdo->prepare('SELECT id FROM ip_blacklist WHERE ip = :ip AND expires_at > NOW()');
+        $stmt->execute([':ip' => $ip]);
+        if ($stmt->fetch()) {
+            http_response_code(403);
+            echo json_encode(['error' => 'Erisim engellendi. Lutfen daha sonra tekrar deneyin.']);
+            return false;
+        }
+    } catch (PDOException $e) {
+        // Tablo yoksa sessizce devam et
+        error_log('IP blacklist check error: ' . $e->getMessage());
+    }
+    return true;
+}
+
+function ban_ip($pdo, string $ip, string $reason, int $duration_minutes = 30): void {
+    try {
+        $stmt = $pdo->prepare('INSERT INTO ip_blacklist (ip, reason, expires_at) VALUES (:ip, :reason, DATE_ADD(NOW(), INTERVAL :minutes MINUTE))');
+        $stmt->execute([':ip' => $ip, ':reason' => $reason, ':minutes' => $duration_minutes]);
+    } catch (PDOException $e) {
+        error_log('IP ban error: ' . $e->getMessage());
+    }
+}
+
+// ==================== Basarisiz Giris Takibi ====================
+
+function record_failed_login(string $ip, string $email): void {
+    $dir = sys_get_temp_dir() . '/parcabizden_failed_logins';
+    if (!is_dir($dir)) @mkdir($dir, 0700, true);
+
+    // Loglama
+    $logFile = $dir . '/failed_logins.log';
+    $logLine = date('Y-m-d H:i:s') . " | IP: $ip | Email: $email\n";
+    @file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
+
+    // IP bazli ardisik basarisiz deneme sayaci
+    $counterFile = $dir . '/' . md5('consecutive_' . $ip) . '.json';
+    $data = ['count' => 0, 'last_attempt' => 0];
+    if (file_exists($counterFile)) {
+        $existing = json_decode(file_get_contents($counterFile), true);
+        if (is_array($existing)) $data = $existing;
+    }
+    // 30 dk'dan eski kayitlari sifirla
+    if (time() - ($data['last_attempt'] ?? 0) > 1800) {
+        $data['count'] = 0;
+    }
+    $data['count']++;
+    $data['last_attempt'] = time();
+    @file_put_contents($counterFile, json_encode($data));
+}
+
+function get_failed_login_count(string $ip): int {
+    $dir = sys_get_temp_dir() . '/parcabizden_failed_logins';
+    $counterFile = $dir . '/' . md5('consecutive_' . $ip) . '.json';
+    if (!file_exists($counterFile)) return 0;
+    $data = json_decode(file_get_contents($counterFile), true);
+    if (!is_array($data)) return 0;
+    // 30 dk'dan eski kayitlari sifirla
+    if (time() - ($data['last_attempt'] ?? 0) > 1800) return 0;
+    return (int)($data['count'] ?? 0);
+}
+
+function clear_failed_logins(string $ip): void {
+    $dir = sys_get_temp_dir() . '/parcabizden_failed_logins';
+    $counterFile = $dir . '/' . md5('consecutive_' . $ip) . '.json';
+    if (file_exists($counterFile)) @unlink($counterFile);
+}
+
+// ==================== Admin Audit Log ====================
+
+function admin_audit_log($pdo, int $userId, string $action, ?int $targetId = null, ?string $details = null): void {
+    $ip = get_client_ip();
+    try {
+        $stmt = $pdo->prepare('INSERT INTO admin_audit_log (user_id, action, target_id, details, ip) VALUES (:uid, :action, :tid, :details, :ip)');
+        $stmt->execute([':uid' => $userId, ':action' => $action, ':tid' => $targetId, ':details' => $details, ':ip' => $ip]);
+    } catch (PDOException $e) {
+        error_log('Audit log error: ' . $e->getMessage());
+    }
 }
 
 // ==================== Auth Handlers ====================
@@ -1324,7 +1425,19 @@ function handle_register($pdo) {
 
 function handle_login($pdo) {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
-    if (!check_rate_limit('login', 10, 15)) return;
+    if (!check_rate_limit('login', 5, 15)) return;
+
+    $ip = get_client_ip();
+
+    // Brute-force kontrolu: 5 ardisik basarisiz → 30dk ban
+    $failCount = get_failed_login_count($ip);
+    if ($failCount >= 5) {
+        ban_ip($pdo, $ip, 'brute_force_login', 30);
+        http_response_code(403);
+        echo json_encode(['error' => 'Cok fazla basarisiz giris denemesi. IP adresiniz 30 dakika engellendi.']);
+        return;
+    }
+
     try {
         $email = trim($_POST['email'] ?? '');
         $password = $_POST['password'] ?? '';
@@ -1336,8 +1449,24 @@ function handle_login($pdo) {
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$user || !password_verify($password, $user['password_hash'])) {
+            record_failed_login($ip, $email);
+
+            // Admin kullanici icin 3 basarisiz → 60 dk ban
+            if ($user && !empty($user['is_admin'])) {
+                $currentFails = get_failed_login_count($ip);
+                if ($currentFails >= 3) {
+                    ban_ip($pdo, $ip, 'brute_force_admin', 60);
+                    http_response_code(403);
+                    echo json_encode(['error' => 'Admin hesabina cok fazla basarisiz giris. IP adresiniz 60 dakika engellendi.']);
+                    return;
+                }
+            }
+
             http_response_code(401); echo json_encode(['error' => 'E-posta veya sifre hatali']); return;
         }
+
+        // Basarili giris — sayaci sifirla
+        clear_failed_logins($ip);
 
         // E-posta dogrulama kontrolu devre disi (e-posta servisi aktif olunca acilacak)
         // if (!$user['email_verified']) { ... }

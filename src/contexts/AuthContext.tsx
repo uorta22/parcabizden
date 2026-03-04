@@ -66,8 +66,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (token && isTokenExpired(token)) {
         logout()
       }
-    }, 60000) // Check every minute
+    }, 60000) // Her dakika kontrol
     return () => clearInterval(interval)
+  }, [logout])
+
+  // Sayfa gorunurluk degistiginde (tab switch) profil yeniden kontrol
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const token = localStorage.getItem('token')
+        if (!token || isTokenExpired(token)) {
+          logout()
+          return
+        }
+        api.getProfile()
+          .then(setUser)
+          .catch(() => logout())
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [logout])
 
   const login = async (email: string, password: string) => {
