@@ -6,3 +6,7 @@ parcabizden-deploy.zip
 api/logs
 api/tmp
 .claude
+_autodata_temp
+php-backend
+natro-index.php
+*.db
