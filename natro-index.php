@@ -1,5 +1,5 @@
 <?php
-// Global error handler — production'da detay sızdırma
+// Global error handler — production'da detay sizdirma
 set_error_handler(function($severity, $message, $file, $line) {
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
