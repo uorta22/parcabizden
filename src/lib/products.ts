@@ -34,10 +34,6 @@ export async function searchProducts(query: string): Promise<ShopProduct[]> {
   }
 }
 
-export function getProductsByCategory(products: ShopProduct[], category: string): ShopProduct[] {
-  return products.filter(p => p.category === category)
-}
-
 export async function getProductByOem(oem: string): Promise<ShopProduct | null> {
   try {
     const res = await apiProductSearch(oem)

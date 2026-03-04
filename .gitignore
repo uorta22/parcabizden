@@ -52,3 +52,4 @@ out.zip
 # Autodata temp files
 _autodata_temp/
 public/data/vehicle_specs_import.sql
+public/data/vehicle_specs_part_*.sql

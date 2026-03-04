@@ -955,6 +955,31 @@ function get_auth_user_id() {
     return $payload ? ($payload['user_id'] ?? null) : null;
 }
 
+// ==================== Garage Helpers ====================
+
+/**
+ * garage tablosundaki opsiyonel kolonlari kontrol eder, eksikleri ALTER TABLE ile ekler.
+ * Donen dizi: ['spec_id' => bool, 'plaka' => bool, 'sase_no' => bool]
+ */
+function ensure_garage_columns($pdo): array {
+    $cols = ['spec_id' => false, 'plaka' => false, 'sase_no' => false];
+    try {
+        $existing = $pdo->query("SHOW COLUMNS FROM garage")->fetchAll(PDO::FETCH_COLUMN);
+        $cols['spec_id'] = in_array('spec_id', $existing);
+        $cols['plaka']   = in_array('plaka', $existing);
+        $cols['sase_no'] = in_array('sase_no', $existing);
+    } catch (PDOException $e) {}
+
+    if (!$cols['plaka']) {
+        try { $pdo->exec("ALTER TABLE garage ADD COLUMN plaka VARCHAR(20) DEFAULT NULL"); $cols['plaka'] = true; } catch (PDOException $e) {}
+    }
+    if (!$cols['sase_no']) {
+        try { $pdo->exec("ALTER TABLE garage ADD COLUMN sase_no VARCHAR(50) DEFAULT NULL"); $cols['sase_no'] = true; } catch (PDOException $e) {}
+    }
+
+    return $cols;
+}
+
 // ==================== Garage Handlers ====================
 
 function handle_garage_list($pdo) {
@@ -962,19 +987,11 @@ function handle_garage_list($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        // Opsiyonel kolonları kontrol et
-        $hasSpecId = false; $hasPlaka = false; $hasSaseNo = false;
-        try {
-            $colCheck = $pdo->query("SHOW COLUMNS FROM garage");
-            $existingCols = $colCheck->fetchAll(PDO::FETCH_COLUMN);
-            $hasSpecId = in_array('spec_id', $existingCols);
-            $hasPlaka = in_array('plaka', $existingCols);
-            $hasSaseNo = in_array('sase_no', $existingCols);
-        } catch (PDOException $e) {}
-
-        // Eksik kolonları ekle
-        if (!$hasPlaka) { try { $pdo->exec("ALTER TABLE garage ADD COLUMN plaka VARCHAR(20) DEFAULT NULL"); $hasPlaka = true; } catch (PDOException $e) {} }
-        if (!$hasSaseNo) { try { $pdo->exec("ALTER TABLE garage ADD COLUMN sase_no VARCHAR(50) DEFAULT NULL"); $hasSaseNo = true; } catch (PDOException $e) {} }
+        // Opsiyonel kolonlari kontrol et ve eksikleri ekle
+        $garageCols = ensure_garage_columns($pdo);
+        $hasSpecId  = $garageCols['spec_id'];
+        $hasPlaka   = $garageCols['plaka'];
+        $hasSaseNo  = $garageCols['sase_no'];
 
         $cols = 'id, brand_slug, brand_name, generation_slug, generation_name, year, nickname, current_km, km_updated_at, notes, created_at';
         if ($hasSpecId) $cols .= ', spec_id';
@@ -1052,15 +1069,11 @@ function handle_garage_add($pdo) {
         $plaka   = isset($_POST['plaka']) && trim($_POST['plaka']) !== '' ? strtoupper(trim($_POST['plaka'])) : null;
         $sase_no = isset($_POST['sase_no']) && trim($_POST['sase_no']) !== '' ? strtoupper(trim($_POST['sase_no'])) : null;
 
-        // Opsiyonel kolonları kontrol et
-        $hasSpecCol = false; $hasPlakaCol = false; $hasSaseCol = false;
-        try {
-            $cc = $pdo->query("SHOW COLUMNS FROM garage");
-            $existingCols = $cc->fetchAll(PDO::FETCH_COLUMN);
-            $hasSpecCol = in_array('spec_id', $existingCols);
-            $hasPlakaCol = in_array('plaka', $existingCols);
-            $hasSaseCol = in_array('sase_no', $existingCols);
-        } catch (PDOException $e) {}
+        // Opsiyonel kolonlari kontrol et ve eksikleri ekle
+        $garageCols = ensure_garage_columns($pdo);
+        $hasSpecCol  = $garageCols['spec_id'];
+        $hasPlakaCol = $garageCols['plaka'];
+        $hasSaseCol  = $garageCols['sase_no'];
 
         $insertCols = ['user_id', 'brand_slug', 'brand_name', 'generation_slug', 'generation_name', 'year', 'nickname'];
         $insertVals = [$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null];
@@ -1364,6 +1377,20 @@ function clear_failed_logins(string $ip): void {
     $dir = sys_get_temp_dir() . '/parcabizden_failed_logins';
     $counterFile = $dir . '/' . md5('consecutive_' . $ip) . '.json';
     if (file_exists($counterFile)) @unlink($counterFile);
+}
+
+// ==================== Admin Helpers ====================
+
+/**
+ * Kullanicinin admin yetkisini kontrol eder; yetkisiz ise 403 donup cikis yapar.
+ */
+function requireAdmin($db, $userId): void {
+    $stmt = $db->prepare('SELECT is_admin FROM users WHERE id = :id');
+    $stmt->execute([':id' => $userId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$row || !$row['is_admin']) {
+        jsonResponse(['error' => 'Yetkisiz erisim'], 403);
+    }
 }
 
 // ==================== Admin Audit Log ====================

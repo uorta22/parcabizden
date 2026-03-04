@@ -5,15 +5,6 @@
  * Requires authenticated admin user ($userId + is_admin check).
  */
 
-function requireAdmin($db, $userId) {
-    $stmt = $db->prepare('SELECT is_admin FROM users WHERE id = :id');
-    $stmt->execute([':id' => $userId]);
-    $row = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$row || !$row['is_admin']) {
-        jsonResponse(['error' => 'Yetkisiz erisim'], 403);
-    }
-}
-
 function handleAdminProductAdd($db, $userId) {
     requireAdmin($db, $userId);
 
