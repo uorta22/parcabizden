@@ -31,7 +31,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy/
-          server-dir: ./api.parcabizden.com.tr/
+          server-dir: ../
           dangerous-clean-slate: false
           exclude: |
             **/.env
