@@ -1,0 +1,39 @@
+name: Deploy PHP to Natro
+
+on:
+  push:
+    branches:
+      - claude/auto-parts-request-site-OpsbX
+    paths:
+      - 'natro-index.php'
+      - 'php-backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: PHP dosyalarini hazirla
+        run: |
+          mkdir -p deploy
+          # natro-index.php → index.php olarak kopyala
+          cp natro-index.php deploy/index.php
+          # php-backend altindaki tum PHP dosyalarini duz dizine kopyala
+          cp php-backend/*.php deploy/
+
+      - name: FTP Deploy
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./deploy/
+          server-dir: ./api.parcabizden.com.tr/
+          dangerous-clean-slate: false
+          exclude: |
+            **/.env
+            **/error_log
+            **/*.txt
+            **/*.log
