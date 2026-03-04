@@ -41,7 +41,7 @@ if (!$DB_HOST || !$DB_NAME || !$DB_USER || !$DB_PASS) { http_response_code(500);
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_order_list', 'admin_order_update_status'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -55,6 +55,23 @@ try {
     echo json_encode(['error' => 'DB connection failed']);
     exit;
 }
+
+// Helper for php-backend modules
+function jsonResponse($data, $code = 200) {
+    http_response_code($code);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Include e-commerce & admin modules
+require_once __DIR__ . '/products.php';
+require_once __DIR__ . '/orders.php';
+require_once __DIR__ . '/addresses.php';
+require_once __DIR__ . '/favorites.php';
+require_once __DIR__ . '/profile.php';
+require_once __DIR__ . '/password.php';
+require_once __DIR__ . '/admin-products.php';
+require_once __DIR__ . '/admin-orders.php';
 
 $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
@@ -88,6 +105,80 @@ switch ($action) {
     case 'resend_verify':   handle_resend_verify($pdo); break;
     case 'forgot_password': handle_forgot_password($pdo); break;
     case 'reset_password':  handle_reset_password($pdo); break;
+
+    // ── E-Commerce: Products (no auth) ──
+    case 'product_list':    handleProductList($pdo); break;
+    case 'product_detail':  handleProductDetail($pdo); break;
+    case 'product_search':  handleProductSearch($pdo); break;
+
+    // ── E-Commerce: Profile (auth) ──
+    case 'profile_update':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleProfileUpdate($pdo, $uid); break;
+
+    // ── E-Commerce: Addresses (auth) ──
+    case 'address_list':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAddressList($pdo, $uid); break;
+    case 'address_add':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAddressAdd($pdo, $uid); break;
+    case 'address_update':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAddressUpdate($pdo, $uid); break;
+    case 'address_remove':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAddressRemove($pdo, $uid); break;
+
+    // ── E-Commerce: Orders (auth) ──
+    case 'order_list':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleOrderList($pdo, $uid); break;
+    case 'order_detail':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleOrderDetail($pdo, $uid); break;
+    case 'order_create':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleOrderCreate($pdo, $uid); break;
+
+    // ── E-Commerce: Favorites (auth) ──
+    case 'favorite_list':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleFavoriteList($pdo, $uid); break;
+    case 'favorite_add':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleFavoriteAdd($pdo, $uid); break;
+    case 'favorite_remove':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleFavoriteRemove($pdo, $uid); break;
+
+    // ── E-Commerce: Password & Account (auth) ──
+    case 'change_password':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleChangePassword($pdo, $uid); break;
+    case 'delete_account':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleDeleteAccount($pdo, $uid); break;
+
+    // ── Admin: Products (auth + admin) ──
+    case 'admin_product_add':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAdminProductAdd($pdo, $uid); break;
+    case 'admin_product_update':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAdminProductUpdate($pdo, $uid); break;
+    case 'admin_product_delete':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAdminProductDelete($pdo, $uid); break;
+
+    // ── Admin: Orders (auth + admin) ──
+    case 'admin_order_list':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAdminOrderList($pdo, $uid); break;
+    case 'admin_order_update_status':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        handleAdminOrderUpdateStatus($pdo, $uid); break;
+
     default: echo json_encode(['error' => 'Invalid action']);
 }
 
@@ -1243,7 +1334,7 @@ function handle_login($pdo) {
 
         if (!$email || !$password) { http_response_code(400); echo json_encode(['error' => 'E-posta ve sifre gerekli']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified FROM users WHERE email = ?');
+        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified, is_admin FROM users WHERE email = ?');
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -1258,7 +1349,7 @@ function handle_login($pdo) {
         echo json_encode([
             'message' => 'Giris basarili',
             'token' => $token,
-            'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]
+            'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone'], 'is_admin' => (bool)($user['is_admin'] ?? false)]
         ]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -1272,12 +1363,25 @@ function handle_profile($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, email, name, phone FROM users WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no, is_admin FROM users WHERE id = ?');
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) { http_response_code(404); echo json_encode(['error' => 'Kullanici bulunamadi']); return; }
 
-        echo json_encode(['user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone']]]);
+        echo json_encode(['user' => [
+            'id' => (int)$user['id'],
+            'email' => $user['email'],
+            'name' => $user['name'],
+            'phone' => $user['phone'],
+            'gsm' => $user['gsm'] ?? null,
+            'address_line1' => $user['address_line1'] ?? null,
+            'address_line2' => $user['address_line2'] ?? null,
+            'city' => $user['city'] ?? null,
+            'district' => $user['district'] ?? null,
+            'postal_code' => $user['postal_code'] ?? null,
+            'tc_no' => $user['tc_no'] ?? null,
+            'is_admin' => (bool)($user['is_admin'] ?? false),
+        ]]);
     } catch (Exception $e) {
         http_response_code(500);
         error_log('Profil hatasi: ' . $e->getMessage());
