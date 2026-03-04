@@ -5,10 +5,8 @@ import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import { ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle, Car, Wrench, Info, CheckCircle2 } from 'lucide-react'
 import { searchOemParts } from '@/lib/api'
-import type { OemSearchResult } from '@/lib/api'
+import type { OemSearchResult, ProductEnrichment } from '@/lib/api'
 import { getWhatsAppUrl } from '@/lib/config'
-import { getProductByOem } from '@/lib/products'
-import type { ShopProduct } from '@/types/shop'
 import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon } from '@/components/CategoryIcons'
 import { findPartSpec } from '@/data/part-descriptions'
@@ -77,25 +75,23 @@ function PartDetailContent() {
   const [error, setError] = useState('')
   const [allResults, setAllResults] = useState<OemSearchResult[]>([])
   const [partName, setPartName] = useState('')
-  const [shopProduct, setShopProduct] = useState<ShopProduct | null>(null)
+  const [productInfo, setProductInfo] = useState<ProductEnrichment | null>(null)
 
-  // searchOemParts ile tüm uyumlu araçları getir + shop product check
+  // searchOemParts ile tüm uyumlu araçları getir (backend product enrichment dahil)
   useEffect(() => {
     setLoading(true)
     setError('')
-    Promise.all([
-      searchOemParts(oem).catch(() => ({ results: [] })),
-      getProductByOem(oem).catch(() => null),
-    ])
-      .then(([data, product]) => {
+    searchOemParts(oem)
+      .then(data => {
         const results = data.results || []
         setAllResults(results)
-        setShopProduct(product)
         const match = results.find(r => r.oem_number === oem)
         if (match) {
           setPartName(match.name)
+          if (match.product) setProductInfo(match.product)
         } else if (results.length > 0) {
           setPartName(results[0].name)
+          if (results[0].product) setProductInfo(results[0].product)
         }
       })
       .catch(e => setError(e instanceof Error ? e.message : 'Veri yüklenirken hata oluştu'))
@@ -218,37 +214,54 @@ function PartDetailContent() {
                     )}
                   </div>
 
-                  {/* WhatsApp CTA */}
-                  <a
-                    href={getWhatsAppUrl(whatsappMessage)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors flex-shrink-0 shadow-sm"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    WhatsApp ile Fiyat Al
-                  </a>
+                  {/* Fiyat / CTA */}
+                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                    {productInfo && (productInfo.price || productInfo.discount_price) ? (
+                      <>
+                        <div className="text-right">
+                          {productInfo.discount_price ? (
+                            <>
+                              <span className="text-sm text-gray-400 line-through mr-2">{productInfo.price?.toLocaleString('tr-TR')} TL</span>
+                              <span className="text-2xl font-bold text-primary-600">{productInfo.discount_price.toLocaleString('tr-TR')} TL</span>
+                            </>
+                          ) : (
+                            <span className="text-2xl font-bold text-primary-600">{productInfo.price?.toLocaleString('tr-TR')} TL</span>
+                          )}
+                        </div>
+                        <Link
+                          href={`/urun/${productInfo.slug}`}
+                          className="flex items-center justify-center gap-2 px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-colors shadow-sm"
+                        >
+                          <Package className="w-5 h-5" />
+                          Ürünü İncele
+                        </Link>
+                      </>
+                    ) : (
+                      <a
+                        href={getWhatsAppUrl(whatsappMessage)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        WhatsApp ile Fiyat Al
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* ── E-Magaza Baglantisi ── */}
-            {shopProduct && (
-              <Link
-                href={`/urun/${shopProduct.slug}`}
-                className="block bg-gradient-to-r from-primary-50 to-primary-100/50 border border-primary-200 rounded-2xl p-5 hover:border-primary-400 transition-all group"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-primary-500/30 transition-colors">
-                    <Package className="w-6 h-6 text-primary-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-primary-700 font-semibold text-sm mb-0.5">Bu ürün e-mağazamızda mevcut!</p>
-                    <p className="text-primary-600/70 text-xs">{shopProduct.name}{shopProduct.price ? ` — ${shopProduct.discount_price || shopProduct.price} TL` : ''}</p>
-                  </div>
-                  <ChevronRight className="w-5 h-5 text-primary-400 group-hover:text-primary-600 flex-shrink-0 transition-colors" />
-                </div>
-              </Link>
+            {/* ── E-Mağaza Bağlantısı (thumbnail varsa göster) ── */}
+            {productInfo?.thumbnail && (
+              <div className="flex justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={productInfo.thumbnail}
+                  alt={displayPartName}
+                  className="max-h-48 rounded-xl border border-gray-200 object-contain"
+                />
+              </div>
             )}
 
             {/* ── Uyumlu Markalar ── */}

@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import CartIcon from '@/components/CartIcon'
-import BrandNavBar from '@/components/BrandNavBar'
 import CategoryDropdown from '@/components/CategoryDropdown'
 
 export default function Header() {
@@ -91,16 +90,18 @@ export default function Header() {
                 Ürünler
               </Link>
 
-              {/* AI Assistant */}
-              <Link
-                href="/ai-asistan"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive('/ai-asistan') ? 'text-purple-700 bg-purple-50' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50/50'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                AI Asistan
-              </Link>
+              {/* AI Assistant — sadece giriş yapmış kullanıcılara */}
+              {user && (
+                <Link
+                  href="/ai-asistan"
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                    isActive('/ai-asistan') ? 'text-purple-700 bg-purple-50' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50/50'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  AI Asistan
+                </Link>
+              )}
 
               {/* Cart */}
               <CartIcon />
@@ -235,7 +236,7 @@ export default function Header() {
               {[
                 { href: '/urunler', label: 'Ürünler', icon: ShoppingBag },
                 { href: '/parcalar', label: 'Parçalar', icon: Package },
-                { href: '/ai-asistan', label: 'AI Asistan', icon: Sparkles },
+                ...(user ? [{ href: '/ai-asistan', label: 'AI Asistan', icon: Sparkles }] : []),
                 { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/iletisim', label: 'İletişim' },
               ].map(link => (
@@ -302,7 +303,6 @@ export default function Header() {
           </div>
         </div>
       </header>
-      <BrandNavBar />
     </>
   )
 }

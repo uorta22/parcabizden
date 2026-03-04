@@ -46,7 +46,7 @@ if (!$DB_HOST || !$DB_NAME || !$DB_USER || !$DB_PASS) { http_response_code(500);
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_order_list', 'admin_order_update_status'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_order_list', 'admin_order_update_status', 'admin_enrich_part'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -189,6 +189,12 @@ switch ($action) {
         if (!check_rate_limit('admin_order_update', 30, 15)) break;
         handleAdminOrderUpdateStatus($pdo, $uid); break;
 
+    // ── Admin: Parça Zenginleştir (auth + admin + rate limit) ──
+    case 'admin_enrich_part':
+        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        if (!check_rate_limit('admin_product_write', 30, 15)) break;
+        handleAdminEnrichPart($pdo, $uid); break;
+
     default: echo json_encode(['error' => 'Invalid action']);
 }
 
@@ -285,7 +291,7 @@ function get_parts($pdo) {
     $stmt->execute([':gen' => $gen, ':brand' => $brand, ':node' => $node]);
     $total = intval($stmt->fetchColumn());
 
-    $stmt2 = $pdo->prepare("SELECT oem_number, MAX(name) as name, GROUP_CONCAT(DISTINCT quantity SEPARATOR ', ') as quantity, GROUP_CONCAT(DISTINCT info SEPARATOR ' | ') as info FROM parts WHERE generation_slug = :gen AND brand_slug = :brand AND node_name_en = :node GROUP BY oem_number ORDER BY oem_number LIMIT :lim OFFSET :off");
+    $stmt2 = $pdo->prepare("SELECT p.oem_number, MAX(p.name) as name, GROUP_CONCAT(DISTINCT p.quantity SEPARATOR ', ') as quantity, GROUP_CONCAT(DISTINCT p.info SEPARATOR ' | ') as info, MAX(pr.id) as product_id, MAX(pr.slug) as product_slug, MAX(pr.price) as product_price, MAX(pr.discount_price) as product_discount_price, MAX(pr.thumbnail) as product_thumbnail, MAX(pr.in_stock) as product_in_stock FROM parts p LEFT JOIN products pr ON pr.oem_number = p.oem_number WHERE p.generation_slug = :gen AND p.brand_slug = :brand AND p.node_name_en = :node GROUP BY p.oem_number ORDER BY p.oem_number LIMIT :lim OFFSET :off");
     $stmt2->bindValue(':gen', $gen, PDO::PARAM_STR);
     $stmt2->bindValue(':brand', $brand, PDO::PARAM_STR);
     $stmt2->bindValue(':node', $node, PDO::PARAM_STR);
@@ -299,7 +305,18 @@ function get_parts($pdo) {
         $info = clean_text($r['info']);
         $info = preg_replace('/\|\s*\|/', '|', $info);
         $info = trim($info, ' |');
-        $parts[] = ['oem_number' => $r['oem_number'], 'name' => clean_text($r['name']), 'quantity' => clean_text($r['quantity']), 'info' => $info];
+        $part = ['oem_number' => $r['oem_number'], 'name' => clean_text($r['name']), 'quantity' => clean_text($r['quantity']), 'info' => $info];
+        if ($r['product_id']) {
+            $part['product'] = [
+                'id' => (int)$r['product_id'],
+                'slug' => $r['product_slug'],
+                'price' => $r['product_price'] !== null ? (float)$r['product_price'] : null,
+                'discount_price' => $r['product_discount_price'] !== null ? (float)$r['product_discount_price'] : null,
+                'thumbnail' => $r['product_thumbnail'],
+                'in_stock' => (bool)$r['product_in_stock'],
+            ];
+        }
+        $parts[] = $part;
     }
     echo json_encode(['parts' => $parts, 'total' => $total, 'page' => $page, 'pages' => ($total > 0) ? intval(ceil($total / $limit)) : 0]);
 }
@@ -308,16 +325,29 @@ function search_oem($pdo) {
     $q = isset($_GET['q']) ? trim($_GET['q']) : '';
     if (strlen($q) < 3) { echo json_encode(['error' => 'Min 3 karakter', 'results' => []]); return; }
 
-    $stmt = $pdo->prepare("SELECT oem_number, MAX(name) as name, brand_slug, generation_slug, GROUP_CONCAT(DISTINCT node_name_en SEPARATOR ', ') as node_name_en FROM parts WHERE oem_number = :q GROUP BY oem_number, brand_slug, generation_slug LIMIT 50");
+    $stmt = $pdo->prepare("SELECT p.oem_number, MAX(p.name) as name, p.brand_slug, p.generation_slug, GROUP_CONCAT(DISTINCT p.node_name_en SEPARATOR ', ') as node_name_en, MAX(pr.id) as product_id, MAX(pr.slug) as product_slug, MAX(pr.price) as product_price, MAX(pr.discount_price) as product_discount_price, MAX(pr.thumbnail) as product_thumbnail, MAX(pr.in_stock) as product_in_stock FROM parts p LEFT JOIN products pr ON pr.oem_number = p.oem_number WHERE p.oem_number = :q GROUP BY p.oem_number, p.brand_slug, p.generation_slug LIMIT 50");
     $stmt->execute([':q' => $q]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (empty($results)) {
-        $stmt2 = $pdo->prepare("SELECT oem_number, MAX(name) as name, brand_slug, generation_slug, GROUP_CONCAT(DISTINCT node_name_en SEPARATOR ', ') as node_name_en FROM parts WHERE oem_number LIKE :q GROUP BY oem_number, brand_slug, generation_slug LIMIT 50");
+        $stmt2 = $pdo->prepare("SELECT p.oem_number, MAX(p.name) as name, p.brand_slug, p.generation_slug, GROUP_CONCAT(DISTINCT p.node_name_en SEPARATOR ', ') as node_name_en, MAX(pr.id) as product_id, MAX(pr.slug) as product_slug, MAX(pr.price) as product_price, MAX(pr.discount_price) as product_discount_price, MAX(pr.thumbnail) as product_thumbnail, MAX(pr.in_stock) as product_in_stock FROM parts p LEFT JOIN products pr ON pr.oem_number = p.oem_number WHERE p.oem_number LIKE :q GROUP BY p.oem_number, p.brand_slug, p.generation_slug LIMIT 50");
         $stmt2->execute([':q' => $q . '%']);
         $results = $stmt2->fetchAll(PDO::FETCH_ASSOC);
     }
-    foreach ($results as &$r) { $r['name'] = clean_text($r['name']); }
+    foreach ($results as &$r) {
+        $r['name'] = clean_text($r['name']);
+        if ($r['product_id']) {
+            $r['product'] = [
+                'id' => (int)$r['product_id'],
+                'slug' => $r['product_slug'],
+                'price' => $r['product_price'] !== null ? (float)$r['product_price'] : null,
+                'discount_price' => $r['product_discount_price'] !== null ? (float)$r['product_discount_price'] : null,
+                'thumbnail' => $r['product_thumbnail'],
+                'in_stock' => (bool)$r['product_in_stock'],
+            ];
+        }
+        unset($r['product_id'], $r['product_slug'], $r['product_price'], $r['product_discount_price'], $r['product_thumbnail'], $r['product_in_stock']);
+    }
     echo json_encode(['results' => $results, 'query' => $q]);
 }
 

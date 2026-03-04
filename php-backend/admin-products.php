@@ -148,6 +148,97 @@ function handleAdminProductUpdate($db, $userId) {
     jsonResponse(['product' => formatProduct($row)]);
 }
 
+function handleAdminEnrichPart($db, $userId) {
+    requireAdmin($db, $userId);
+
+    $oemNumber = trim($_POST['oem_number'] ?? '');
+    if (!$oemNumber) {
+        jsonResponse(['error' => 'oem_number zorunlu'], 400);
+    }
+
+    // parts tablosunda kontrol et
+    $stmt = $db->prepare('SELECT oem_number, MAX(name) as name FROM parts WHERE oem_number = :oem GROUP BY oem_number');
+    $stmt->execute([':oem' => $oemNumber]);
+    $partRow = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$partRow) {
+        jsonResponse(['error' => 'Bu OEM numarası parts tablosunda bulunamadı'], 404);
+    }
+
+    $price = trim($_POST['price'] ?? '');
+    $discountPrice = trim($_POST['discount_price'] ?? '');
+    $category = trim($_POST['category'] ?? 'other');
+    $thumbnail = trim($_POST['thumbnail'] ?? '') ?: null;
+
+    // products tablosunda bu OEM var mı?
+    $stmt = $db->prepare('SELECT id FROM products WHERE oem_number = :oem');
+    $stmt->execute([':oem' => $oemNumber]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($existing) {
+        // UPDATE
+        $fields = [];
+        $params = [':id' => (int)$existing['id']];
+
+        if ($price !== '') { $fields[] = 'price = :price'; $params[':price'] = (float)$price; }
+        if ($discountPrice !== '') { $fields[] = 'discount_price = :dprice'; $params[':dprice'] = (float)$discountPrice; }
+        if ($thumbnail) { $fields[] = 'thumbnail = :thumb'; $params[':thumb'] = $thumbnail; }
+        if (isset($_POST['category'])) { $fields[] = 'category = :cat'; $params[':cat'] = $category; }
+        if (isset($_POST['in_stock'])) { $fields[] = 'in_stock = :stock'; $params[':stock'] = $_POST['in_stock'] === '1' ? 1 : 0; }
+
+        if (count($fields) > 0) {
+            $sql = 'UPDATE products SET ' . implode(', ', $fields) . ' WHERE id = :id';
+            $db->prepare($sql)->execute($params);
+        }
+
+        admin_audit_log($db, $userId, 'enrich_part_update', (int)$existing['id'], json_encode(['oem' => $oemNumber]));
+
+        $stmt = $db->prepare('SELECT * FROM products WHERE id = :id');
+        $stmt->execute([':id' => (int)$existing['id']]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        jsonResponse(['product' => formatProduct($row), 'action' => 'updated']);
+    }
+
+    // INSERT — otomatik slug ve name
+    $name = trim($_POST['name'] ?? '') ?: $partRow['name'];
+    $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $oemNumber));
+    $slug = trim($slug, '-');
+
+    // Slug çakışması kontrolü
+    $baseSlug = $slug;
+    $counter = 0;
+    while (true) {
+        $checkSlug = $counter > 0 ? "{$baseSlug}-{$counter}" : $baseSlug;
+        $stmt = $db->prepare('SELECT id FROM products WHERE slug = :slug');
+        $stmt->execute([':slug' => $checkSlug]);
+        if (!$stmt->fetch()) { $slug = $checkSlug; break; }
+        $counter++;
+    }
+
+    $stmt = $db->prepare('INSERT INTO products (name, slug, oem_number, category, price, discount_price, thumbnail, in_stock, images, specs, compatible_vehicles, tags) VALUES (:name, :slug, :oem, :cat, :price, :dprice, :thumb, :stock, :images, :specs, :vehicles, :tags)');
+    $stmt->execute([
+        ':name' => $name,
+        ':slug' => $slug,
+        ':oem' => $oemNumber,
+        ':cat' => $category,
+        ':price' => $price !== '' ? (float)$price : null,
+        ':dprice' => $discountPrice !== '' ? (float)$discountPrice : null,
+        ':thumb' => $thumbnail,
+        ':stock' => ($_POST['in_stock'] ?? '1') === '1' ? 1 : 0,
+        ':images' => '[]',
+        ':specs' => '{}',
+        ':vehicles' => '[]',
+        ':tags' => '[]',
+    ]);
+
+    $productId = (int)$db->lastInsertId();
+    admin_audit_log($db, $userId, 'enrich_part_add', $productId, json_encode(['oem' => $oemNumber, 'name' => $name]));
+
+    $stmt = $db->prepare('SELECT * FROM products WHERE id = :id');
+    $stmt->execute([':id' => $productId]);
+    $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    jsonResponse(['product' => formatProduct($row), 'action' => 'created']);
+}
+
 function handleAdminProductDelete($db, $userId) {
     requireAdmin($db, $userId);
 

@@ -2,7 +2,8 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Sparkles, Package, ChevronRight, MessageCircle, Loader2, Clock, ArrowRight, Trash2, Car } from 'lucide-react'
+import { Search, Sparkles, Package, ChevronRight, MessageCircle, Loader2, Clock, ArrowRight, Trash2, Car, LogIn } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 import { fetchGenerations, fetchVehicleNodes, fetchVehicleParts } from '@/lib/api'
 import type { VehiclePart, VehicleNode } from '@/lib/api'
 import { parseSmartQuery, getTargetCategories, POPULAR_SEARCHES } from '@/lib/smart-search'
@@ -64,6 +65,7 @@ function nodeMatchesParts(node: VehicleNode, parts: string[], rawTerms: string[]
 }
 
 export default function AiAsistanPage() {
+  const { user, isLoading: authLoading } = useAuth()
   const [query, setQuery] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const [results, setResults] = useState<SmartResult[]>([])
@@ -220,6 +222,42 @@ export default function AiAsistanPage() {
     saveHistory([])
     setHistory([])
   }, [])
+
+  // Auth guard — giriş yapmamış kullanıcılara uyarı göster
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full bg-white border border-gray-200 rounded-2xl shadow-sm p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-purple-50 flex items-center justify-center mx-auto mb-5">
+            <Sparkles className="w-8 h-8 text-purple-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">AI Asistan</h1>
+          <p className="text-gray-500 text-sm mb-6">
+            AI Asistan&apos;ı kullanabilmek için giriş yapmanız gerekmektedir.
+          </p>
+          <Link
+            href="/giris"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors"
+          >
+            <LogIn className="w-5 h-5" />
+            Giriş Yap
+          </Link>
+          <p className="mt-4 text-xs text-gray-400">
+            Hesabınız yok mu?{' '}
+            <Link href="/kayit" className="text-purple-600 hover:text-purple-700 font-medium">Kayıt Ol</Link>
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

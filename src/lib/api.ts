@@ -247,12 +247,22 @@ export interface VehicleNode {
   part_count: number
 }
 
+export interface ProductEnrichment {
+  id: number
+  slug: string
+  price: number | null
+  discount_price: number | null
+  thumbnail: string | null
+  in_stock: boolean
+}
+
 export interface VehiclePart {
   oem_number: string
   name: string
   brand_slug?: string
   generation_slug?: string
   node_name_en?: string
+  product?: ProductEnrichment
 }
 
 export interface OemSearchResult {
@@ -261,6 +271,7 @@ export interface OemSearchResult {
   brand_slug: string
   generation_slug: string
   node_name_en: string
+  product?: ProductEnrichment
 }
 
 async function actionFetch<T>(params: Record<string, string>): Promise<T> {
@@ -558,4 +569,23 @@ export async function adminOrderList(page?: number, status?: string): Promise<{ 
 
 export async function adminOrderUpdateStatus(id: number, status: string): Promise<{ success: boolean }> {
   return actionPost<{ success: boolean }>({ action: 'admin_order_update_status', id: String(id), status })
+}
+
+export async function adminEnrichPart(data: {
+  oem_number: string
+  price?: string
+  discount_price?: string
+  category?: string
+  thumbnail?: string
+  name?: string
+  in_stock?: string
+}): Promise<{ product: ShopProduct; action: 'created' | 'updated' }> {
+  const params: Record<string, string> = { action: 'admin_enrich_part', oem_number: data.oem_number }
+  if (data.price !== undefined) params.price = data.price
+  if (data.discount_price !== undefined) params.discount_price = data.discount_price
+  if (data.category !== undefined) params.category = data.category
+  if (data.thumbnail !== undefined) params.thumbnail = data.thumbnail
+  if (data.name !== undefined) params.name = data.name
+  if (data.in_stock !== undefined) params.in_stock = data.in_stock
+  return actionPost<{ product: ShopProduct; action: 'created' | 'updated' }>(params)
 }

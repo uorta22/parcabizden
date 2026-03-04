@@ -3,12 +3,13 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Menu, X } from 'lucide-react'
+import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Menu, X, Sparkles } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/urunler', label: 'Ürünler', icon: Package },
+  { href: '/admin/urunler/zenginlestir', label: 'Zenginleştir', icon: Sparkles },
   { href: '/admin/siparisler', label: 'Siparişler', icon: ShoppingCart },
 ]
 
