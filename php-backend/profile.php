@@ -52,7 +52,7 @@ function handleProfileUpdate($db, $userId) {
  * Replace or extend the existing "profile" action handler.
  */
 function handleProfileGet($db, $userId) {
-    $stmt = $db->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no FROM users WHERE id = :id');
+    $stmt = $db->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no, is_admin FROM users WHERE id = :id');
     $stmt->execute([':id' => $userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -73,6 +73,7 @@ function handleProfileGet($db, $userId) {
             'district' => $user['district'],
             'postal_code' => $user['postal_code'],
             'tc_no' => $user['tc_no'],
+            'is_admin' => (bool)($user['is_admin'] ?? false),
         ],
     ]);
 }

@@ -534,3 +534,28 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export async function deleteAccount(password: string): Promise<{ success: boolean }> {
   return actionPost<{ success: boolean }>({ action: 'delete_account', password })
 }
+
+// ==================== Admin ====================
+
+export async function adminProductAdd(data: Record<string, string>): Promise<{ product: ShopProduct }> {
+  return actionPost<{ product: ShopProduct }>({ action: 'admin_product_add', ...data })
+}
+
+export async function adminProductUpdate(id: number, data: Record<string, string>): Promise<{ product: ShopProduct }> {
+  return actionPost<{ product: ShopProduct }>({ action: 'admin_product_update', id: String(id), ...data })
+}
+
+export async function adminProductDelete(id: number): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'admin_product_delete', id: String(id) })
+}
+
+export async function adminOrderList(page?: number, status?: string): Promise<{ orders: Order[]; total: number }> {
+  const params: Record<string, string> = { action: 'admin_order_list' }
+  if (page) params.page = String(page)
+  if (status) params.status = status
+  return actionPost<{ orders: Order[]; total: number }>(params)
+}
+
+export async function adminOrderUpdateStatus(id: number, status: string): Promise<{ success: boolean }> {
+  return actionPost<{ success: boolean }>({ action: 'admin_order_update_status', id: String(id), status })
+}
