@@ -2,11 +2,11 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2 } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, fetchAutodataBrands, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import type { AutodataGeneration, SlugMatch, VehicleSpecRow } from '@/types/api'
 import { findAutodataGenerationImage } from '@/lib/vehicleImage'
@@ -51,22 +51,58 @@ function OemBadge({ oem }: { oem: string }) {
   )
 }
 
-// ── Static view (no vehicle selected) — redirect to homepage ──
+// ── Static view (no vehicle selected) — marka seçimi göster ──
 function StaticCategoriesView() {
+  const router = useRouter()
+  const [brands, setBrands] = useState<{ name: string; slug: string }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchAutodataBrands()
+      .then(data => setBrands(data.brands || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  const getBrandLogo = (name: string): string => {
+    const map: Record<string, string> = {
+      'Mercedes-Benz': 'mercedes-benz.png', 'Alfa Romeo': 'alfa-romeo.png',
+      'Land Rover': 'land-rover.png', 'Aston Martin': 'aston-martin.png',
+      'Rolls-Royce': 'rolls-royce.png',
+    }
+    return `/brands/${map[name] || name.toLowerCase().replace(/\s+/g, '-') + '.png'}`
+  }
+
+  const handleBrandClick = (slug: string, name: string) => {
+    router.push(`/parcalar?brand=${slug}&marka=${encodeURIComponent(name)}`)
+  }
+
   return (
-    <div className="max-w-lg mx-auto text-center py-16">
-      <div className="w-20 h-20 rounded-2xl bg-primary-50 flex items-center justify-center mx-auto mb-6">
-        <Car className="w-10 h-10 text-primary-500" />
+    <div>
+      <div className="text-center mb-10">
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Marka Seçin</h2>
+        <p className="text-gray-500">Aracınızın markasını seçerek parça kataloğuna ulaşın</p>
       </div>
-      <h2 className="text-2xl font-bold text-gray-900 mb-3">Parça aramak için araç seçin</h2>
-      <p className="text-gray-500 mb-8">Ana sayfadan aracınızı seçerek parça kataloğuna ulaşabilirsiniz.</p>
-      <Link
-        href="/"
-        className="inline-flex items-center gap-2 px-8 py-4 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-xl transition-all text-lg"
-      >
-        <Car className="w-5 h-5" />
-        Ana Sayfaya Git
-      </Link>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+          {brands.map(b => (
+            <button
+              key={b.slug}
+              onClick={() => handleBrandClick(b.slug, b.name)}
+              className="group flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={getBrandLogo(b.name)} alt={b.name} className="w-12 h-12 object-contain" loading="lazy" />
+              <span className="text-xs text-gray-700 font-medium text-center group-hover:text-primary-600 transition-colors">{b.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

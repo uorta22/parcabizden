@@ -356,7 +356,7 @@ export default function BrandBar() {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={getBrandLogo(name)} alt={name} className="w-8 h-8 object-contain flex-shrink-0" loading="lazy" />
+                      <img src={getBrandLogo(name)} alt={name} className="w-10 h-10 object-contain flex-shrink-0" loading="lazy" />
                       <span className="text-sm text-gray-700 font-medium truncate">{name}</span>
                     </button>
                   )

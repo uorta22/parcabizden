@@ -13,7 +13,6 @@ import {
   IconSteeringWheel,
 } from '@tabler/icons-react'
 import HeroSection from '@/components/HeroSection'
-import BrandModelSelector from '@/components/BrandModelSelector'
 
 import { siteConfig, getWhatsAppUrl, getPhoneUrl } from '@/lib/config'
 
@@ -59,20 +58,7 @@ export default function Home() {
       {/* Hero - VIN/OEM Search + CTAs */}
       <HeroSection />
 
-      {/* Brand / Model Selector */}
-      <section className="py-16 md:py-24 bg-white">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Marka ve Model <span className="text-primary-500">Seçin</span>
-            </h2>
-            <p className="text-gray-500 max-w-2xl mx-auto">
-              Aracınızın markasını seçin, modele özel uyumlu parçaları görüntüleyin.
-            </p>
-          </div>
-          <BrandModelSelector />
-        </div>
-      </section>
+      {/* Spacer — VIN arama zaten HeroSection'da */}
 
       {/* Categories */}
       <section className="py-16 md:py-24 bg-gray-50">
