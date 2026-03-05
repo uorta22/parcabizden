@@ -71,17 +71,23 @@ export default function BrandBar() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
+  // Race condition önleme: aktif istek ID'si
+  const requestIdRef = useRef(0)
+
   // Marka seçildiğinde modelleri ve nesilleri çek
   const selectBrand = useCallback(async (slug: string, name: string) => {
-    if (activeBrand === slug) { setActiveBrand(null); return }
     setActiveBrand(slug)
     setActiveBrandName(name)
     setGenCards([])
     setGenLoading(true)
     setShowMore(false)
 
+    const myRequestId = ++requestIdRef.current
+
     try {
       const { models } = await fetchAutodataModels(slug)
+      // Eski istek mi kontrol et
+      if (requestIdRef.current !== myRequestId) return
 
       // Tüm modellerin nesillerini paralel çek
       const genResults = await Promise.all(
@@ -91,6 +97,7 @@ export default function BrandBar() {
             .catch(() => ({ model: m.name, gens: [] as AutodataGeneration[] }))
         )
       )
+      if (requestIdRef.current !== myRequestId) return
 
       // Düzleştir ve kart oluştur
       const cards: GenCard[] = []
@@ -112,6 +119,7 @@ export default function BrandBar() {
       // Görselleri progresif yükle (10'arlık batch'ler)
       const BATCH = 10
       for (let start = 0; start < cards.length; start += BATCH) {
+        if (requestIdRef.current !== myRequestId) return
         const batch = cards.slice(start, start + BATCH)
         const imageResults = await Promise.all(
           batch.map((card, i) =>
@@ -120,6 +128,7 @@ export default function BrandBar() {
               .catch(() => ({ index: start + i, img: null }))
           )
         )
+        if (requestIdRef.current !== myRequestId) return
         setGenCards(prev => {
           const next = [...prev]
           for (const { index, img } of imageResults) {
@@ -131,9 +140,9 @@ export default function BrandBar() {
         })
       }
     } catch {
-      setGenLoading(false)
+      if (requestIdRef.current === myRequestId) setGenLoading(false)
     }
-  }, [activeBrand])
+  }, [])
 
   // Nesil tıklandığında parcalar sayfasına yönlendir
   const handleGenClick = (slug: string, brandName: string, modelName: string, genName: string, yearStart: number | null) => {
