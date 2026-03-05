@@ -163,7 +163,7 @@ export default function BrandBar() {
   if (!fetched) return <div className="h-9" /> // placeholder
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative" onMouseLeave={() => { setActiveBrand(null); setShowMore(false) }}>
       {/* ── Yatay Marka Tabları ── */}
       <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {popularBrands.map(b => {
@@ -172,7 +172,8 @@ export default function BrandBar() {
           return (
             <button
               key={b.slug}
-              onClick={() => selectBrand(b.slug, name)}
+              onMouseEnter={() => selectBrand(b.slug, name)}
+              onClick={() => handleBrandOnlyClick(b.slug, name)}
               className={`flex-shrink-0 px-3 py-1.5 text-xs font-bold tracking-wide rounded-md transition-all whitespace-nowrap ${
                 isActive
                   ? 'bg-gray-900 text-white'
@@ -187,7 +188,7 @@ export default function BrandBar() {
         {/* Üç nokta — diğer markalar */}
         {otherBrands.length > 0 && (
           <button
-            onClick={() => { setShowMore(!showMore); setActiveBrand(null) }}
+            onMouseEnter={() => { setShowMore(true); setActiveBrand(null) }}
             className={`flex-shrink-0 px-2.5 py-1.5 rounded-md transition-all ${
               showMore ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'
             }`}
