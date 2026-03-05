@@ -258,3 +258,17 @@ function handleAdminProductDelete($db, $userId) {
 
     jsonResponse(['success' => true]);
 }
+
+function handleAdminSetDefaultThumbnails($db, $userId) {
+    requireAdmin($db, $userId);
+
+    $defaultUrl = 'https://parcabizden.com.tr/default-part.jpg';
+
+    $stmt = $db->prepare("UPDATE products SET thumbnail = :url WHERE thumbnail IS NULL OR thumbnail = ''");
+    $stmt->execute([':url' => $defaultUrl]);
+    $affected = $stmt->rowCount();
+
+    admin_audit_log($db, $userId, 'set_default_thumbnails', 0, json_encode(['affected' => $affected]));
+
+    jsonResponse(['success' => true, 'updated' => $affected]);
+}
