@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import CartIcon from '@/components/CartIcon'
-import CategoryDropdown from '@/components/CategoryDropdown'
+import BrandBar from '@/components/BrandBar'
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -187,26 +187,9 @@ export default function Header() {
             </div>
           </div>
 
-          {/* ═══ Desktop Sub-bar: Categories + Brand Nav ═══ */}
-          <div className="hidden lg:flex items-center gap-3 pb-2">
-            <CategoryDropdown />
-            <div className="h-5 w-px bg-gray-200" />
-            <nav className="flex items-center gap-1">
-              {[
-                { href: '/hakkimizda', label: 'Hakkımızda' },
-                { href: '/iletisim', label: 'İletişim' },
-              ].map(link => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
-                    isActive(link.href) ? 'text-primary-600 bg-primary-50' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+          {/* ═══ Desktop Sub-bar: Brand Navigation ═══ */}
+          <div className="hidden lg:block pb-2">
+            <BrandBar />
           </div>
         </div>
 
