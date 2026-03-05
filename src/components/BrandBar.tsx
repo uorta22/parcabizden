@@ -51,6 +51,8 @@ export default function BrandBar() {
   const [genLoading, setGenLoading] = useState(false)
   const [showMore, setShowMore] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
+  // Marka verisi önbelleği — tekrar hover'da yeniden çekme
+  const brandCacheRef = useRef<Record<string, GenCard[]>>({})
 
   // Marka listesini çek
   useEffect(() => {
@@ -74,30 +76,59 @@ export default function BrandBar() {
   // Race condition önleme: aktif istek ID'si
   const requestIdRef = useRef(0)
 
+  // Nesilleri sıralı batch'ler halinde çek (browser bağlantı limitini aşmamak için)
+  async function fetchGenerationsInBatches(
+    slug: string,
+    modelNames: string[],
+    concurrency: number,
+    myRequestId: number,
+  ) {
+    const results: { model: string; gens: AutodataGeneration[] }[] = []
+    for (let i = 0; i < modelNames.length; i += concurrency) {
+      if (requestIdRef.current !== myRequestId) return null
+      const batch = modelNames.slice(i, i + concurrency)
+      const batchResults = await Promise.all(
+        batch.map(name =>
+          fetchAutodataGenerations(slug, name)
+            .then(d => ({ model: name, gens: d.generations || [] }))
+            .catch(() => ({ model: name, gens: [] as AutodataGeneration[] }))
+        )
+      )
+      results.push(...batchResults)
+    }
+    return results
+  }
+
   // Marka seçildiğinde modelleri ve nesilleri çek
   const selectBrand = useCallback(async (slug: string, name: string) => {
+    // Zaten bu marka aktifse tekrar çekme
+    if (activeBrand === slug) return
+
     setActiveBrand(slug)
     setActiveBrandName(name)
+    setShowMore(false)
+
+    // Önbellekte varsa direkt göster
+    if (brandCacheRef.current[slug]) {
+      setGenCards(brandCacheRef.current[slug])
+      setGenLoading(false)
+      return
+    }
+
     setGenCards([])
     setGenLoading(true)
-    setShowMore(false)
 
     const myRequestId = ++requestIdRef.current
 
     try {
       const { models } = await fetchAutodataModels(slug)
-      // Eski istek mi kontrol et
       if (requestIdRef.current !== myRequestId) return
 
-      // Tüm modellerin nesillerini paralel çek
-      const genResults = await Promise.all(
-        models.map(m =>
-          fetchAutodataGenerations(slug, m.name)
-            .then(d => ({ model: m.name, gens: d.generations || [] }))
-            .catch(() => ({ model: m.name, gens: [] as AutodataGeneration[] }))
-        )
+      // Nesilleri 5'erli batch'ler halinde çek
+      const genResults = await fetchGenerationsInBatches(
+        slug, models.map(m => m.name), 5, myRequestId
       )
-      if (requestIdRef.current !== myRequestId) return
+      if (!genResults || requestIdRef.current !== myRequestId) return
 
       // Düzleştir ve kart oluştur
       const cards: GenCard[] = []
@@ -136,13 +167,20 @@ export default function BrandBar() {
               next[index] = { ...next[index], image: img, imageLoading: false }
             }
           }
+          // Önbelleğe kaydet
+          brandCacheRef.current[slug] = next
           return next
         })
+      }
+      // Görsel olmadan da önbelleğe al
+      if (cards.length === 0) {
+        brandCacheRef.current[slug] = cards
       }
     } catch {
       if (requestIdRef.current === myRequestId) setGenLoading(false)
     }
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBrand])
 
   // Nesil tıklandığında parcalar sayfasına yönlendir
   const handleGenClick = (slug: string, brandName: string, modelName: string, genName: string, yearStart: number | null) => {
@@ -210,7 +248,7 @@ export default function BrandBar() {
 
       {/* ── Nesil Dropdown Paneli ── */}
       {activeBrand && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50">
+        <div className="absolute left-0 right-0 top-full pt-1 z-50">
           <div className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-fadeIn">
             {/* Başlık */}
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
@@ -296,7 +334,7 @@ export default function BrandBar() {
 
       {/* ── Tüm Markalar Paneli ── */}
       {showMore && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50">
+        <div className="absolute left-0 right-0 top-full pt-1 z-50">
           <div className="bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-fadeIn">
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
               <span className="text-sm font-bold text-gray-900">Tüm Markalar</span>
