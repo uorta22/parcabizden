@@ -8,9 +8,9 @@ import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 import type { AutodataBrand, AutodataGeneration } from '@/types/api'
 
 const POPULAR_SLUGS = [
-  'opel', 'bmw', 'mercedes-benz', 'volkswagen', 'audi',
-  'seat', 'skoda', 'renault', 'peugeot', 'citroen',
-  'ford', 'toyota', 'hyundai', 'fiat',
+  'audi', 'bmw', 'citroen', 'fiat', 'ford',
+  'hyundai', 'mercedes-benz', 'opel', 'peugeot', 'renault',
+  'seat', 'skoda', 'toyota', 'volkswagen',
 ]
 
 function formatName(slug: string): string {
@@ -130,7 +130,7 @@ export default function BrandBar() {
       )
       if (!genResults || requestIdRef.current !== myRequestId) return
 
-      // Düzleştir ve kart oluştur
+      // Düzleştir, kart oluştur ve yıla göre sırala (yeni → eski)
       const cards: GenCard[] = []
       for (const { model, gens } of genResults) {
         for (const g of gens) {
@@ -144,6 +144,7 @@ export default function BrandBar() {
           })
         }
       }
+      cards.sort((a, b) => (b.yearStart || 0) - (a.yearStart || 0))
       setGenCards(cards)
       setGenLoading(false)
 
