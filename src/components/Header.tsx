@@ -79,15 +79,15 @@ export default function Header() {
 
             {/* Right Actions */}
             <div className="hidden lg:flex items-center gap-2">
-              {/* Products link */}
+              {/* Parçalar link */}
               <Link
-                href="/urunler"
+                href="/parcalar"
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive('/urunler') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  isActive('/parcalar') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" />
-                Ürünler
+                Parçalar
               </Link>
 
               {/* AI Assistant — sadece giriş yapmış kullanıcılara */}
@@ -193,7 +193,6 @@ export default function Header() {
             <div className="h-5 w-px bg-gray-200" />
             <nav className="flex items-center gap-1">
               {[
-                { href: '/parcalar', label: 'Parçalar' },
                 { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/iletisim', label: 'İletişim' },
               ].map(link => (
@@ -234,7 +233,6 @@ export default function Header() {
 
             <nav className="flex flex-col gap-1">
               {[
-                { href: '/urunler', label: 'Ürünler', icon: ShoppingBag },
                 { href: '/parcalar', label: 'Parçalar', icon: Package },
                 ...(user ? [{ href: '/ai-asistan', label: 'AI Asistan', icon: Sparkles }] : []),
                 { href: '/hakkimizda', label: 'Hakkımızda' },

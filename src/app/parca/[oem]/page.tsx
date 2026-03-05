@@ -3,7 +3,10 @@
 import { useEffect, useState, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
-import { ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle, Car, Wrench, Info, CheckCircle2 } from 'lucide-react'
+import {
+  ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle,
+  Car, Wrench, Info, CheckCircle2, ShoppingCart, Minus, Plus, Heart,
+} from 'lucide-react'
 import { searchOemParts } from '@/lib/api'
 import type { OemSearchResult, ProductEnrichment } from '@/lib/api'
 import { getWhatsAppUrl } from '@/lib/config'
@@ -11,6 +14,9 @@ import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon } from '@/components/CategoryIcons'
 import { findPartSpec } from '@/data/part-descriptions'
 import { findBrandGroup, formatBrandSlug, parseGenerationSlug } from '@/lib/brand-groups'
+import { useCart } from '@/contexts/CartContext'
+import { useAuth } from '@/contexts/AuthContext'
+import { favoriteAdd, favoriteRemove } from '@/lib/api'
 
 // ── OEM Kopyala Butonu ──
 function OemCopyBadge({ oem, large }: { oem: string; large?: boolean }) {
@@ -36,30 +42,26 @@ function OemCopyBadge({ oem, large }: { oem: string; large?: boolean }) {
   )
 }
 
-// ── Kategori adlarını ID'den çeviren map ──
+// ── Kategori adları ──
 const CATEGORY_NAMES: Record<string, string> = {
-  engine: 'Motor',
-  turbo_intake: 'Turbo & Emme',
-  fuel: 'Yakıt Sistemi',
-  exhaust: 'Egzoz',
-  transmission: 'Şanzıman',
-  brake: 'Fren',
-  suspension: 'Süspansiyon',
-  wheel_tyre: 'Jant & Lastik',
-  body_exterior: 'Kaporta & Dış',
-  glass_mirror: 'Cam & Ayna',
-  lighting: 'Aydınlatma',
-  electrical: 'Elektrik',
-  climate: 'Klima & Isıtma',
-  interior: 'İç Aksam',
-  audio_media: 'Ses & Medya',
-  tow_transport: 'Çeki & Taşıma',
-  other: 'Diğer',
+  engine: 'Motor', turbo_intake: 'Turbo & Emme', fuel: 'Yakıt Sistemi',
+  exhaust: 'Egzoz', transmission: 'Şanzıman', brake: 'Fren',
+  suspension: 'Süspansiyon', wheel_tyre: 'Jant & Lastik', body_exterior: 'Kaporta & Dış',
+  glass_mirror: 'Cam & Ayna', lighting: 'Aydınlatma', electrical: 'Elektrik',
+  climate: 'Klima & Isıtma', interior: 'İç Aksam', audio_media: 'Ses & Medya',
+  tow_transport: 'Çeki & Taşıma', other: 'Diğer',
+}
+
+// ── Fiyat formatlayıcı ──
+function formatPrice(price: number): string {
+  return price.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 0 })
 }
 
 function PartDetailContent() {
   const params = useParams()
   const searchParams = useSearchParams()
+  const { addItem } = useCart()
+  const { user } = useAuth()
 
   const oem = decodeURIComponent(params.oem as string)
   const brand = searchParams.get('brand') || ''
@@ -77,7 +79,12 @@ function PartDetailContent() {
   const [partName, setPartName] = useState('')
   const [productInfo, setProductInfo] = useState<ProductEnrichment | null>(null)
 
-  // searchOemParts ile tüm uyumlu araçları getir (backend product enrichment dahil)
+  // Sepet ve favori state
+  const [quantity, setQuantity] = useState(1)
+  const [addedToCart, setAddedToCart] = useState(false)
+  const [isFavorite, setIsFavorite] = useState(false)
+  const [favLoading, setFavLoading] = useState(false)
+
   useEffect(() => {
     setLoading(true)
     setError('')
@@ -113,7 +120,6 @@ function PartDetailContent() {
   const brandSlugs = useMemo(() => Array.from(brandGroups.keys()).sort(), [brandGroups])
   const groupLabel = useMemo(() => findBrandGroup(brandSlugs), [brandSlugs])
 
-  // Uyumlu modeller tablosu
   const modelRows = useMemo(() => {
     return allResults.map(r => {
       const parsed = parseGenerationSlug(r.generation_slug || '')
@@ -129,13 +135,52 @@ function PartDetailContent() {
     })
   }, [allResults])
 
-  // Kategori ve node bilgisi
   const displayCatName = catName || (catId ? CATEGORY_NAMES[catId] || catId : '')
   const displayNodeName = nodeName || node || ''
   const displayPartName = partName || oem
 
+  // Fiyat bilgileri
+  const hasPrice = productInfo && (productInfo.price != null && productInfo.price > 0)
+  const hasDiscount = hasPrice && productInfo!.discount_price != null && productInfo!.discount_price! < productInfo!.price!
+  const displayPrice = hasDiscount ? productInfo!.discount_price! : (productInfo?.price || 0)
+
+  // Sepete ekle
+  const handleAddToCart = () => {
+    if (!productInfo || !hasPrice) return
+    addItem({
+      product_id: String(productInfo.id),
+      product_name: displayPartName,
+      product_slug: productInfo.slug,
+      product_image: productInfo.thumbnail || undefined,
+      unit_price: displayPrice,
+      has_price: true,
+      quantity,
+    })
+    setAddedToCart(true)
+    setTimeout(() => setAddedToCart(false), 2000)
+  }
+
+  // Favori toggle
+  const handleToggleFavorite = async () => {
+    if (!productInfo || !user) return
+    setFavLoading(true)
+    try {
+      if (isFavorite) {
+        await favoriteRemove(productInfo.id)
+        setIsFavorite(false)
+      } else {
+        await favoriteAdd(productInfo.id)
+        setIsFavorite(true)
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setFavLoading(false)
+    }
+  }
+
   // WhatsApp mesajı
-  const whatsappMessage = `Merhaba, aşağıdaki parça için fiyat bilgisi almak istiyorum.\n\nParça: ${displayPartName}\nOEM No: ${oem}${marka ? `\nAraç: ${marka} ${modelName}` : ''}${displayCatName ? `\nKategori: ${displayCatName}` : ''}${displayNodeName ? `\nGrup: ${displayNodeName}` : ''}`
+  const whatsappMessage = `Merhaba, aşağıdaki parça için ${hasPrice ? 'sipariş vermek' : 'fiyat bilgisi almak'} istiyorum.\n\nParça: ${displayPartName}\nOEM No: ${oem}${marka ? `\nAraç: ${marka} ${modelName}` : ''}${displayCatName ? `\nKategori: ${displayCatName}` : ''}${displayNodeName ? `\nGrup: ${displayNodeName}` : ''}${hasPrice ? `\nFiyat: ${formatPrice(displayPrice)}\nAdet: ${quantity}` : ''}`
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 md:py-12">
@@ -179,94 +224,173 @@ function PartDetailContent() {
 
         {/* Content */}
         {!loading && !error && (
-          <div className="max-w-5xl mx-auto space-y-8">
+          <div className="max-w-5xl mx-auto">
 
-            {/* ── Parça Başlığı ── */}
-            <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-              <div className="p-6 md:p-8">
-                <div className="flex flex-col md:flex-row md:items-start gap-6">
-                  <div className="flex-1 min-w-0">
-                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{displayPartName}</h1>
+            {/* ── Ana Grid: Sol (Görsel + Bilgi), Sağ (Satın Al Kartı) ── */}
+            <div className="grid lg:grid-cols-12 gap-6 mb-8">
 
-                    {/* Badges */}
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <OemCopyBadge oem={oem} large />
-                      {displayCatName && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                          {catId && <CategoryIcon id={catId} className="text-gray-400" size={14} stroke={2} />}
-                          {displayCatName}
-                        </span>
-                      )}
-                      {displayNodeName && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
-                          <Package className="w-3.5 h-3.5 text-gray-400" />
-                          {displayNodeName}
-                        </span>
-                      )}
-                    </div>
+              {/* Sol taraf — Görsel + Parça Bilgileri */}
+              <div className="lg:col-span-8 space-y-6">
 
-                    {/* Araç bilgisi */}
-                    {marka && (
-                      <div className="inline-flex items-center gap-2 px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
-                        <Car className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                        <span className="text-sm text-primary-700 font-medium">{marka} {modelName}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Fiyat / CTA */}
-                  <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                    {productInfo && (productInfo.price || productInfo.discount_price) ? (
-                      <>
-                        <div className="text-right">
-                          {productInfo.discount_price ? (
-                            <>
-                              <span className="text-sm text-gray-400 line-through mr-2">{productInfo.price?.toLocaleString('tr-TR')} TL</span>
-                              <span className="text-2xl font-bold text-primary-600">{productInfo.discount_price.toLocaleString('tr-TR')} TL</span>
-                            </>
+                {/* Parça Başlık Kartı */}
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                  <div className="p-6 md:p-8">
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {/* Görsel */}
+                      <div className="w-full md:w-48 flex-shrink-0">
+                        <div className="aspect-square bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center overflow-hidden relative">
+                          {productInfo?.thumbnail ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={productInfo.thumbnail}
+                              alt={displayPartName}
+                              className="w-full h-full object-contain p-4"
+                            />
                           ) : (
-                            <span className="text-2xl font-bold text-primary-600">{productInfo.price?.toLocaleString('tr-TR')} TL</span>
+                            <div className="flex flex-col items-center gap-2">
+                              {catId ? (
+                                <CategoryIcon id={catId} className="text-gray-300" size={64} stroke={1} />
+                              ) : (
+                                <Package className="w-16 h-16 text-gray-300" />
+                              )}
+                            </div>
+                          )}
+                          {/* Favori butonu */}
+                          {user && productInfo && (
+                            <button
+                              onClick={handleToggleFavorite}
+                              disabled={favLoading}
+                              className={`absolute top-2 right-2 p-2 rounded-full transition-all ${
+                                isFavorite
+                                  ? 'bg-red-50 text-red-500 hover:bg-red-100'
+                                  : 'bg-white/80 backdrop-blur-sm text-gray-400 hover:text-red-500 hover:bg-red-50'
+                              } ${favLoading ? 'opacity-50' : ''}`}
+                            >
+                              <Heart className={`w-4 h-4 ${isFavorite ? 'fill-current' : ''}`} />
+                            </button>
                           )}
                         </div>
-                        <Link
-                          href={`/urun/${productInfo.slug}`}
-                          className="flex items-center justify-center gap-2 px-6 py-3.5 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-xl transition-colors shadow-sm"
+                      </div>
+
+                      {/* Bilgiler */}
+                      <div className="flex-1 min-w-0">
+                        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{displayPartName}</h1>
+
+                        {/* Badges */}
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                          <OemCopyBadge oem={oem} large />
+                          {displayCatName && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                              {catId && <CategoryIcon id={catId} className="text-gray-400" size={14} stroke={2} />}
+                              {displayCatName}
+                            </span>
+                          )}
+                          {displayNodeName && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                              <Package className="w-3.5 h-3.5 text-gray-400" />
+                              {displayNodeName}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Araç bilgisi */}
+                        {marka && (
+                          <div className="inline-flex items-center gap-2 px-3 py-2 bg-primary-50 border border-primary-200 rounded-lg">
+                            <Car className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                            <span className="text-sm text-primary-700 font-medium">{marka} {modelName}</span>
+                          </div>
+                        )}
+
+                        {/* Stok durumu */}
+                        {productInfo && (
+                          <div className={`flex items-center gap-2 text-sm mt-3 ${productInfo.in_stock ? 'text-green-600' : 'text-gray-400'}`}>
+                            {productInfo.in_stock ? (
+                              <><CheckCircle2 className="w-4 h-4" /> Stokta Mevcut</>
+                            ) : (
+                              <><AlertCircle className="w-4 h-4" /> Stokta Yok</>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Sağ taraf — Satın Al Kartı */}
+              <div className="lg:col-span-4">
+                <div className="lg:sticky lg:top-24">
+                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                    <div className="p-5 space-y-4">
+
+                      {/* Fiyat */}
+                      {hasPrice ? (
+                        <div>
+                          {hasDiscount && (
+                            <span className="text-sm text-gray-400 line-through">{formatPrice(productInfo!.price!)}</span>
+                          )}
+                          <p className="text-3xl font-bold text-gray-900">{formatPrice(displayPrice)}</p>
+                          {hasDiscount && (
+                            <span className="inline-flex items-center px-2 py-0.5 bg-red-50 text-red-600 text-xs font-medium rounded-md mt-1">
+                              %{Math.round((1 - productInfo!.discount_price! / productInfo!.price!) * 100)} indirim
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <div>
+                          <p className="text-lg font-semibold text-gray-700">Fiyat bilgisi için sorun</p>
+                          <p className="text-xs text-gray-400 mt-1">WhatsApp ile hızlı bilgi alın</p>
+                        </div>
+                      )}
+
+                      {/* Adet seçici */}
+                      {hasPrice && (
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm text-gray-600">Adet:</span>
+                          <div className="flex items-center border border-gray-200 rounded-lg">
+                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-2 hover:bg-gray-50 transition-colors">
+                              <Minus className="w-4 h-4 text-gray-500" />
+                            </button>
+                            <span className="w-10 text-center text-sm font-medium text-gray-900">{quantity}</span>
+                            <button onClick={() => setQuantity(quantity + 1)} className="p-2 hover:bg-gray-50 transition-colors">
+                              <Plus className="w-4 h-4 text-gray-500" />
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Sepete Ekle Butonu */}
+                      {hasPrice && (
+                        <button
+                          onClick={handleAddToCart}
+                          disabled={addedToCart}
+                          className={`w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold transition-all text-sm ${
+                            addedToCart ? 'bg-green-500 text-white' : 'bg-primary-500 hover:bg-primary-600 text-dark-900'
+                          }`}
                         >
-                          <Package className="w-5 h-5" />
-                          Ürünü İncele
-                        </Link>
-                      </>
-                    ) : (
+                          {addedToCart ? <><Check className="w-5 h-5" /> Sepete Eklendi!</> : <><ShoppingCart className="w-5 h-5" /> Sepete Ekle</>}
+                        </button>
+                      )}
+
+                      {/* WhatsApp CTA */}
                       <a
                         href={getWhatsAppUrl(whatsappMessage)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 px-6 py-3.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors shadow-sm"
+                        className="w-full flex items-center justify-center gap-2 py-3.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-semibold transition-colors text-sm"
                       >
                         <MessageCircle className="w-5 h-5" />
-                        WhatsApp ile Fiyat Al
+                        {hasPrice ? 'WhatsApp ile Sipariş' : 'WhatsApp ile Fiyat Sor'}
                       </a>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* ── E-Mağaza Bağlantısı (thumbnail varsa göster) ── */}
-            {productInfo?.thumbnail && (
-              <div className="flex justify-center">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={productInfo.thumbnail}
-                  alt={displayPartName}
-                  className="max-h-48 rounded-xl border border-gray-200 object-contain"
-                />
-              </div>
-            )}
-
             {/* ── Uyumlu Markalar ── */}
             {brandSlugs.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-8">
                 <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
@@ -317,7 +441,7 @@ function PartDetailContent() {
 
             {/* ── Uyumlu Modeller Tablosu ── */}
             {modelRows.length > 0 && (
-              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-8">
                 <div className="px-6 py-4 border-b border-gray-100">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center">
@@ -399,7 +523,7 @@ function PartDetailContent() {
             {(() => {
               const spec = findPartSpec(displayPartName, catId || undefined)
               if (!spec) return (
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-8">
                   <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">
@@ -423,7 +547,7 @@ function PartDetailContent() {
                 </div>
               )
               return (
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden mb-8">
                   <div className="px-6 py-4 border-b border-gray-100">
                     <div className="flex items-center gap-3">
                       <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center">

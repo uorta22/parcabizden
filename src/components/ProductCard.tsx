@@ -55,9 +55,14 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
     }
   }
 
+  // OEM varsa /parca/{oem}, yoksa /urun/{slug}
+  const detailHref = product.oem_number
+    ? `/parca/${encodeURIComponent(product.oem_number)}`
+    : `/urun/${product.slug}`
+
   return (
     <Link
-      href={`/urun/${product.slug}`}
+      href={detailHref}
       className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary-300 hover:shadow-lg transition-all duration-200"
     >
       {/* Image / Placeholder */}
