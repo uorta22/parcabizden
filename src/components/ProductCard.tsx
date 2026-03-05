@@ -67,19 +67,13 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
     >
       {/* Image / Placeholder */}
       <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
-        {product.thumbnail || (product.images && product.images.length > 0) ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={product.thumbnail || (product.images.length > 0 ? product.images[0] : undefined)}
-            alt={product.name}
-            className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-            loading="lazy"
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <CategoryIcon id={product.category} className="text-gray-300" size={48} stroke={1.5} />
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={product.thumbnail || (product.images && product.images.length > 0 ? product.images[0] : '/default-part.jpg')}
+          alt={product.name}
+          className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
+        />
 
         {/* Discount badge */}
         {hasDiscount && (

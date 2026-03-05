@@ -239,22 +239,12 @@ function PartDetailContent() {
                       {/* Görsel */}
                       <div className="w-full md:w-48 flex-shrink-0">
                         <div className="aspect-square bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-center overflow-hidden relative">
-                          {productInfo?.thumbnail ? (
-                            /* eslint-disable-next-line @next/next/no-img-element */
-                            <img
-                              src={productInfo.thumbnail}
-                              alt={displayPartName}
-                              className="w-full h-full object-contain p-4"
-                            />
-                          ) : (
-                            <div className="flex flex-col items-center gap-2">
-                              {catId ? (
-                                <CategoryIcon id={catId} className="text-gray-300" size={64} stroke={1} />
-                              ) : (
-                                <Package className="w-16 h-16 text-gray-300" />
-                              )}
-                            </div>
-                          )}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={productInfo?.thumbnail || '/default-part.jpg'}
+                            alt={displayPartName}
+                            className="w-full h-full object-contain p-4"
+                          />
                           {/* Favori butonu */}
                           {user && productInfo && (
                             <button
