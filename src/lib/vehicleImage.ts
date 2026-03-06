@@ -143,13 +143,20 @@ export async function findAutodataImage(
     if (normalize(img.generation) === searchNorm) return img.image
   }
 
-  // Cross-match: search parts against generation parts
-  for (const img of brandMatches) {
-    const genParts = extractParts(img.generation).map(normalize)
-    for (const sp of searchParts) {
-      for (const gp of genParts) {
-        if (sp === gp || sp.includes(gp) || gp.includes(sp)) return img.image
-      }
+  // Cross-match: search parts against generation name (normalized, full string)
+  // sp'nin generation'ın normalize halinde olup olmadığını kontrol et
+  // Ama sp'den sonra gelen karakter rakam veya romen rakamı parçası olmamalı (focusii ≠ focusiii)
+  const genNormFull = brandMatches.map(img => ({ img, norm: normalize(img.generation) }))
+  for (const sp of searchParts) {
+    if (sp.length < 5) continue
+    for (const { img, norm } of genNormFull) {
+      const idx = norm.indexOf(sp)
+      if (idx === -1) continue
+      // sp'den sonra gelen karakter: aynı "kelime" devam etmemeli
+      // Romen rakamları (i,v,x) ve rakamlar kontrol edilmeli
+      const after = norm[idx + sp.length]
+      if (after && /[ivx0-9]/.test(after) && /[ivx0-9]/.test(sp[sp.length - 1])) continue
+      return img.image
     }
   }
 
