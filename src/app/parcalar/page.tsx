@@ -1218,14 +1218,8 @@ function OemSearchView({ query }: { query: string }) {
             className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all block"
           >
             <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="mb-3">
               <OemBadge oem={part.oem_number} />
-              {part.count > 1 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 border border-primary-100 rounded-md text-[11px] font-medium text-primary-600">
-                  <Car className="w-3 h-3" />
-                  {part.count} araç
-                </span>
-              )}
             </div>
             <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
               Detay & Fiyat Al
