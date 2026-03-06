@@ -161,9 +161,9 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
         } catch { /* devam et */ }
       }
 
-      // Fallback: autodata görseli
-      if (!cancelled && gen) {
-        const img = await findAutodataGenerationImage(marka, gen)
+      // Fallback: autodata görseli (modelName kullan, DB slug değil)
+      if (!cancelled && modelName) {
+        const img = await findAutodataGenerationImage(marka, modelName)
         if (img && !cancelled) setVehicleImage(img)
       }
     }
