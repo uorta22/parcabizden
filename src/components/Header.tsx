@@ -32,11 +32,19 @@ export default function Header() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    if (searchQuery.trim()) {
-      router.push(`/urunler?q=${encodeURIComponent(searchQuery.trim())}`)
-      setSearchQuery('')
-      setIsMenuOpen(false)
+    const q = searchQuery.trim()
+    if (!q) return
+
+    // OEM numarası tespiti: harf+rakam karışımı, 6-20 karakter, boşluk yok
+    const isOem = /^[A-Za-z0-9.\-/]{6,20}$/.test(q) && /\d/.test(q) && /[A-Za-z]/.test(q)
+
+    if (isOem) {
+      router.push(`/parca/${encodeURIComponent(q)}`)
+    } else {
+      router.push(`/parcalar?q=${encodeURIComponent(q)}`)
     }
+    setSearchQuery('')
+    setIsMenuOpen(false)
   }
 
   const isActive = (href: string) => {

@@ -6,9 +6,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2 } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, fetchAutodataBrands, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
+import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, fetchAutodataModels, fetchAutodataBrands, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
-import type { AutodataGeneration, SlugMatch, VehicleSpecRow } from '@/types/api'
+import type { AutodataGeneration, AutodataModel, SlugMatch, VehicleSpecRow } from '@/types/api'
 import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 import PartDiagram from '@/components/PartDiagram'
 
@@ -137,21 +137,40 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   const modelSlug = searchParams.get('model_slug')
   const modelKey = searchParams.get('model_key')
 
-  // Load vehicle image
+  // Marka logosu
+  const brandLogo = marka ? getBrandLogoPath(marka) : ''
+
+  // Load vehicle image — vehicle-tree.json ilk, fallback olarak autodata görseli
   useEffect(() => {
-    if (!marka || !modelSlug) return
-    fetch('/data/vehicle-tree.json')
-      .then(r => r.json())
-      .then(tree => {
-        const b = tree[marka]
-        if (!b) return
-        for (const models of Object.values(b.body_types) as { slug: string; key: string; image: string }[][]) {
-          const found = models.find((m: { slug: string; key: string }) => m.slug === modelSlug || m.key === modelKey)
-          if (found) { setVehicleImage(found.image); return }
-        }
-      })
-      .catch(() => {})
-  }, [marka, modelSlug, modelKey])
+    if (!marka) return
+    let cancelled = false
+
+    const loadImage = async () => {
+      // vehicle-tree.json'dan dene
+      if (modelSlug) {
+        try {
+          const res = await fetch('/data/vehicle-tree.json')
+          const tree = await res.json()
+          const b = tree[marka]
+          if (b) {
+            for (const models of Object.values(b.body_types) as { slug: string; key: string; image: string }[][]) {
+              const found = models.find((m: { slug: string; key: string }) => m.slug === modelSlug || m.key === modelKey)
+              if (found && !cancelled) { setVehicleImage(found.image); return }
+            }
+          }
+        } catch { /* devam et */ }
+      }
+
+      // Fallback: autodata görseli
+      if (!cancelled && gen) {
+        const img = await findAutodataGenerationImage(marka, gen)
+        if (img && !cancelled) setVehicleImage(img)
+      }
+    }
+
+    loadImage()
+    return () => { cancelled = true }
+  }, [marka, modelSlug, modelKey, gen])
 
   const handleCategoryClick = useCallback(async (cat: VehicleCategory) => {
     setSelectedCat(cat)
@@ -247,10 +266,15 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
           </div>
         </div>
         <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-6">
-          {vehicleImage && (
+          {vehicleImage ? (
             <div className="w-36 h-24 md:w-44 md:h-28 rounded-xl bg-gray-100 border border-gray-200 flex-shrink-0 overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={vehicleImage} alt={modelName} className="w-full h-full object-contain p-2" />
+            </div>
+          ) : brandLogo && (
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={brandLogo} alt={marka} className="w-full h-full object-contain" />
             </div>
           )}
           <div className="flex-1 text-center sm:text-left min-w-0">
@@ -509,6 +533,69 @@ function summarizeSpecs(specs: VehicleSpecRow[]): GenSpecSummary | null {
     fuelTypes: fuels.join(', '),
     transmissions: trans.join(', '),
   }
+}
+
+// ── Model Picker (when brand is known but model_name is missing) ──
+function ModelPicker({ brand, marka }: { brand: string; marka: string }) {
+  const [models, setModels] = useState<AutodataModel[]>([])
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    fetchAutodataModels(brand)
+      .then(data => setModels(data.models || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [brand])
+
+  const handleModelClick = (model: AutodataModel) => {
+    router.push(`/parcalar?brand=${brand}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(model.name)}`)
+  }
+
+  return (
+    <>
+      {/* Vehicle Banner */}
+      <div className="mb-8 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+        <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-5">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={getBrandLogoPath(marka)} alt={marka} className="w-full h-full object-contain" />
+          </div>
+          <div className="flex-1 text-center sm:text-left min-w-0">
+            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka}</h2>
+            <p className="text-sm text-gray-500 mt-1">Aracınızın modelini seçin</p>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+        </div>
+      ) : models.length > 0 ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {models.map(m => (
+            <button
+              key={m.name}
+              onClick={() => handleModelClick(m)}
+              className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-4 text-left transition-all"
+            >
+              <p className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{m.name}</p>
+              <p className="text-xs text-gray-400 mt-1">{m.gen_count} nesil{m.min_year && m.max_year ? ` · ${m.min_year}–${m.max_year}` : ''}</p>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+          <p className="text-gray-600 mb-4">Bu marka için model bilgisi bulunamadı.</p>
+          <a href={getWhatsAppUrl(`Merhaba, ${marka} aracım için parça arıyorum.`)} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
+            <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
+          </a>
+        </div>
+      )}
+    </>
+  )
 }
 
 // ── Generation Picker (when brand is known but gen is missing) ──
@@ -1068,6 +1155,68 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   )
 }
 
+// ── OEM Search Results View ──
+function OemSearchView({ query }: { query: string }) {
+  const [results, setResults] = useState<{ oem_number: string; name: string; brand?: string }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!query) return
+    setLoading(true)
+    searchOemParts(query)
+      .then(data => setResults(data.results || []))
+      .catch(() => setResults([]))
+      .finally(() => setLoading(false))
+  }, [query])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+      </div>
+    )
+  }
+
+  if (results.length === 0) {
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
+        <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+          <Search className="w-7 h-7 text-gray-400" />
+        </div>
+        <h3 className="text-gray-900 font-semibold mb-2">&ldquo;{query}&rdquo; için sonuç bulunamadı</h3>
+        <p className="text-gray-500 text-sm mb-5">Farklı bir arama terimi deneyin veya WhatsApp ile bize ulaşın.</p>
+        <a href={getWhatsAppUrl(`Merhaba, "${query}" araması için yardım istiyorum.`)} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
+          <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
+        </a>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-gray-500 mb-6">&ldquo;{query}&rdquo; için {results.length} sonuç bulundu</p>
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        {results.map((part, i) => (
+          <Link
+            key={`${part.oem_number}-${i}`}
+            href={`/parca/${encodeURIComponent(part.oem_number)}`}
+            className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all block"
+          >
+            <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
+            <div className="mb-3">
+              <OemBadge oem={part.oem_number} />
+            </div>
+            <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
+              Detay & Fiyat Al
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Main Page ──
 function ParcalarContent() {
   const searchParams = useSearchParams()
@@ -1075,9 +1224,13 @@ function ParcalarContent() {
   const gen = searchParams.get('gen')
   const marka = searchParams.get('marka')
   const modelName = searchParams.get('model_name')
+  const qParam = searchParams.get('q')
 
+  // Durum tespiti
   const hasVehicleWithGen = brand && gen && marka && modelName
-  const hasVehicleWithoutGen = brand && marka && !gen
+  const hasBrandWithModel = brand && marka && modelName && !gen
+  const hasBrandOnly = brand && marka && !modelName && !gen
+  const hasSearch = qParam && !brand && !gen
 
   return (
     <div className="min-h-screen py-8 md:py-12">
@@ -1086,25 +1239,39 @@ function ParcalarContent() {
         <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
           <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
           <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900">Parçalar</span>
-          {(hasVehicleWithGen || hasVehicleWithoutGen) && marka && (
+          {brand ? (
+            <Link href="/parcalar" className="hover:text-gray-900 transition-colors">Parçalar</Link>
+          ) : (
+            <span className="text-gray-900">Parçalar</span>
+          )}
+          {marka && (
             <>
               <ChevronRight className="w-4 h-4" />
-              <span className="text-primary-500">{marka} {modelName}</span>
+              <span className="text-primary-500">{marka} {modelName || ''}</span>
+            </>
+          )}
+          {hasSearch && (
+            <>
+              <ChevronRight className="w-4 h-4" />
+              <span className="text-primary-500">Arama: {qParam}</span>
             </>
           )}
         </nav>
 
         {hasVehicleWithGen ? (
           <VehiclePartsExplorer brand={brand} gen={gen} marka={marka} modelName={modelName} />
-        ) : hasVehicleWithoutGen ? (
-          <GenerationPicker brand={brand} marka={marka} modelName={modelName || ''} />
+        ) : hasBrandWithModel ? (
+          <GenerationPicker brand={brand} marka={marka} modelName={modelName} />
+        ) : hasBrandOnly ? (
+          <ModelPicker brand={brand} marka={marka} />
+        ) : hasSearch ? (
+          <OemSearchView query={qParam} />
         ) : (
           <StaticCategoriesView />
         )}
 
         {/* CTA Section */}
-        {!hasVehicleWithGen && !hasVehicleWithoutGen && (
+        {!hasVehicleWithGen && !hasBrandWithModel && !hasBrandOnly && (
           <div className="mt-16 text-center">
             <div className="bg-gradient-to-r from-secondary-700 to-secondary-900 rounded-2xl p-8 md:p-12">
               <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Aradığınız Parçayı Bulamadınız mı?</h2>
