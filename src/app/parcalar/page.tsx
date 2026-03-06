@@ -1157,7 +1157,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
 
 // ── OEM Search Results View ──
 function OemSearchView({ query }: { query: string }) {
-  const [results, setResults] = useState<{ oem_number: string; name: string; brand?: string }[]>([])
+  const [results, setResults] = useState<{ oem_number: string; name: string; brand_slug?: string }[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -1169,6 +1169,20 @@ function OemSearchView({ query }: { query: string }) {
       .finally(() => setLoading(false))
   }, [query])
 
+  // Aynı OEM numaralarını grupla — her OEM'den sadece biri gösterilsin, uyumlu araç sayısı badge olarak
+  const uniqueParts = useMemo(() => {
+    const map = new Map<string, { oem_number: string; name: string; count: number }>()
+    for (const r of results) {
+      const existing = map.get(r.oem_number)
+      if (existing) {
+        existing.count++
+      } else {
+        map.set(r.oem_number, { oem_number: r.oem_number, name: r.name, count: 1 })
+      }
+    }
+    return Array.from(map.values())
+  }, [results])
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -1177,7 +1191,7 @@ function OemSearchView({ query }: { query: string }) {
     )
   }
 
-  if (results.length === 0) {
+  if (uniqueParts.length === 0) {
     return (
       <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
         <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
@@ -1195,17 +1209,23 @@ function OemSearchView({ query }: { query: string }) {
 
   return (
     <div>
-      <p className="text-sm text-gray-500 mb-6">&ldquo;{query}&rdquo; için {results.length} sonuç bulundu</p>
+      <p className="text-sm text-gray-500 mb-6">&ldquo;{query}&rdquo; için {uniqueParts.length} parça bulundu</p>
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {results.map((part, i) => (
+        {uniqueParts.map((part) => (
           <Link
-            key={`${part.oem_number}-${i}`}
+            key={part.oem_number}
             href={`/parca/${encodeURIComponent(part.oem_number)}`}
             className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all block"
           >
             <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
-            <div className="mb-3">
+            <div className="flex items-center gap-2 mb-3">
               <OemBadge oem={part.oem_number} />
+              {part.count > 1 && (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 border border-primary-100 rounded-md text-[11px] font-medium text-primary-600">
+                  <Car className="w-3 h-3" />
+                  {part.count} araç
+                </span>
+              )}
             </div>
             <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
               Detay & Fiyat Al
