@@ -1,29 +1,6 @@
 import { MetadataRoute } from 'next'
 import { categories, parts } from '@/data/parts'
 
-// Turkiye'de en populer markalar — sitemap'te marka sayfalari olarak indexlenir
-const POPULAR_BRANDS = [
-  'bmw', 'mercedes-benz', 'audi', 'volkswagen', 'ford', 'renault',
-  'toyota', 'honda', 'hyundai', 'kia', 'opel', 'peugeot', 'citroen',
-  'fiat', 'nissan', 'mazda', 'volvo', 'skoda', 'seat', 'dacia',
-  'chevrolet', 'mitsubishi', 'suzuki', 'subaru', 'land-rover', 'jeep',
-  'mini', 'porsche', 'alfa-romeo', 'cupra',
-]
-
-// Marka slug -> gosterim ismi
-const BRAND_NAMES: Record<string, string> = {
-  'bmw': 'BMW', 'mercedes-benz': 'Mercedes-Benz', 'audi': 'Audi',
-  'volkswagen': 'Volkswagen', 'ford': 'Ford', 'renault': 'Renault',
-  'toyota': 'Toyota', 'honda': 'Honda', 'hyundai': 'Hyundai',
-  'kia': 'Kia', 'opel': 'Opel', 'peugeot': 'Peugeot', 'citroen': 'Citroen',
-  'fiat': 'Fiat', 'nissan': 'Nissan', 'mazda': 'Mazda', 'volvo': 'Volvo',
-  'skoda': 'Skoda', 'seat': 'Seat', 'dacia': 'Dacia',
-  'chevrolet': 'Chevrolet', 'mitsubishi': 'Mitsubishi', 'suzuki': 'Suzuki',
-  'subaru': 'Subaru', 'land-rover': 'Land Rover', 'jeep': 'Jeep',
-  'mini': 'Mini', 'porsche': 'Porsche', 'alfa-romeo': 'Alfa Romeo',
-  'cupra': 'Cupra',
-}
-
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://parcabizden.com.tr'
 
@@ -73,14 +50,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  // Marka sayfalari — /parcalar?brand=bmw&marka=BMW seklinde
-  const brandPages: MetadataRoute.Sitemap = POPULAR_BRANDS.map(slug => ({
-    url: `${baseUrl}/parcalar?brand=${slug}&marka=${encodeURIComponent(BRAND_NAMES[slug] || slug)}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.8,
-  }))
-
   // Kategori sayfalari
   const categoryPages: MetadataRoute.Sitemap = categories.map((category) => ({
     url: `${baseUrl}/parcalar/${category.id}`,
@@ -97,5 +66,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.7,
   }))
 
-  return [...staticPages, ...brandPages, ...categoryPages, ...partPages]
+  return [...staticPages, ...categoryPages, ...partPages]
 }
