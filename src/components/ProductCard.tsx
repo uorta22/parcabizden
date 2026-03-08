@@ -6,6 +6,7 @@ import type { ShopProduct } from '@/types/shop'
 import { formatPrice } from '@/lib/products'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
 import { getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon } from '@/components/CategoryIcons'
 import { favoriteAdd, favoriteRemove } from '@/lib/api'
@@ -14,6 +15,7 @@ import { useState } from 'react'
 export default function ProductCard({ product, onRemoveFavorite }: { product: ShopProduct; onRemoveFavorite?: (id: string | number) => void }) {
   const { addItem } = useCart()
   const { user } = useAuth()
+  const { toast } = useToast()
   const [isFav, setIsFav] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
   const hasPrice = product.price != null && product.price > 0
@@ -30,6 +32,7 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
       unit_price: hasDiscount ? product.discount_price! : (product.price || 0),
       has_price: hasPrice,
     })
+    toast('Ürün sepete eklendi', 'success')
   }
 
   const handleToggleFav = async (e: React.MouseEvent) => {
@@ -41,15 +44,18 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
       if (onRemoveFavorite) {
         await favoriteRemove(product.id)
         onRemoveFavorite(product.id)
+        toast('Favorilerden çıkarıldı', 'info')
       } else if (isFav) {
         await favoriteRemove(product.id)
         setIsFav(false)
+        toast('Favorilerden çıkarıldı', 'info')
       } else {
         await favoriteAdd(product.id)
         setIsFav(true)
+        toast('Favorilere eklendi', 'success')
       }
     } catch {
-      // silently fail
+      toast('İşlem başarısız oldu', 'error')
     } finally {
       setFavLoading(false)
     }

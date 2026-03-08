@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { ShoppingCart, Trash2, Minus, Plus, MessageCircle, ArrowLeft, Package, MapPin, Check, Loader2 } from 'lucide-react'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
+import EmptyState from '@/components/EmptyState'
 import { formatPrice } from '@/lib/products'
 import { addressList, orderCreate } from '@/lib/api'
 import type { UserAddress } from '@/types/api'
@@ -12,6 +14,7 @@ import type { UserAddress } from '@/types/api'
 export default function SepetPage() {
   const { items, removeItem, updateQuantity, clearCart, totalPrice, getWhatsAppCartUrl } = useCart()
   const { user } = useAuth()
+  const { toast } = useToast()
   const [addresses, setAddresses] = useState<UserAddress[]>([])
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null)
   const [orderNotes, setOrderNotes] = useState('')
@@ -52,8 +55,11 @@ export default function SepetPage() {
       })
       setOrderSuccess(true)
       clearCart()
+      toast('Siparişiniz başarıyla oluşturuldu!', 'success')
     } catch (err) {
-      setOrderError(err instanceof Error ? err.message : 'Sipariş oluşturulurken hata oluştu')
+      const errMsg = err instanceof Error ? err.message : 'Sipariş oluşturulurken hata oluştu'
+      setOrderError(errMsg)
+      toast(errMsg, 'error')
     } finally {
       setOrdering(false)
     }
@@ -90,21 +96,13 @@ export default function SepetPage() {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen py-20">
-        <div className="container mx-auto px-4 text-center">
-          <div className="w-20 h-20 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-6">
-            <ShoppingCart className="w-10 h-10 text-gray-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-3">Sepetiniz Boş</h1>
-          <p className="text-gray-500 mb-8">Henüz sepetinize ürün eklemediniz.</p>
-          <Link
-            href="/urunler"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-primary-500 hover:bg-primary-600 text-dark-900 font-semibold rounded-xl transition-colors"
-          >
-            <Package className="w-5 h-5" />
-            Ürünlere Göz At
-          </Link>
-        </div>
+      <div className="min-h-screen">
+        <EmptyState
+          icon={<ShoppingCart className="w-10 h-10" />}
+          title="Sepetiniz Boş"
+          description="Henüz sepetinize ürün eklemediniz."
+          action={{ label: 'Ürünlere Göz At', href: '/urunler', icon: <Package className="w-5 h-5" /> }}
+        />
       </div>
     )
   }

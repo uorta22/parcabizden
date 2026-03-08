@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { Plus, Car, AlertTriangle, Clock, Gauge } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import GarageCard from '@/components/GarageCard'
+import EmptyState from '@/components/EmptyState'
 import AddVehicleModal from '@/components/AddVehicleModal'
 import type { GarageVehicleNatro } from '@/types/api'
 import { garageList, garageAdd, garageRemove } from '@/lib/api'
@@ -127,20 +128,12 @@ export default function HesabimGarajPage() {
           <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : vehicles.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
-            <Car className="w-10 h-10 text-gray-400" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Garajınız Boş</h2>
-          <p className="text-gray-500 mb-6">Araç ekleyerek hızlıca parça araması yapabilirsiniz.</p>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-600 text-white font-semibold rounded-lg transition-all"
-          >
-            <Plus className="w-5 h-5" />
-            İlk Aracınızı Ekleyin
-          </button>
-        </div>
+        <EmptyState
+          icon={<Car className="w-10 h-10" />}
+          title="Garajınız Boş"
+          description="Araç ekleyerek hızlıca parça araması yapabilirsiniz."
+          action={{ label: 'İlk Aracınızı Ekleyin', onClick: () => setShowAddModal(true), icon: <Plus className="w-5 h-5" /> }}
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-3">
           {vehicles.map((vehicle) => (

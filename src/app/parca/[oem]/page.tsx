@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useParams, useSearchParams } from 'next/navigation'
 import {
-  ChevronRight, Copy, Check, MessageCircle, Loader2, Package, AlertCircle,
+  Copy, Check, MessageCircle, Loader2, Package, AlertCircle,
   Car, Wrench, Info, CheckCircle2, ShoppingCart, Minus, Plus, Heart,
 } from 'lucide-react'
 import { searchOemParts } from '@/lib/api'
@@ -16,14 +16,18 @@ import { findPartSpec } from '@/data/part-descriptions'
 import { findBrandGroup, formatBrandSlug, parseGenerationSlug } from '@/lib/brand-groups'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/contexts/ToastContext'
+import Breadcrumb from '@/components/Breadcrumb'
 import { favoriteAdd, favoriteRemove } from '@/lib/api'
 
 // ── OEM Kopyala Butonu ──
 function OemCopyBadge({ oem, large }: { oem: string; large?: boolean }) {
   const [copied, setCopied] = useState(false)
+  const { toast } = useToast()
   const copy = () => {
     navigator.clipboard.writeText(oem)
     setCopied(true)
+    toast('OEM numarası kopyalandı', 'success')
     setTimeout(() => setCopied(false), 1500)
   }
   return (
@@ -62,6 +66,7 @@ function PartDetailContent() {
   const searchParams = useSearchParams()
   const { addItem } = useCart()
   const { user } = useAuth()
+  const { toast } = useToast()
 
   const oem = decodeURIComponent(params.oem as string)
   const brand = searchParams.get('brand') || ''
@@ -235,6 +240,7 @@ function PartDetailContent() {
       quantity,
     })
     setAddedToCart(true)
+    toast('Ürün sepete eklendi', 'success')
     setTimeout(() => setAddedToCart(false), 2000)
   }
 
@@ -246,12 +252,14 @@ function PartDetailContent() {
       if (isFavorite) {
         await favoriteRemove(productInfo.id)
         setIsFavorite(false)
+        toast('Favorilerden çıkarıldı', 'info')
       } else {
         await favoriteAdd(productInfo.id)
         setIsFavorite(true)
+        toast('Favorilere eklendi', 'success')
       }
     } catch {
-      // silently fail
+      toast('İşlem başarısız oldu', 'error')
     } finally {
       setFavLoading(false)
     }
@@ -265,24 +273,16 @@ function PartDetailContent() {
       <div className="container mx-auto px-4">
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8 flex-wrap">
-          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
-          <ChevronRight className="w-4 h-4 flex-shrink-0" />
-          <Link href="/parcalar" className="hover:text-gray-900 transition-colors">Parçalar</Link>
-          {marka && (
-            <>
-              <ChevronRight className="w-4 h-4 flex-shrink-0" />
-              <Link
-                href={`/parcalar?brand=${brand}&gen=${gen}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(modelName)}`}
-                className="hover:text-gray-900 transition-colors"
-              >
-                {marka} {modelName}
-              </Link>
-            </>
-          )}
-          <ChevronRight className="w-4 h-4 flex-shrink-0" />
-          <span className="text-gray-900 font-medium">{oem}</span>
-        </nav>
+        <div className="mb-8">
+          <Breadcrumb
+            items={[
+              { label: 'Ana Sayfa', href: '/' },
+              { label: 'Parçalar', href: '/parcalar' },
+              ...(marka ? [{ label: `${marka} ${modelName}`, href: `/parcalar?brand=${brand}&gen=${gen}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(modelName)}` }] : []),
+              { label: oem },
+            ]}
+          />
+        </div>
 
         {/* Loading */}
         {loading && (

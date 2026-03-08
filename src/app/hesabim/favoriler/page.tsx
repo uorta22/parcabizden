@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Heart } from 'lucide-react'
 import { favoriteList, favoriteRemove } from '@/lib/api'
 import ProductCard from '@/components/ProductCard'
+import EmptyState from '@/components/EmptyState'
 import type { ShopProduct } from '@/types/shop'
 
 export default function FavorilerPage() {
@@ -56,15 +57,12 @@ export default function FavorilerPage() {
       )}
 
       {!error && products.length === 0 ? (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-6">
-            <Heart className="w-10 h-10 text-gray-400" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Favori Ürününüz Yok</h2>
-          <p className="text-gray-500 mb-6">
-            Ürün sayfalarındaki kalp ikonuna tıklayarak favorilerinize ekleyebilirsiniz.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Heart className="w-10 h-10" />}
+          title="Favori Ürününüz Yok"
+          description="Ürün sayfalarındaki kalp ikonuna tıklayarak favorilerinize ekleyebilirsiniz."
+          action={{ label: 'Ürünlere Göz At', href: '/urunler' }}
+        />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {products.map((product) => (

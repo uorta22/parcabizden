@@ -9,6 +9,8 @@ import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/contexts/CartContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import BackToTop from '@/components/BackToTop'
+import CookieConsent from '@/components/CookieConsent'
 import { siteConfig } from '@/lib/config'
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
@@ -67,6 +69,8 @@ export default function RootLayout({
               </main>
               <Footer />
               <ChatWidget />
+              <BackToTop />
+              <CookieConsent />
               <SpeedInsights />
             </CartProvider>
           </AuthProvider>

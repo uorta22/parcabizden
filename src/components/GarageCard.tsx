@@ -5,6 +5,7 @@ import { Trash2, Search, Wrench, MessageCircle, Car, Gauge, AlertTriangle, Clock
 import Link from 'next/link'
 import type { GarageVehicleNatro } from '@/types/api'
 import { getWhatsAppUrl } from '@/lib/config'
+import Badge from '@/components/Badge'
 
 interface GarageCardProps {
   vehicle: GarageVehicleNatro
@@ -73,20 +74,18 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
           </div>
         )}
 
-        {/* Maintenance Badges */}
+        {/* Bakım durumu badge'leri */}
         {(vehicle.overdue_count > 0 || vehicle.upcoming_count > 0) && (
           <div className="flex flex-wrap gap-1.5 mt-3">
             {vehicle.overdue_count > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">
-                <AlertTriangle className="w-3 h-3" />
-                {vehicle.overdue_count} gecikmi\u015f
-              </span>
+              <Badge variant="danger" icon={<AlertTriangle className="w-3 h-3" />}>
+                {vehicle.overdue_count} gecikmiş
+              </Badge>
             )}
             {vehicle.upcoming_count > 0 && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                <Clock className="w-3 h-3" />
-                {vehicle.upcoming_count} yakla\u015f\u0131yor
-              </span>
+              <Badge variant="warning" icon={<Clock className="w-3 h-3" />}>
+                {vehicle.upcoming_count} yaklaşıyor
+              </Badge>
             )}
           </div>
         )}
