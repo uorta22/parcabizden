@@ -807,14 +807,22 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     })
     setResolving(true)
     setError('')
+
+    // 15 saniye timeout — API aşırı yavaşsa takılmayı önle
+    const timeout = setTimeout(() => {
+      setResolving(false)
+      setError('no_parts')
+      setSelectedGenDisplay(null)
+    }, 15000)
+
     try {
       const result = await resolveAutodataSlug(brand, modelName, gen.name, gen.year_start ?? undefined)
+      clearTimeout(timeout)
       if (result.auto_selected) {
         setSelectedGen(result.auto_selected)
       } else if (result.matches.length === 1) {
         setSelectedGen(result.matches[0].generation_slug)
       } else if (result.matches.length > 1) {
-        // Filter junk matches — only keep model-relevant ones
         const relevant = filterByModel(result.matches)
         if (relevant.length === 1) {
           setSelectedGen(relevant[0].generation_slug)
@@ -825,7 +833,6 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           setResolving(false)
           setSelectedGenDisplay(null)
         } else {
-          // All matches irrelevant — check pre-fetched DB gens
           const relevantDb = filterByModel(dbGenerations)
           if (relevantDb.length > 0) {
             setDbGenerations(relevantDb)
@@ -838,7 +845,6 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           setSelectedGenDisplay(null)
         }
       } else {
-        // No matches from resolve — use pre-fetched DB generations
         const relevantDb = filterByModel(dbGenerations)
         if (relevantDb.length > 0) {
           setDbGenerations(relevantDb)
@@ -851,6 +857,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         setSelectedGenDisplay(null)
       }
     } catch {
+      clearTimeout(timeout)
       const relevantDb = filterByModel(dbGenerations)
       if (relevantDb.length > 0) {
         setDbGenerations(relevantDb)

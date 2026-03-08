@@ -137,33 +137,46 @@ export async function findAutodataImage(
 
   const searchNorm = normalize(modelOrGeneration)
   const searchParts = extractParts(modelOrGeneration).map(normalize)
+  const brandNorm = normalize(brandName)
 
-  // Exact generation match
+  // Generation'lardan marka prefixini cikaran yardimci
+  const stripBrand = (s: string) => {
+    const n = normalize(s)
+    return n.startsWith(brandNorm) ? n.slice(brandNorm.length) : n
+  }
+
+  // Exact generation match (marka prefiksi ile ve prefikssiz)
   for (const img of brandMatches) {
-    if (normalize(img.generation) === searchNorm) return img.image
+    const genNorm = normalize(img.generation)
+    if (genNorm === searchNorm || stripBrand(img.generation) === searchNorm) return img.image
   }
 
   // Cross-match: search parts against generation name (normalized, full string)
-  // sp'nin generation'ın normalize halinde olup olmadığını kontrol et
-  // Ama sp'den sonra gelen karakter rakam veya romen rakamı parçası olmamalı (focusii ≠ focusiii)
-  const genNormFull = brandMatches.map(img => ({ img, norm: normalize(img.generation) }))
+  const genNormFull = brandMatches.map(img => ({ img, norm: normalize(img.generation), stripped: stripBrand(img.generation) }))
   for (const sp of searchParts) {
     if (sp.length < 5) continue
-    for (const { img, norm } of genNormFull) {
-      const idx = norm.indexOf(sp)
-      if (idx === -1) continue
-      // sp'den sonra gelen karakter: aynı "kelime" devam etmemeli
-      // Romen rakamları (i,v,x) ve rakamlar kontrol edilmeli
-      const after = norm[idx + sp.length]
-      if (after && /[ivx0-9]/.test(after) && /[ivx0-9]/.test(sp[sp.length - 1])) continue
-      return img.image
+    for (const { img, norm, stripped } of genNormFull) {
+      // Hem tam hem de marka-prefikssiz generation'da ara
+      for (const target of [norm, stripped]) {
+        const idx = target.indexOf(sp)
+        if (idx === -1) continue
+        // Romen rakami sinir kontrolu (focusii != focusiii)
+        const after = target[idx + sp.length]
+        if (after && /[ivx0-9]/.test(after) && /[ivx0-9]/.test(sp[sp.length - 1])) continue
+        return img.image
+      }
     }
   }
 
-  // Partial model name match — stricter: must startsWith
+  // Partial model name match — startsWith (her iki yonlu)
   for (const img of brandMatches) {
     const modelNorm = normalize(img.model)
     if (modelNorm.startsWith(searchNorm) || searchNorm.startsWith(modelNorm)) return img.image
+  }
+
+  // Brand-stripped generation match — kisa model isimleri icin (orn: "02")
+  for (const { img, stripped } of genNormFull) {
+    if (stripped.startsWith(searchNorm) || searchNorm.startsWith(stripped)) return img.image
   }
 
   // Fallback: first word match — minimum 4 chars + startsWith
