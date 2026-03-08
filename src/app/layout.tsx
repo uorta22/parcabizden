@@ -37,19 +37,9 @@ export const metadata: Metadata = {
     title: `${siteConfig.name} - Yedek Parça & Çıkma Parça`,
     description: siteConfig.description,
   },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true,
-      'max-video-preview': -1,
-      'max-image-preview': 'large',
-      'max-snippet': -1,
-    },
-  },
   verification: {
-    // google: 'your-google-verification-code',
+    // Google Search Console dogrulama kodu — GSC'den alindiktan sonra buraya eklenmeli
+    // google: 'YOUR_GOOGLE_VERIFICATION_CODE',
   },
 }
 

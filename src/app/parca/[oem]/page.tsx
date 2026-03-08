@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { searchOemParts } from '@/lib/api'
 import type { OemSearchResult, ProductEnrichment } from '@/lib/api'
-import { getWhatsAppUrl } from '@/lib/config'
+import { getWhatsAppUrl, siteConfig } from '@/lib/config'
 import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon } from '@/components/CategoryIcons'
 import { findPartSpec } from '@/data/part-descriptions'
@@ -104,6 +104,84 @@ function PartDetailContent() {
       .catch(e => setError(e instanceof Error ? e.message : 'Veri yüklenirken hata oluştu'))
       .finally(() => setLoading(false))
   }, [oem])
+
+  // JSON-LD Schema — Product + BreadcrumbList
+  useEffect(() => {
+    if (loading || !partName) return
+
+    const schemas: object[] = []
+
+    // Product schema
+    const productSchema: Record<string, unknown> = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: partName,
+      description: `${partName} - OEM No: ${oem}${marka ? ` | ${marka} ${modelName} uyumlu` : ''}`,
+      sku: oem,
+      mpn: oem,
+      brand: marka ? { '@type': 'Brand', name: marka } : { '@type': 'Brand', name: 'OEM' },
+      category: 'Araç Yedek Parça',
+      url: window.location.href,
+    }
+    if (productInfo?.thumbnail) {
+      productSchema.image = productInfo.thumbnail
+    }
+    if (productInfo && productInfo.price != null && productInfo.price > 0) {
+      const finalPrice = (productInfo.discount_price != null && productInfo.discount_price < productInfo.price)
+        ? productInfo.discount_price
+        : productInfo.price
+      productSchema.offers = {
+        '@type': 'Offer',
+        price: finalPrice,
+        priceCurrency: 'TRY',
+        availability: productInfo.in_stock
+          ? 'https://schema.org/InStock'
+          : 'https://schema.org/OutOfStock',
+        seller: { '@type': 'Organization', name: siteConfig.name },
+      }
+    }
+    schemas.push(productSchema)
+
+    // BreadcrumbList schema
+    const breadcrumbItems = [
+      { name: 'Ana Sayfa', url: siteConfig.url },
+      { name: 'Parcalar', url: `${siteConfig.url}/parcalar` },
+    ]
+    if (marka && modelName) {
+      breadcrumbItems.push({
+        name: `${marka} ${modelName}`,
+        url: `${siteConfig.url}/parcalar?brand=${brand}&gen=${gen}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(modelName)}`,
+      })
+    }
+    breadcrumbItems.push({ name: oem, url: window.location.href })
+
+    schemas.push({
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: breadcrumbItems.map((item, i) => ({
+        '@type': 'ListItem',
+        position: i + 1,
+        name: item.name,
+        item: item.url,
+      })),
+    })
+
+    // Inject into head
+    const scriptId = 'part-detail-jsonld'
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null
+    if (!script) {
+      script = document.createElement('script')
+      script.id = scriptId
+      script.type = 'application/ld+json'
+      document.head.appendChild(script)
+    }
+    script.textContent = JSON.stringify(schemas)
+
+    return () => {
+      const el = document.getElementById(scriptId)
+      if (el) el.remove()
+    }
+  }, [loading, partName, oem, marka, modelName, brand, gen, productInfo])
 
   // Uyumlu markaları grupla
   const brandGroups = useMemo(() => {
