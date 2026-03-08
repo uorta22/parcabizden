@@ -11,6 +11,10 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'api.parcabizden.com.tr',
       },
+      {
+        protocol: 'https',
+        hostname: 'www.auto-data.net',
+      },
     ],
   },
   async headers() {

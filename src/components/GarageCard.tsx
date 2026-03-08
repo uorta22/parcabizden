@@ -1,9 +1,8 @@
 'use client'
 
-import { memo } from 'react'
+import { memo, useState } from 'react'
 import { Trash2, Search, Wrench, MessageCircle, Car, Gauge, AlertTriangle, Clock } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 import type { GarageVehicleNatro } from '@/types/api'
 import { getWhatsAppUrl } from '@/lib/config'
 
@@ -14,6 +13,7 @@ interface GarageCardProps {
 }
 
 function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
+  const [imgError, setImgError] = useState(false)
   const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
   const detailHref = `/hesabim/garaj/${vehicle.id}`
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
@@ -35,8 +35,9 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
     <Link href={detailHref} className="block bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary-400 hover:shadow-md transition-all group flex flex-col cursor-pointer">
       {/* Vehicle Image */}
       <div className="relative aspect-[16/10] bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center overflow-hidden">
-        {vehicleImage ? (
-          <Image src={vehicleImage} alt={`${vehicle.brand_name} ${vehicle.generation_name}`} fill className="object-contain p-2" sizes="(max-width: 768px) 100vw, 33vw" />
+        {vehicleImage && !imgError ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={vehicleImage} alt={`${vehicle.brand_name} ${vehicle.generation_name}`} className="w-full h-full object-contain p-2" loading="lazy" onError={() => setImgError(true)} />
         ) : (
           <Car className="w-12 h-12 text-gray-300" />
         )}
