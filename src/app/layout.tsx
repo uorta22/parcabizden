@@ -7,6 +7,7 @@ import ChatWidget from '@/components/ChatWidget'
 import SchemaOrg from '@/components/SchemaOrg'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/contexts/CartContext'
+import { ToastProvider } from '@/contexts/ToastContext'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { siteConfig } from '@/lib/config'
 
@@ -57,17 +58,19 @@ export default function RootLayout({
         <SchemaOrg />
       </head>
       <body className={`${inter.className} bg-white text-gray-900`}>
-        <AuthProvider>
-          <CartProvider>
-            <Header />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Footer />
-            <ChatWidget />
-            <SpeedInsights />
-          </CartProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <CartProvider>
+              <Header />
+              <main className="min-h-screen">
+                {children}
+              </main>
+              <Footer />
+              <ChatWidget />
+              <SpeedInsights />
+            </CartProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   )
