@@ -6,6 +6,9 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2 } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
+import { ProductCardSkeleton, GenerationCardSkeleton, Skeleton } from '@/components/Skeleton'
+import Pagination from '@/components/Pagination'
+import Tabs from '@/components/Tabs'
 import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, fetchAutodataModels, fetchAutodataBrands, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
 import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
 import type { AutodataGeneration, AutodataModel, SlugMatch, VehicleSpecRow } from '@/types/api'
@@ -250,8 +253,8 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
   // Filtered lists
   const filteredNodes = nodes.filter(n => !nodeSearch || n.label.toLowerCase().includes(nodeSearch.toLowerCase()))
   const filteredParts = parts.filter(p => !partSearch || p.name.toLowerCase().includes(partSearch.toLowerCase()) || p.oem_number.toLowerCase().includes(partSearch.toLowerCase()))
-  const paginatedParts = filteredParts.slice(0, partsPage * PARTS_PER_PAGE)
-  const remainingParts = filteredParts.length - paginatedParts.length
+  const totalPages = Math.ceil(filteredParts.length / PARTS_PER_PAGE)
+  const paginatedParts = filteredParts.slice((partsPage - 1) * PARTS_PER_PAGE, partsPage * PARTS_PER_PAGE)
 
   // If generation slug doesn't match DB, fallback to generation picker
   if (fallbackToGenerations) {
@@ -320,8 +323,10 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
 
       {/* Loading */}
       {loading && (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
         </div>
       )}
 
@@ -450,13 +455,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
                 })}
               </div>
 
-              {remainingParts > 0 && (
-                <button onClick={() => setPartsPage(p => p + 1)}
-                  className="mt-4 w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 text-sm font-medium transition-all flex items-center justify-center gap-2">
-                  Daha Fazla Göster
-                  <span className="text-xs text-gray-400">({remainingParts} parça daha)</span>
-                </button>
-              )}
+              <Pagination currentPage={partsPage} totalPages={totalPages} onPageChange={setPartsPage} />
 
               {filteredParts.length === 0 && (
                 <p className="text-gray-500 text-sm text-center py-10">Aramanızla eşleşen parça bulunamadı</p>
@@ -575,8 +574,13 @@ function ModelPicker({ brand, marka }: { brand: string; marka: string }) {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 space-y-2" aria-hidden="true">
+              <Skeleton className="h-5 w-3/5" />
+              <Skeleton className="h-3 w-2/5" />
+            </div>
+          ))}
         </div>
       ) : models.length > 0 ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
@@ -966,10 +970,10 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
 
       {/* Loading state (initial) */}
       {loading && !resolving && (
-        <div className="flex items-center justify-center py-20">
-          <div className="text-center">
-            <Loader2 className="w-8 h-8 text-primary-500 animate-spin mx-auto" />
-          </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <GenerationCardSkeleton key={i} />
+          ))}
         </div>
       )}
 
@@ -1001,36 +1005,15 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         <div>
           {/* Body Type Tabs */}
           {bodyTypeTabs.length > 0 && (
-            <div className="flex overflow-x-auto scrollbar-hide gap-2 mb-5 pb-1">
-              <button
-                onClick={() => setActiveBodyType('__all__')}
-                className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeBodyType === '__all__'
-                    ? 'bg-primary-50 text-primary-600 border border-primary-300 shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
-                }`}
-              >
-                Tumu
-                <span className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded-md ${
-                  activeBodyType === '__all__' ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'
-                }`}>{autodataGens.length}</span>
-              </button>
-              {bodyTypeTabs.map(({ type, count }) => (
-                <button
-                  key={type}
-                  onClick={() => setActiveBodyType(type)}
-                  className={`flex-shrink-0 flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                    activeBodyType === type
-                      ? 'bg-primary-50 text-primary-600 border border-primary-300 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'
-                  }`}
-                >
-                  {type}
-                  <span className={`text-[11px] tabular-nums px-1.5 py-0.5 rounded-md ${
-                    activeBodyType === type ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'
-                  }`}>{count}</span>
-                </button>
-              ))}
+            <div className="mb-5">
+              <Tabs
+                tabs={[
+                  { id: '__all__', label: 'Tümü', count: autodataGens.length },
+                  ...bodyTypeTabs.map(({ type, count }) => ({ id: type, label: type, count })),
+                ]}
+                activeTab={activeBodyType}
+                onChange={setActiveBodyType}
+              />
             </div>
           )}
 

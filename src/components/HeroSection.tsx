@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, MessageCircle, Sparkles, AlertCircle, CheckCircle, Wrench, Info, Car, Loader2, Copy, Check, Package, ChevronLeft, Hash, ChevronRight } from 'lucide-react'
+import Pagination from '@/components/Pagination'
 import { BrandLogo } from '@/components/BrandLogos'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import type { VehicleInfo, VehicleGeneration } from '@/types/vehicle'
@@ -283,8 +284,8 @@ export default function HeroSection() {
     return apiNodes.filter(n => n.label.toLowerCase().includes(q) || n.name.toLowerCase().includes(q))
   }, [apiNodes, nodeSearch])
 
-  const visibleParts = useMemo(() => apiParts.slice(0, partsPage * PARTS_PER_PAGE), [apiParts, partsPage])
-  const remainingParts = apiParts.length - visibleParts.length
+  const totalPartsPages = Math.ceil(apiParts.length / PARTS_PER_PAGE)
+  const visibleParts = useMemo(() => apiParts.slice((partsPage - 1) * PARTS_PER_PAGE, partsPage * PARTS_PER_PAGE), [apiParts, partsPage])
 
   return (
     <>
@@ -803,15 +804,7 @@ export default function HeroSection() {
                             ))}
                           </div>
 
-                          {remainingParts > 0 && (
-                            <button
-                              onClick={() => setPartsPage(p => p + 1)}
-                              className="mt-6 w-full py-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-xl text-gray-500 hover:text-gray-900 text-sm font-medium transition-all flex items-center justify-center gap-2"
-                            >
-                              Daha Fazla Göster
-                              <span className="text-xs text-gray-400">({remainingParts} parça daha)</span>
-                            </button>
-                          )}
+                          <Pagination currentPage={partsPage} totalPages={totalPartsPages} onPageChange={setPartsPage} />
                         </>
                       )}
                     </div>
