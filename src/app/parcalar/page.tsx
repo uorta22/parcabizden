@@ -108,7 +108,7 @@ function StaticCategoriesView() {
 }
 
 // ── Dynamic vehicle parts explorer ──
-function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string; gen: string; marka: string; modelName: string }) {
+function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: { brand: string; gen: string; marka: string; modelName: string; generationName?: string }) {
   type View = 'categories' | 'nodes' | 'parts'
 
   const [view, setView] = useState<View>('categories')
@@ -140,13 +140,19 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
   // Marka logosu
   const brandLogo = marka ? getBrandLogoPath(marka) : ''
 
-  // Load vehicle image — vehicle-tree.json ilk, fallback olarak autodata görseli
+  // Load vehicle image — önce spesifik nesil adı, sonra vehicle-tree.json, en son genel model adı
   useEffect(() => {
     if (!marka) return
     let cancelled = false
 
     const loadImage = async () => {
-      // vehicle-tree.json'dan dene
+      // 1. Spesifik nesil adı varsa önce onu dene (GenerationPicker'dan gelen)
+      if (!cancelled && generationName) {
+        const img = await findAutodataGenerationImage(marka, generationName)
+        if (img && !cancelled) { setVehicleImage(img); return }
+      }
+
+      // 2. vehicle-tree.json'dan dene (URL'den gelen model slug ile)
       if (modelSlug) {
         try {
           const res = await fetch('/data/vehicle-tree.json')
@@ -161,7 +167,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
         } catch { /* devam et */ }
       }
 
-      // Fallback: autodata görseli (modelName kullan, DB slug değil)
+      // 3. Fallback: genel model adı ile autodata görseli
       if (!cancelled && modelName) {
         const img = await findAutodataGenerationImage(marka, modelName)
         if (img && !cancelled) setVehicleImage(img)
@@ -170,7 +176,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName }: { brand: string;
 
     loadImage()
     return () => { cancelled = true }
-  }, [marka, modelSlug, modelKey, gen])
+  }, [marka, modelSlug, modelKey, gen, generationName])
 
   const handleCategoryClick = useCallback(async (cat: VehicleCategory) => {
     setSelectedCat(cat)
@@ -608,6 +614,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   const [resolving, setResolving] = useState(false)
   const [error, setError] = useState('')
   const [selectedGen, setSelectedGen] = useState<string | null>(null)
+  const [selectedGenName, setSelectedGenName] = useState<string | null>(null)
   const [useAutodata, setUseAutodata] = useState(false)
 
   // New states for enhanced UX
@@ -805,6 +812,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       image: genImages[genKey],
       specs: genSpecs[genKey],
     })
+    setSelectedGenName(gen.name)
     setResolving(true)
     setError('')
 
@@ -873,7 +881,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
 
   // If a generation is selected, show the full parts explorer
   if (selectedGen) {
-    return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} />
+    return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} generationName={selectedGenName || undefined} />
   }
 
   const whatsappText = `Merhaba, ${marka} ${modelName} aracim icin parca ariyorum.`
