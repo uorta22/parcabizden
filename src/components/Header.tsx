@@ -7,9 +7,12 @@ import {
   Menu, X, Car, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus,
   ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
 } from 'lucide-react'
+import dynamic from 'next/dynamic'
 import { useAuth } from '@/contexts/AuthContext'
 import CartIcon from '@/components/CartIcon'
-import BrandBar from '@/components/BrandBar'
+
+// BrandBar lazy load — API çağrısı yapan ağır bileşen, sadece desktop'ta görünür
+const BrandBar = dynamic(() => import('@/components/BrandBar'), { ssr: false })
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)

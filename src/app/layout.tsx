@@ -1,17 +1,20 @@
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
+import dynamic from 'next/dynamic'
 import './globals.css'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
-import ChatWidget from '@/components/ChatWidget'
 import SchemaOrg from '@/components/SchemaOrg'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/contexts/CartContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { SpeedInsights } from '@vercel/speed-insights/next'
-import BackToTop from '@/components/BackToTop'
-import CookieConsent from '@/components/CookieConsent'
 import { siteConfig } from '@/lib/config'
+
+// Lazy load: başlangıçta görünmeyen veya etkileşim sonrası açılan bileşenler
+const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false })
+const BackToTop = dynamic(() => import('@/components/BackToTop'), { ssr: false })
+const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false })
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' })
 
