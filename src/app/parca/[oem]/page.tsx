@@ -370,15 +370,15 @@ function PartDetailContent() {
                         )}
 
                         {/* Stok durumu */}
-                        {productInfo && (
-                          <div className={`flex items-center gap-2 text-sm mt-3 ${productInfo.in_stock ? 'text-green-600' : 'text-gray-400'}`}>
-                            {productInfo.in_stock ? (
-                              <><CheckCircle2 className="w-4 h-4" /> Stokta Mevcut</>
-                            ) : (
-                              <><AlertCircle className="w-4 h-4" /> Stokta Yok</>
-                            )}
-                          </div>
-                        )}
+                        <div className={`flex items-center gap-2 text-sm mt-3 ${
+                          !productInfo || productInfo.in_stock !== false ? 'text-green-600' : 'text-gray-400'
+                        }`}>
+                          {!productInfo || productInfo.in_stock !== false ? (
+                            <><CheckCircle2 className="w-4 h-4" /> Stokta Var</>
+                          ) : (
+                            <><AlertCircle className="w-4 h-4" /> Stokta Yok</>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -390,6 +390,12 @@ function PartDetailContent() {
                 <div className="lg:sticky lg:top-24">
                   <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
                     <div className="p-5 space-y-4">
+
+                      {/* Stok durumu badge */}
+                      <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                        <CheckCircle2 className="w-4 h-4 text-green-600" />
+                        <span className="text-sm font-medium text-green-700">Stokta Var</span>
+                      </div>
 
                       {/* Fiyat */}
                       {hasPrice ? (

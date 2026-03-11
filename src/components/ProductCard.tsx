@@ -89,18 +89,20 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
         )}
 
         {/* Stock badge */}
-        {!product.in_stock && (
-          <span className="absolute top-2 right-2 px-2 py-1 bg-gray-700 text-white text-[11px] font-medium rounded-lg">
-            Stokta Yok
-          </span>
-        )}
+        <span className={`absolute top-2 right-2 px-2 py-1 text-[11px] font-medium rounded-lg ${
+          product.in_stock !== false
+            ? 'bg-green-600 text-white'
+            : 'bg-gray-700 text-white'
+        }`}>
+          {product.in_stock !== false ? 'Stokta Var' : 'Stokta Yok'}
+        </span>
 
         {/* Favorite heart */}
         {user && (
           <button
             onClick={handleToggleFav}
             disabled={favLoading}
-            className={`absolute ${!product.in_stock ? 'top-10' : 'top-2'} right-2 p-1.5 rounded-full transition-all ${
+            className={`absolute top-10 right-2 p-1.5 rounded-full transition-all ${
               (isFav || onRemoveFavorite)
                 ? 'bg-red-50 text-red-500 hover:bg-red-100'
                 : 'bg-white/70 text-gray-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100'
@@ -144,7 +146,9 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
               </span>
             </div>
           ) : (
-            <span className="text-sm font-medium text-gray-500">Fiyat Sor</span>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Fiyat Sor</span>
+            </div>
           )}
 
           {hasPrice ? (
