@@ -23,11 +23,11 @@ function formatBrandName(slug: string): string {
 
 function getBrandLogo(name: string): string {
   const overrides: Record<string, string> = {
-    'Mercedes-Benz': 'mercedes-benz.png', 'Alfa Romeo': 'alfa-romeo.png',
-    'Land Rover': 'land-rover.png', 'Aston Martin': 'aston-martin.png',
-    'Rolls-Royce': 'rolls-royce.png', 'MINI': 'mini.png',
+    'Mercedes-Benz': 'mercedes-benz.webp', 'Alfa Romeo': 'alfa-romeo.webp',
+    'Land Rover': 'land-rover.webp', 'Aston Martin': 'aston-martin.webp',
+    'Rolls-Royce': 'rolls-royce.webp', 'MINI': 'mini.webp',
   }
-  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.png'}`
+  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
 }
 
 export default function CategoryDropdown() {

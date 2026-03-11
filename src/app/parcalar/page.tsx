@@ -69,11 +69,11 @@ function StaticCategoriesView() {
 
   const getBrandLogo = (name: string): string => {
     const map: Record<string, string> = {
-      'Mercedes-Benz': 'mercedes-benz.png', 'Alfa Romeo': 'alfa-romeo.png',
-      'Land Rover': 'land-rover.png', 'Aston Martin': 'aston-martin.png',
-      'Rolls-Royce': 'rolls-royce.png',
+      'Mercedes-Benz': 'mercedes-benz.webp', 'Alfa Romeo': 'alfa-romeo.webp',
+      'Land Rover': 'land-rover.webp', 'Aston Martin': 'aston-martin.webp',
+      'Rolls-Royce': 'rolls-royce.webp',
     }
-    return `/brands/${map[name] || name.toLowerCase().replace(/\s+/g, '-') + '.png'}`
+    return `/brands/${map[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
   }
 
   const handleBrandClick = (slug: string, name: string) => {
@@ -504,11 +504,11 @@ interface GenSpecSummary {
 
 function getBrandLogoPath(name: string): string {
   const overrides: Record<string, string> = {
-    'Alfa Romeo': 'alfa-romeo.png', 'Aston Martin': 'aston-martin.png',
-    'Land Rover': 'land-rover.png', 'Mercedes-Benz': 'mercedes-benz.png',
-    'Rolls-Royce': 'rolls-royce.png',
+    'Alfa Romeo': 'alfa-romeo.webp', 'Aston Martin': 'aston-martin.webp',
+    'Land Rover': 'land-rover.webp', 'Mercedes-Benz': 'mercedes-benz.webp',
+    'Rolls-Royce': 'rolls-royce.webp',
   }
-  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.png'}`
+  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
 }
 
 function summarizeSpecs(specs: VehicleSpecRow[]): GenSpecSummary | null {

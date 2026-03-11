@@ -21,20 +21,20 @@ interface BrandData {
 type VehicleTree = Record<string, BrandData>
 
 const brandLogoOverrides: Record<string, string> = {
-  'Mercedes-Benz': 'mercedes-benz.png',
-  'Mercedes': 'mercedes-benz.png',
-  'MINI': 'mini.png',
-  'MAN': 'man.png',
-  'Genesis': 'genesis.jpg',
-  'Lada': 'lada.jpg',
-  'Alfa Romeo': 'alfa-romeo.png',
-  'Land Rover': 'land-rover.png',
+  'Mercedes-Benz': 'mercedes-benz.webp',
+  'Mercedes': 'mercedes-benz.webp',
+  'MINI': 'mini.webp',
+  'MAN': 'man.webp',
+  'Genesis': 'genesis.webp',
+  'Lada': 'lada.webp',
+  'Alfa Romeo': 'alfa-romeo.webp',
+  'Land Rover': 'land-rover.webp',
 }
 
 function getBrandLogoPath(brand: string): string {
   if (brandLogoOverrides[brand]) return `/brands/${brandLogoOverrides[brand]}`
   const slug = brand.toLowerCase().replace(/\s+/g, '-')
-  return `/brands/${slug}.png`
+  return `/brands/${slug}.webp`
 }
 
 // Map autodata brand names to vehicle-tree.json keys
