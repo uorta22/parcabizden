@@ -190,13 +190,41 @@ export async function findAutodataImage(
   return null
 }
 
+// Model bazlı görsel cache — aynı marka+model için tek görsel kullan
+const modelImageCache = new Map<string, string | null>()
+
+function extractModelName(generationName: string): string {
+  // "Egea (357) HB / CROSS (2016->)" → "egea"
+  // "3 Serisi Sedan (G20N)(2022->)" → "3serisi"
+  // "Golf II (191/193)(08.1983-1992)" → "golf"
+  const cleaned = generationName
+    .replace(/\([^)]*\)/g, '') // Parantez içini kaldır
+    .replace(/\d{4}\s*-?>?\s*\d{0,4}/g, '') // Yılları kaldır
+    .replace(/[IVXLC]+$/i, '') // Sonundaki romen rakamlarını kaldır
+    .trim()
+  // İlk kelimeyi al (model adı)
+  const firstWord = cleaned.split(/[\s/]+/)[0]
+  return firstWord.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 export async function findAutodataGenerationImage(
   brandName: string,
   generationName: string
 ): Promise<string | null> {
+  // Model bazlı cache key
+  const modelName = extractModelName(generationName)
+  const cacheKey = `${normalize(brandName)}_${modelName}`
+
+  if (modelImageCache.has(cacheKey)) {
+    return modelImageCache.get(cacheKey)!
+  }
+
   // 1. Try autodata per-brand JSON
   const autodataResult = await findAutodataImage(brandName, generationName)
-  if (autodataResult) return autodataResult
+  if (autodataResult) {
+    modelImageCache.set(cacheKey, autodataResult)
+    return autodataResult
+  }
 
   // 2. Fallback to vehicle-tree.json
   try {
@@ -204,10 +232,14 @@ export async function findAutodataGenerationImage(
     const slug = brandSlug(brandName)
     const genSlug = brandSlug(generationName)
     const result = findVehicleImage(tree, slug, genSlug)
-    if (result) return result
+    if (result) {
+      modelImageCache.set(cacheKey, result)
+      return result
+    }
   } catch {
     // tree load failed, ignore
   }
 
+  modelImageCache.set(cacheKey, null)
   return null
 }

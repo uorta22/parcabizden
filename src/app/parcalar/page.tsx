@@ -644,23 +644,50 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     })
   }, [modelName])
 
-  // Fetch generation images in parallel (per-brand file is cached after first fetch)
+  // Fetch generation images — model+body_type bazlı tek görsel (aynı model için tek fetch)
   useEffect(() => {
     if (!marka || autodataGens.length === 0) return
     setGenImages({})
     let cancelled = false
     const fetchImages = async () => {
+      // Model adına göre grupla — her grup için sadece 1 fetch yap
+      const modelGroups = new Map<string, string[]>() // modelBaseKey → genKey[]
+      for (const gen of autodataGens) {
+        const genKey = `${gen.name}-${gen.body_type}`
+        // Model adını nesil adından çıkar (ilk kelime)
+        const modelBase = gen.name.split(/[\s(]/)[0].toLowerCase()
+        const groupKey = `${modelBase}_${gen.body_type || ''}`
+        if (!modelGroups.has(groupKey)) modelGroups.set(groupKey, [])
+        modelGroups.get(groupKey)!.push(genKey)
+      }
+
+      // Her model grubu için tek bir neslin görselini fetch et
+      const fetched = new Map<string, string | null>()
+      const uniqueGens = Array.from(modelGroups.entries()).map(([groupKey, genKeys]) => {
+        // Grubun ilk nesil adını kullan (representative)
+        const repGen = autodataGens.find(g => `${g.name}-${g.body_type}` === genKeys[0])!
+        return { groupKey, genKeys, repGen }
+      })
+
       const results = await Promise.all(
-        autodataGens.map(async (gen) => {
-          const key = `${gen.name}-${gen.body_type}`
-          const img = await findAutodataGenerationImage(marka, gen.name)
-          return { key, img }
+        uniqueGens.map(async ({ groupKey, repGen }) => {
+          const img = await findAutodataGenerationImage(marka, repGen.name)
+          return { groupKey, img }
         })
       )
       if (cancelled) return
+
+      for (const { groupKey, img } of results) {
+        fetched.set(groupKey, img)
+      }
+
+      // Tüm nesillere model grubunun görselini ata
       const images: Record<string, string> = {}
-      for (const { key, img } of results) {
-        if (img) images[key] = img
+      for (const [groupKey, genKeys] of Array.from(modelGroups.entries())) {
+        const img = fetched.get(groupKey)
+        if (img) {
+          for (const gk of genKeys) images[gk] = img
+        }
       }
       setGenImages(images)
     }

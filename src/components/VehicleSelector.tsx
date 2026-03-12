@@ -434,23 +434,45 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
     return null
   }
 
-  // Fetch autodata images for generation cards in parallel
+  // Fetch autodata images for generation cards — grouped by model+body_type
   useEffect(() => {
     if (!selectedBrand || generations.length === 0) return
     setGenImages({})
     let cancelled = false
     const fetchImages = async () => {
-      const results = await Promise.all(
-        generations.map(async (gen) => {
-          const key = `${gen.name}-${gen.body_type}`
-          const img = await findAutodataGenerationImage(selectedBrand.name, gen.name)
-          return { key, img }
+      // Model bazlı gruplama: aynı model+body_type için tek görsel çek
+      const groups = new Map<string, { gens: typeof generations }>()
+      for (const gen of generations) {
+        const modelBase = gen.name
+          .replace(/\([^)]*\)/g, '')
+          .replace(/\d{4}\s*-?>?\s*\d{0,4}/g, '')
+          .trim()
+          .split(/[\s/]+/)[0]
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, '')
+        const groupKey = `${modelBase}_${gen.body_type || 'other'}`
+        if (!groups.has(groupKey)) {
+          groups.set(groupKey, { gens: [] })
+        }
+        groups.get(groupKey)!.gens.push(gen)
+      }
+
+      // Her grup için tek bir temsilci generation'dan görsel çek
+      const groupResults = await Promise.all(
+        Array.from(groups.entries()).map(async ([groupKey, { gens }]) => {
+          const representative = gens[0]
+          const img = await findAutodataGenerationImage(selectedBrand.name, representative.name)
+          return { groupKey, gens, img }
         })
       )
       if (cancelled) return
       const images: Record<string, string> = {}
-      for (const { key, img } of results) {
-        if (img) images[key] = img
+      for (const { gens, img } of groupResults) {
+        if (img) {
+          for (const gen of gens) {
+            images[`${gen.name}-${gen.body_type}`] = img
+          }
+        }
       }
       setGenImages(images)
     }
