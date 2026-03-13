@@ -197,15 +197,23 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
     }
   }, [brand, gen])
 
-  // Load categories
+  // Load categories — anında statik isimlerle göster, arka planda sayıları doldur
   useEffect(() => {
-    setLoading(true)
     setError('')
     setFallbackToGenerations(false)
+
+    // Anında statik kategorileri göster (sayılar 0 olarak, loading yok)
+    const placeholder: VehicleCategory[] = STATIC_API_CATEGORIES.map((c, i) => ({
+      id: c.id, name_tr: c.name_tr, name_en: c.id, icon: c.id,
+      sort_order: i, total_parts: 0, node_count: 0,
+    }))
+    setApiCategories(placeholder)
+    setLoading(false)
+
+    // Arka planda gerçek sayıları fetch et
     fetchVehicleCategories(brand, gen)
       .then(data => {
         if (data.total_parts === 0 || data.categories.length === 0) {
-          // Slug mismatch — vehicle-tree slug doesn't match DB slug, fallback to generation picker
           setFallbackToGenerations(true)
           return
         }
@@ -223,7 +231,6 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
         }
       })
       .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
   }, [brand, gen, handleCategoryClick])
 
   const handleNodeClick = useCallback(async (node: VehicleNode) => {

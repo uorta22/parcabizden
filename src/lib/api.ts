@@ -304,14 +304,33 @@ async function actionPost<T>(params: Record<string, string>): Promise<T> {
   return data
 }
 
-export function fetchVehicleCategories(brand: string, gen: string) {
-  return actionFetch<{ categories: VehicleCategory[]; total_parts: number }>({
+// ── In-memory cache for categories, nodes, brands (5 min TTL) ──
+const CACHE_TTL = 5 * 60 * 1000
+type CacheEntry<T> = { data: T; timestamp: number }
+const categoriesCache = new Map<string, CacheEntry<{ categories: VehicleCategory[]; total_parts: number }>>()
+const nodesCache = new Map<string, CacheEntry<{ nodes: VehicleNode[] }>>()
+const brandsCache: { data: { brands: AutodataBrand[] } | null; timestamp: number } = { data: null, timestamp: 0 }
+
+export async function fetchVehicleCategories(brand: string, gen: string) {
+  const key = `${brand}_${gen}`
+  const cached = categoriesCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
+
+  const data = await actionFetch<{ categories: VehicleCategory[]; total_parts: number }>({
     action: 'categories', brand, gen,
   })
+  categoriesCache.set(key, { data, timestamp: Date.now() })
+  return data
 }
 
-export function fetchVehicleNodes(brand: string, gen: string, cat: string) {
-  return actionFetch<{ nodes: VehicleNode[] }>({ action: 'nodes', brand, gen, cat })
+export async function fetchVehicleNodes(brand: string, gen: string, cat: string) {
+  const key = `${brand}_${gen}_${cat}`
+  const cached = nodesCache.get(key)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
+
+  const data = await actionFetch<{ nodes: VehicleNode[] }>({ action: 'nodes', brand, gen, cat })
+  nodesCache.set(key, { data, timestamp: Date.now() })
+  return data
 }
 
 export function fetchVehicleParts(brand: string, gen: string, node: string) {
@@ -351,12 +370,22 @@ export function searchOemParts(query: string) {
 
 // ==================== Autodata Endpoints ====================
 
-export function fetchAutodataBrands() {
-  return actionFetch<{ brands: AutodataBrand[] }>({ action: 'autodata_brands' })
+export async function fetchAutodataBrands() {
+  if (brandsCache.data && Date.now() - brandsCache.timestamp < CACHE_TTL) return brandsCache.data
+  const data = await actionFetch<{ brands: AutodataBrand[] }>({ action: 'autodata_brands' })
+  brandsCache.data = data
+  brandsCache.timestamp = Date.now()
+  return data
 }
 
-export function fetchAutodataModels(brandSlug: string) {
-  return actionFetch<{ models: AutodataModel[]; brand: string }>({ action: 'autodata_models', brand: brandSlug })
+const modelsCache = new Map<string, CacheEntry<{ models: AutodataModel[]; brand: string }>>()
+
+export async function fetchAutodataModels(brandSlug: string) {
+  const cached = modelsCache.get(brandSlug)
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
+  const data = await actionFetch<{ models: AutodataModel[]; brand: string }>({ action: 'autodata_models', brand: brandSlug })
+  modelsCache.set(brandSlug, { data, timestamp: Date.now() })
+  return data
 }
 
 export function fetchAutodataGenerations(brandSlug: string, model: string) {

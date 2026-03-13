@@ -117,24 +117,35 @@ export default function HeroSection() {
 
   // ── VIN handlers ──
   const loadCategories = useCallback(async (brandSlug: string, genSlug: string, genName: string) => {
-    setLoadingParts(true)
-    setApiCategories([])
+    // Anında statik kategorileri göster (sayılar 0)
+    const STATIC_CATS: VehicleCategory[] = [
+      'engine', 'turbo_intake', 'fuel', 'exhaust', 'transmission', 'brake',
+      'suspension', 'wheel_tyre', 'body_exterior', 'glass_mirror', 'lighting',
+      'electrical', 'climate', 'interior', 'audio_media', 'tow_transport', 'other',
+    ].map((id, i) => ({
+      id, name_tr: { engine: 'Motor', turbo_intake: 'Turbo & Emme', fuel: 'Yakıt Sistemi', exhaust: 'Egzoz', transmission: 'Şanzıman', brake: 'Fren', suspension: 'Süspansiyon', wheel_tyre: 'Jant & Lastik', body_exterior: 'Kaporta & Dış', glass_mirror: 'Cam & Ayna', lighting: 'Aydınlatma', electrical: 'Elektrik', climate: 'Klima & Isıtma', interior: 'İç Aksam', audio_media: 'Ses & Medya', tow_transport: 'Çeki & Taşıma', other: 'Diğer' }[id] || id,
+      name_en: id, icon: id, sort_order: i, total_parts: 0, node_count: 0,
+    }))
+    setApiCategories(STATIC_CATS)
     setApiNodes([])
     setApiParts([])
     setSelectedCat(null)
     setSelectedNode(null)
     setPartsPage(1)
     setNodeSearch('')
+    setSelectedGen({ slug: genSlug, name: genName })
+    setPartsView('categories')
+    setLoadingParts(false)
+
+    // Arka planda gerçek sayıları fetch et
     try {
       const res = await fetchVehicleCategories(brandSlug, genSlug)
-      setApiCategories(res.categories)
-      setTotalApiParts(res.total_parts)
-      setSelectedGen({ slug: genSlug, name: genName })
-      setPartsView('categories')
+      if (res.categories.length > 0) {
+        setApiCategories(res.categories)
+        setTotalApiParts(res.total_parts)
+      }
     } catch {
-      // silently fail — WhatsApp CTA remains visible
-    } finally {
-      setLoadingParts(false)
+      // silently fail — statik kategoriler hala görünür
     }
   }, [])
 
