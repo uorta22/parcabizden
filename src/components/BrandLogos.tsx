@@ -421,6 +421,13 @@ export function BrandLogo({ brand, size = 40, className = '' }: BrandLogoProps) 
   )
 }
 
+// Marka adından logo URL'i döndürür (src olarak kullanılabilir)
+export function getBrandLogoUrl(brand: string): string | null {
+  const file = brandFileMap[brand] ||
+    Object.entries(brandFileMap).find(([key]) => key.toLowerCase() === brand.toLowerCase())?.[1]
+  return file ? `/brands/${file}` : null
+}
+
 // Popular brands in Turkey shown on homepage
 export const allBrands = [
   'Volkswagen', 'BMW', 'Mercedes-Benz', 'Audi', 'Toyota', 'Ford',

@@ -1,11 +1,9 @@
 import { MetadataRoute } from 'next'
-import { categories, parts } from '@/data/parts'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://parcabizden.com.tr'
 
-  // Statik sayfalar
-  const staticPages: MetadataRoute.Sitemap = [
+  return [
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -16,12 +14,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${baseUrl}/parcalar`,
       lastModified: new Date(),
       changeFrequency: 'daily',
-      priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/sase-sorgula`,
-      lastModified: new Date(),
-      changeFrequency: 'weekly',
       priority: 0.9,
     },
     {
@@ -49,22 +41,4 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
   ]
-
-  // Kategori sayfalari
-  const categoryPages: MetadataRoute.Sitemap = categories.map((category) => ({
-    url: `${baseUrl}/parcalar/${category.id}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily' as const,
-    priority: 0.8,
-  }))
-
-  // Parca detay sayfalari
-  const partPages: MetadataRoute.Sitemap = parts.map((part) => ({
-    url: `${baseUrl}/parcalar/${part.category}/${part.id}`,
-    lastModified: new Date(),
-    changeFrequency: 'weekly' as const,
-    priority: 0.7,
-  }))
-
-  return [...staticPages, ...categoryPages, ...partPages]
 }

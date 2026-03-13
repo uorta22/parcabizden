@@ -42,32 +42,17 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link href="/parcalar" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Tüm Parçalar
+                  Parça Kataloğu
                 </Link>
               </li>
               <li>
-                <Link href="/sase-sorgula" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Şase ile Sorgula
+                <Link href="/hakkimizda" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  Hakkımızda
                 </Link>
               </li>
               <li>
-                <Link href="/parcalar/motor" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Motor Parçaları
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar/sanziman" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Şanzıman Parçaları
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar/suspansiyon" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Süspansiyon
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar/elektrik" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Elektrik Aksamı
+                <Link href="/iletisim" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
+                  İletişim
                 </Link>
               </li>
             </ul>

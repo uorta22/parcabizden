@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import { getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon } from '@/components/CategoryIcons'
+import { getBrandLogoUrl } from '@/components/BrandLogos'
 import { favoriteAdd, favoriteRemove } from '@/lib/api'
 import { useState } from 'react'
 
@@ -18,6 +19,8 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
   const { toast } = useToast()
   const [isFav, setIsFav] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
+  const productImage = product.thumbnail || (product.images && product.images.length > 0 ? product.images[0] : null)
+  const brandLogo = product.brand_name ? getBrandLogoUrl(product.brand_name) : null
   const hasPrice = product.price != null && product.price > 0
   const hasDiscount = hasPrice && product.discount_price != null && product.discount_price < product.price!
 
@@ -71,15 +74,31 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
       href={detailHref}
       className="group bg-white border border-gray-200 rounded-xl overflow-hidden hover:border-primary-300 hover:shadow-lg transition-all duration-200"
     >
-      {/* Image / Placeholder */}
+      {/* Image / Brand Logo Placeholder */}
       <div className="relative aspect-[4/3] bg-gray-50 overflow-hidden">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={product.thumbnail || (product.images && product.images.length > 0 ? product.images[0] : '/default-part.jpg')}
-          alt={product.name}
-          className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
+        {productImage ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={productImage}
+            alt={product.name}
+            className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-300"
+            loading="lazy"
+          />
+        ) : brandLogo ? (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={brandLogo}
+              alt={product.brand_name || 'Marka'}
+              className="w-16 h-16 object-contain opacity-40 group-hover:opacity-60 transition-opacity duration-300"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+            <CategoryIcon id={product.category} className="text-gray-300 group-hover:text-gray-400 transition-colors" size={48} stroke={1.2} />
+          </div>
+        )}
 
         {/* Discount badge */}
         {hasDiscount && (
