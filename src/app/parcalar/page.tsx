@@ -802,9 +802,20 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         return
       }
 
-      // No relevant generations at all → no parts catalog
-      setError('no_parts')
-      setResolving(false)
+      // filterByModel boş döndü — tüm resolve eşleşmelerini veya DB nesillerini göster
+      const allMatches = result?.matches || []
+      if (allMatches.length > 0) {
+        setDbGenerations(allMatches)
+        setUseAutodata(false)
+        setResolving(false)
+      } else if (allDbGens.length > 0) {
+        setDbGenerations(allDbGens)
+        setUseAutodata(false)
+        setResolving(false)
+      } else {
+        setError('no_parts')
+        setResolving(false)
+      }
     })
   }, [autodataGen, autodataYear, brand, modelName, filterByModel])
 
@@ -883,6 +894,24 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       setSelectedGenDisplay(null)
     }, 15000)
 
+    // Yardımcı: filterByModel boş döndüğünde tüm eşleşmeleri (veya DB nesilleri) göster
+    const fallbackToAllMatches = (matches: Array<{ generation_slug: string; generation_name: string; part_count: number }>) => {
+      // filterByModel boş döndüyse, tüm eşleşmeleri göster — kullanıcı manuel seçsin
+      if (matches.length > 0) {
+        setDbGenerations(matches)
+        setAutodataGens([])
+        setUseAutodata(false)
+      } else if (dbGenerations.length > 0) {
+        // DB'deki tüm nesilleri göster (filtresiz)
+        setAutodataGens([])
+        setUseAutodata(false)
+      } else {
+        setError('no_parts')
+      }
+      setResolving(false)
+      setSelectedGenDisplay(null)
+    }
+
     try {
       const result = await resolveAutodataSlug(brand, modelName, gen.name, gen.year_start ?? undefined)
       clearTimeout(timeout)
@@ -901,41 +930,15 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           setResolving(false)
           setSelectedGenDisplay(null)
         } else {
-          const relevantDb = filterByModel(dbGenerations)
-          if (relevantDb.length > 0) {
-            setDbGenerations(relevantDb)
-            setAutodataGens([])
-            setUseAutodata(false)
-          } else {
-            setError('no_parts')
-          }
-          setResolving(false)
-          setSelectedGenDisplay(null)
+          // filterByModel boş döndü — tüm eşleşmeleri göster
+          fallbackToAllMatches(result.matches)
         }
       } else {
-        const relevantDb = filterByModel(dbGenerations)
-        if (relevantDb.length > 0) {
-          setDbGenerations(relevantDb)
-          setAutodataGens([])
-          setUseAutodata(false)
-        } else {
-          setError('no_parts')
-        }
-        setResolving(false)
-        setSelectedGenDisplay(null)
+        fallbackToAllMatches([])
       }
     } catch {
       clearTimeout(timeout)
-      const relevantDb = filterByModel(dbGenerations)
-      if (relevantDb.length > 0) {
-        setDbGenerations(relevantDb)
-        setAutodataGens([])
-        setUseAutodata(false)
-      } else {
-        setError('no_parts')
-      }
-      setResolving(false)
-      setSelectedGenDisplay(null)
+      fallbackToAllMatches([])
     }
   }
 
@@ -1315,13 +1318,23 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       {/* DB generations fallback — enhanced cards */}
       {!loading && !resolving && !error && !useAutodata && dbGenerations.length > 0 && (
         <div>
+          {/* Model ismi DB'de bulunamadığında bilgi notu */}
+          {dbGenerations.length > 0 && !dbGenerations.some(g => g.generation_name.toLowerCase().includes(modelName.toLowerCase().split(/\s+/)[0])) && (
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl mb-5">
+              <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm text-amber-800 font-medium">{marka} {modelName} için doğrudan eşleşme bulunamadı</p>
+                <p className="text-xs text-amber-600 mt-1">Aşağıdaki {marka} nesillerinden size uygun olanı seçebilir veya WhatsApp ile destek alabilirsiniz.</p>
+              </div>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-3 mb-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
                 <Car className="w-5 h-5 text-primary-500" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">{dbGenerations.length} nesil bulundu</h3>
+                <h3 className="text-lg font-bold text-gray-900">{marka} — {dbGenerations.length} nesil mevcut</h3>
                 <p className="text-gray-500 text-xs">Doğru nesil/dönem seçimi daha iyi parça listesi sağlar</p>
               </div>
             </div>
