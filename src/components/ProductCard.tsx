@@ -96,7 +96,7 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
           </div>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
-            <CategoryIcon id={product.category} className="text-gray-300 group-hover:text-gray-400 transition-colors" size={48} stroke={1.2} />
+            <CategoryIcon id={product.category} className="text-gray-300 group-hover:text-gray-400 transition-colors" size={48} strokeWidth={1.2} />
           </div>
         )}
 
@@ -135,7 +135,7 @@ export default function ProductCard({ product, onRemoveFavorite }: { product: Sh
       {/* Card body */}
       <div className="p-4">
         <div className="flex items-center gap-1.5 mb-2">
-          <CategoryIcon id={product.category} className="text-gray-400" size={14} stroke={2} />
+          <CategoryIcon id={product.category} className="text-gray-400" size={14} strokeWidth={2} />
           <span className="text-[11px] text-gray-400 uppercase tracking-wider font-medium">{product.category.replace(/_/g, ' ')}</span>
         </div>
 

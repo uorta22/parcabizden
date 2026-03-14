@@ -61,9 +61,9 @@ export const CATEGORY_COLORS: Record<string, string> = {
   other: 'from-gray-500 to-gray-600',
 }
 
-export function CategoryIcon({ id, className, size = 20, stroke = 1.8 }: { id: string; className?: string; size?: number; stroke?: number }) {
+export function CategoryIcon({ id, className, size = 20, strokeWidth = 1.8 }: { id: string; className?: string; size?: number; strokeWidth?: number }) {
   const Icon = CATEGORY_ICON_MAP[id] || CATEGORY_ICON_MAP.other
-  return <Icon className={className} size={size} stroke={stroke} />
+  return <Icon className={className} size={size} strokeWidth={strokeWidth} />
 }
 
 export function getCategoryColor(id: string) {

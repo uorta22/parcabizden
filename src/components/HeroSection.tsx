@@ -666,7 +666,7 @@ export default function HeroSection() {
                               <div className="relative">
                                 <div className="flex items-start justify-between mb-3">
                                   <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                                    <CategoryIcon id={cat.id} className="text-white" size={20} stroke={2} />
+                                    <CategoryIcon id={cat.id} className="text-white" size={20} strokeWidth={2} />
                                   </div>
                                   <span className="text-[11px] tabular-nums px-2 py-0.5 rounded-md bg-gray-100 text-gray-500 border border-gray-200">
                                     {cat.total_parts.toLocaleString('tr-TR')}

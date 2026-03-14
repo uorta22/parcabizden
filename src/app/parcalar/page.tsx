@@ -355,7 +355,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
                 className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-md transition-all text-left">
                 <div className="flex items-start gap-3">
                   <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                    <CategoryIcon id={cat.id} className="text-white" size={22} stroke={2} />
+                    <CategoryIcon id={cat.id} className="text-white" size={22} strokeWidth={2} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-gray-900 font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>

@@ -342,7 +342,7 @@ function PartDetailContent() {
                         </div>
                       ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center">
-                          <CategoryIcon id={catId || 'other'} className="text-gray-200" size={80} stroke={1} />
+                          <CategoryIcon id={catId || 'other'} className="text-gray-200" size={80} strokeWidth={1} />
                           <span className="mt-4 text-sm text-gray-300 font-medium">{displayCatName || 'Yedek Parça'}</span>
                         </div>
                       )}
@@ -377,7 +377,7 @@ function PartDetailContent() {
                     <div className="flex flex-wrap items-center gap-2">
                       {displayCatName && (
                         <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
-                          {catId && <CategoryIcon id={catId} className="text-gray-400" size={14} stroke={2} />}
+                          {catId && <CategoryIcon id={catId} className="text-gray-400" size={14} strokeWidth={2} />}
                           {displayCatName}
                         </span>
                       )}
