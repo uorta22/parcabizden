@@ -643,10 +643,32 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   // Helper: filter matches/generations by model name relevance
   const filterByModel = useCallback((matches: Array<{ generation_slug: string; generation_name: string; part_count: number }>) => {
     if (!modelName) return matches
-    const baseModel = modelName.split(/\s+/)[0].toLowerCase()
-    if (baseModel.length < 2) return matches
+
+    // "3 Serisi" → ["3", "serisi"], "X5" → ["x5"], "Golf" → ["golf"]
+    const modelWords = modelName.toLowerCase().split(/\s+/).filter(Boolean)
+    const baseModel = modelWords[0]
+    if (!baseModel) return matches
+
+    // "Serisi" gibi genel kelimeleri çıkar, asıl model tanımlayıcısını bul
+    const genericWords = ['serisi', 'series', 'class', 'klasse', 'sınıfı']
+    const significantWords = modelWords.filter(w => !genericWords.includes(w))
+
     return matches.filter(m => {
       const name = m.generation_name.toLowerCase()
+      const slug = m.generation_slug.toLowerCase()
+
+      // Kısa sayısal model isimleri için (3, 5, 7 gibi): "3 serisi" → generation'da "3" ile başlaması lazım
+      if (baseModel.length <= 2 && /^\d+$/.test(baseModel)) {
+        // "3 Serisi (E90)" gibi generation_name'lerde "3 " ile başlama veya "3-" içerme kontrolü
+        const pattern = new RegExp(`\\b${baseModel}\\b`)
+        return pattern.test(name) || pattern.test(slug)
+      }
+
+      // Uzun model isimleri için: herhangi bir önemli kelime generation_name'de geçmeli
+      if (significantWords.length > 0) {
+        return significantWords.some(w => name.includes(w) || slug.includes(w))
+      }
+
       return name.startsWith(baseModel) || name.includes(baseModel)
     })
   }, [modelName])
