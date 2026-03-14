@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2 } from 'lucide-react'
+import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2, ArrowRight, Grid3x3, List } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import { ProductCardSkeleton, GenerationCardSkeleton, Skeleton } from '@/components/Skeleton'
@@ -945,32 +945,61 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
   }
 
   const whatsappText = `Merhaba, ${marka} ${modelName} aracim icin parca ariyorum.`
+  const [genSearch, setGenSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+
+  // Nesil arama filtresi
+  const searchFilteredAutodataGens = useMemo(() => {
+    if (!genSearch.trim()) return filteredAutodataGens
+    const q = genSearch.toLowerCase()
+    return filteredAutodataGens.filter(g =>
+      g.name.toLowerCase().includes(q) ||
+      (g.body_type && g.body_type.toLowerCase().includes(q)) ||
+      `${g.year_start}`.includes(q) ||
+      `${g.year_end}`.includes(q)
+    )
+  }, [filteredAutodataGens, genSearch])
+
+  const searchFilteredDbGens = useMemo(() => {
+    if (!genSearch.trim()) return dbGenerations
+    const q = genSearch.toLowerCase()
+    return dbGenerations.filter(g =>
+      g.generation_name.toLowerCase().includes(q) ||
+      g.generation_slug.toLowerCase().includes(q)
+    )
+  }, [dbGenerations, genSearch])
 
   return (
     <>
-      {/* Vehicle Banner — enhanced with logo, badge, and WhatsApp CTA */}
-      <div className="mb-8 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-5">
-          {/* Brand logo */}
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
+      {/* Vehicle Banner — gradient hero */}
+      <div className="mb-8 rounded-2xl overflow-hidden bg-gradient-to-r from-secondary-800 via-secondary-700 to-secondary-600 shadow-lg">
+        <div className="p-6 md:p-8 flex flex-col sm:flex-row items-center gap-5 md:gap-8">
+          {/* Marka logo */}
+          <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0 p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={getBrandLogoPath(marka)} alt={marka} className="w-full h-full object-contain" />
+            <img src={getBrandLogoPath(marka)} alt={marka} className="w-full h-full object-contain drop-shadow-lg" />
           </div>
           <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka} {modelName}</h2>
-            <div className="flex items-center justify-center sm:justify-start gap-2 mt-1.5">
-              <p className="text-sm text-gray-500">Aracinizin nesil/donemini secin</p>
-              {!loading && useAutodata && autodataGens.length > 0 && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-50 border border-primary-200 rounded-full text-xs font-medium text-primary-600">
+            <h2 className="text-2xl md:text-3xl font-bold text-white">{marka} {modelName}</h2>
+            <p className="text-secondary-200 text-sm mt-2">Aracınızın nesil/dönemini seçerek parça kataloğuna ulaşın</p>
+            {!loading && useAutodata && autodataGens.length > 0 && (
+              <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full text-xs font-medium text-white">
+                  <Car className="w-3.5 h-3.5" />
                   {autodataGens.length} nesil
                 </span>
-              )}
-            </div>
+                {bodyTypeTabs.length > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full text-xs font-medium text-white">
+                    {bodyTypeTabs.length} kasa tipi
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all flex-shrink-0 text-sm">
+            className="flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-400 text-white font-semibold rounded-xl transition-all flex-shrink-0 text-sm shadow-lg shadow-green-500/30 hover:shadow-green-400/40">
             <MessageCircle className="w-4 h-4" />
-            Parca Talep Et
+            Parça Talep Et
           </a>
         </div>
       </div>
@@ -978,17 +1007,17 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       {/* Resolving overlay — visual confirmation card */}
       {resolving && (
         <div className="mb-8">
-          <div className="bg-white border border-primary-200 rounded-2xl overflow-hidden shadow-sm">
+          <div className="bg-white border-2 border-primary-200 rounded-2xl overflow-hidden shadow-md">
             <div className="p-6 flex flex-col sm:flex-row items-center gap-5">
               {selectedGenDisplay?.image ? (
-                <div className="w-32 h-20 sm:w-40 sm:h-24 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
+                <div className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selectedGenDisplay.image} alt={selectedGenDisplay.name} className="w-full h-full object-cover" />
+                  <img src={selectedGenDisplay.image} alt={selectedGenDisplay.name} className="w-full h-full object-contain p-2" />
                 </div>
               ) : (
-                <div className="w-32 h-20 sm:w-40 sm:h-24 rounded-xl bg-gray-50 flex items-center justify-center flex-shrink-0">
+                <div className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center flex-shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getBrandLogoPath(marka)} alt={marka} className="w-10 h-10 object-contain opacity-30" />
+                  <img src={getBrandLogoPath(marka)} alt={marka} className="w-12 h-12 object-contain opacity-30" />
                 </div>
               )}
               <div className="flex-1 text-center sm:text-left min-w-0">
@@ -1008,17 +1037,17 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
                     )}
                   </>
                 ) : (
-                  <p className="text-gray-600 font-medium">Parca katalogu eslestiriliyor...</p>
+                  <p className="text-gray-600 font-medium">Parça kataloğu eşleştiriliyor...</p>
                 )}
               </div>
               <div className="flex-shrink-0 flex flex-col items-center gap-2">
                 <Loader2 className="w-7 h-7 text-primary-500 animate-spin" />
-                <span className="text-xs text-gray-400">Yukleniyor...</span>
+                <span className="text-xs text-gray-400">Yükleniyor...</span>
               </div>
             </div>
             {/* Animated progress bar */}
-            <div className="h-1 bg-primary-100 overflow-hidden">
-              <div className="h-full bg-primary-500 rounded-r-full animate-pulse" style={{ width: '60%', animation: 'pulse 1.5s ease-in-out infinite, slideRight 2s ease-in-out infinite' }} />
+            <div className="h-1.5 bg-primary-100 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-r-full animate-pulse" style={{ width: '60%', animation: 'pulse 1.5s ease-in-out infinite, slideRight 2s ease-in-out infinite' }} />
             </div>
           </div>
         </div>
@@ -1034,16 +1063,16 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       )}
 
       {error === 'no_parts' && !loading && !resolving && (
-        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-          <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <Package className="w-7 h-7 text-gray-400" />
+        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+            <Package className="w-8 h-8 text-gray-400" />
           </div>
-          <h3 className="text-gray-900 font-semibold mb-2">Parca katalogu henuz hazir degil</h3>
-          <p className="text-gray-500 text-sm mb-5 max-w-md mx-auto">
-            {marka} {modelName} icin parca katalogu henuz sistemimizde bulunmuyor. WhatsApp uzerinden talep olusturabilirsiniz.
+          <h3 className="text-gray-900 font-bold text-lg mb-2">Parça kataloğu henüz hazır değil</h3>
+          <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
+            {marka} {modelName} için parça kataloğu henüz sistemimizde bulunmuyor. WhatsApp üzerinden talep oluşturabilirsiniz.
           </p>
           <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors">
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors shadow-md">
             <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Et
           </a>
         </div>
@@ -1059,148 +1088,295 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       {/* Autodata generations — visual cards with images and specs */}
       {!loading && !resolving && !error && useAutodata && autodataGens.length > 0 && (
         <div>
-          {/* Body Type Tabs */}
-          {bodyTypeTabs.length > 0 && (
-            <div className="mb-5">
-              <Tabs
-                tabs={[
-                  { id: '__all__', label: 'Tümü', count: autodataGens.length },
-                  ...bodyTypeTabs.map(({ type, count }) => ({ id: type, label: type, count })),
-                ]}
-                activeTab={activeBodyType}
-                onChange={setActiveBodyType}
-              />
+          {/* Toolbar: Body type tabs + Search + View toggle */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5">
+            {/* Body Type Tabs */}
+            {bodyTypeTabs.length > 0 && (
+              <div className="flex-1 min-w-0 w-full sm:w-auto">
+                <Tabs
+                  tabs={[
+                    { id: '__all__', label: 'Tümü', count: autodataGens.length },
+                    ...bodyTypeTabs.map(({ type, count }) => ({ id: type, label: type, count })),
+                  ]}
+                  activeTab={activeBodyType}
+                  onChange={setActiveBodyType}
+                />
+              </div>
+            )}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Arama */}
+              {autodataGens.length > 6 && (
+                <div className="relative flex-1 sm:flex-none sm:w-52">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={genSearch}
+                    onChange={e => setGenSearch(e.target.value)}
+                    placeholder="Nesil ara..."
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
+                  />
+                </div>
+              )}
+              {/* Görünüm değiştirici */}
+              <div className="flex items-center bg-white border border-gray-200 rounded-lg p-0.5">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Izgara görünüm"
+                >
+                  <Grid3x3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
+                  title="Liste görünüm"
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Sonuç sayısı */}
+          {genSearch && (
+            <p className="text-xs text-gray-400 mb-3">{searchFilteredAutodataGens.length} nesil eşleşiyor</p>
+          )}
+
+          {/* Grid View */}
+          {viewMode === 'grid' && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {searchFilteredAutodataGens.map((gen) => {
+                const genKey = `${gen.name}-${gen.body_type}`
+                const genImg = genImages[genKey]
+                const specs = genSpecs[genKey]
+                return (
+                  <button
+                    key={genKey}
+                    onClick={() => handleAutodataSelect(gen)}
+                    onMouseEnter={() => prefetchSpec(gen)}
+                    onFocus={() => prefetchSpec(gen)}
+                    className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl overflow-hidden text-left transition-all duration-200 hover:-translate-y-0.5"
+                  >
+                    {/* Nesil görseli */}
+                    <div className="relative aspect-[16/10] bg-gradient-to-br from-gray-50 to-gray-100/50 overflow-hidden">
+                      {genImg ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={genImg}
+                          alt={gen.name}
+                          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={getBrandLogoPath(marka)} alt={marka} className="w-12 h-12 object-contain opacity-15" />
+                        </div>
+                      )}
+                      {/* Yıl badge */}
+                      {(gen.year_start || gen.year_end) && (
+                        <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[11px] font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md">
+                          <Calendar className="w-3 h-3" />
+                          {gen.year_start || '?'}–{gen.year_end || 'günümüz'}
+                        </span>
+                      )}
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-primary-500/0 group-hover:bg-primary-500/5 transition-colors duration-300" />
+                    </div>
+
+                    {/* Kart gövdesi */}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="text-sm font-bold text-gray-900 group-hover:text-primary-600 transition-colors leading-snug">{gen.name}</p>
+                        <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
+                        {gen.body_type && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600 font-medium">{gen.body_type}</span>
+                        )}
+                        <span className="text-[11px] text-gray-400">{gen.mod_count} varyant</span>
+                      </div>
+
+                      {/* Teknik özellikler */}
+                      <div className="mt-3 pt-3 border-t border-gray-100 min-h-[48px]">
+                        {specs && (specs.powerRange || specs.fuelTypes) ? (
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
+                            {specs.powerRange && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                                <Zap className="w-3 h-3 text-amber-500 flex-shrink-0" />
+                                <span className="truncate">{specs.powerRange}</span>
+                              </div>
+                            )}
+                            {specs.engineRange && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                                <Settings2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                <span className="truncate">{specs.engineRange}</span>
+                              </div>
+                            )}
+                            {specs.fuelTypes && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                                <Fuel className="w-3 h-3 text-blue-500 flex-shrink-0" />
+                                <span className="truncate">{specs.fuelTypes}</span>
+                              </div>
+                            )}
+                            {specs.transmissions && (
+                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
+                                <Settings2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                                <span className="truncate">{specs.transmissions}</span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                            <Settings2 className="w-3 h-3 flex-shrink-0" />
+                            <span>{gen.mod_count} varyant mevcut</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredAutodataGens.map((gen) => {
-              const genKey = `${gen.name}-${gen.body_type}`
-              const genImg = genImages[genKey]
-              const specs = genSpecs[genKey]
-              return (
-                <button
-                  key={genKey}
-                  onClick={() => handleAutodataSelect(gen)}
-                  onMouseEnter={() => prefetchSpec(gen)}
-                  onFocus={() => prefetchSpec(gen)}
-                  className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl overflow-hidden text-left transition-all duration-200 hover:-translate-y-0.5"
-                >
-                  {/* Generation image */}
-                  <div className="relative aspect-[16/10] bg-gray-50 overflow-hidden">
-                    {genImg ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={genImg}
-                        alt={gen.name}
-                        className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={getBrandLogoPath(marka)} alt={marka} className="w-10 h-10 object-contain opacity-20" />
-                      </div>
-                    )}
-                    {/* Year badge */}
-                    {(gen.year_start || gen.year_end) && (
-                      <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[11px] font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md">
-                        <Calendar className="w-3 h-3" />
-                        {gen.year_start || '?'}–{gen.year_end || 'gunumuz'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Card body */}
-                  <div className="p-3.5">
-                    <p className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors leading-snug">{gen.name}</p>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-gray-500">
-                      {gen.body_type && <span>{gen.body_type}</span>}
-                      {gen.body_type && gen.mod_count && <span className="text-gray-300">|</span>}
-                      <span>{gen.mod_count} varyant</span>
-                    </div>
-
-                    {/* Spec summary — fixed height to prevent layout shift */}
-                    <div className="h-[52px] mt-3 pt-3 border-t border-gray-100">
-                      {specs && (specs.powerRange || specs.fuelTypes) ? (
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 animate-fadeIn">
-                          {specs.powerRange && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                              <Zap className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                              <span className="truncate">{specs.powerRange}</span>
-                            </div>
-                          )}
-                          {specs.engineRange && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                              <Settings2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                              <span className="truncate">{specs.engineRange}</span>
-                            </div>
-                          )}
-                          {specs.fuelTypes && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                              <Fuel className="w-3 h-3 text-blue-500 flex-shrink-0" />
-                              <span className="truncate">{specs.fuelTypes}</span>
-                            </div>
-                          )}
-                          {specs.transmissions && (
-                            <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                              <Settings2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                              <span className="truncate">{specs.transmissions}</span>
-                            </div>
-                          )}
-                        </div>
+          {/* List View */}
+          {viewMode === 'list' && (
+            <div className="space-y-2">
+              {searchFilteredAutodataGens.map((gen) => {
+                const genKey = `${gen.name}-${gen.body_type}`
+                const genImg = genImages[genKey]
+                const specs = genSpecs[genKey]
+                return (
+                  <button
+                    key={genKey}
+                    onClick={() => handleAutodataSelect(gen)}
+                    onMouseEnter={() => prefetchSpec(gen)}
+                    onFocus={() => prefetchSpec(gen)}
+                    className="group w-full bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-3 md:p-4 text-left transition-all duration-200 flex items-center gap-4"
+                  >
+                    {/* Küçük görsel */}
+                    <div className="w-24 h-16 md:w-32 md:h-20 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100/50 overflow-hidden flex-shrink-0">
+                      {genImg ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img src={genImg} alt={gen.name} className="w-full h-full object-contain p-1" loading="lazy" />
                       ) : (
-                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                          <Settings2 className="w-3 h-3 flex-shrink-0" />
-                          <span>{gen.mod_count} varyant mevcut</span>
+                        <div className="w-full h-full flex items-center justify-center">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={getBrandLogoPath(marka)} alt={marka} className="w-8 h-8 object-contain opacity-15" />
                         </div>
                       )}
                     </div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
+
+                    {/* Bilgi */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{gen.name}</p>
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {(gen.year_start || gen.year_end) && (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
+                            <Calendar className="w-3 h-3" />
+                            {gen.year_start || '?'}–{gen.year_end || 'günümüz'}
+                          </span>
+                        )}
+                        {gen.body_type && (
+                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600 font-medium">{gen.body_type}</span>
+                        )}
+                        <span className="text-[11px] text-gray-400">{gen.mod_count} varyant</span>
+                      </div>
+                      {/* Spec satırı */}
+                      {specs && (specs.powerRange || specs.fuelTypes) && (
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[11px] text-gray-500">
+                          {specs.powerRange && <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-500" />{specs.powerRange}</span>}
+                          {specs.fuelTypes && <span className="flex items-center gap-1"><Fuel className="w-3 h-3 text-blue-500" />{specs.fuelTypes}</span>}
+                          {specs.transmissions && <span className="flex items-center gap-1"><Settings2 className="w-3 h-3 text-purple-400" />{specs.transmissions}</span>}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Ok */}
+                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Arama sonuç yok */}
+          {genSearch && searchFilteredAutodataGens.length === 0 && (
+            <div className="text-center py-12">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">&ldquo;{genSearch}&rdquo; ile eşleşen nesil bulunamadı</p>
+              <button onClick={() => setGenSearch('')} className="mt-2 text-primary-500 hover:text-primary-600 text-sm font-medium">Aramayı temizle</button>
+            </div>
+          )}
         </div>
       )}
 
       {/* DB generations fallback — enhanced cards */}
       {!loading && !resolving && !error && !useAutodata && dbGenerations.length > 0 && (
         <div>
-          <div className="flex items-center gap-3 mb-5">
-            <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-              <Car className="w-5 h-5 text-primary-500" />
+          <div className="flex items-center justify-between gap-3 mb-5">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
+                <Car className="w-5 h-5 text-primary-500" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">{dbGenerations.length} nesil bulundu</h3>
+                <p className="text-gray-500 text-xs">Doğru nesil/dönem seçimi daha iyi parça listesi sağlar</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">{dbGenerations.length} nesil bulundu</h3>
-              <p className="text-gray-500 text-xs">Dogru nesil/donem secimi daha iyi parca listesi saglar</p>
-            </div>
+            {dbGenerations.length > 6 && (
+              <div className="relative w-48 hidden sm:block">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={genSearch}
+                  onChange={e => setGenSearch(e.target.value)}
+                  placeholder="Ara..."
+                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 transition-colors"
+                />
+              </div>
+            )}
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {dbGenerations.map((gen) => (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {searchFilteredDbGens.map((gen) => (
               <button
                 key={gen.generation_slug}
                 onClick={() => setSelectedGen(gen.generation_slug)}
                 className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5"
               >
-                <p className="text-gray-900 font-semibold text-sm group-hover:text-primary-600 transition-colors mb-2 leading-snug">{gen.generation_name}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-gray-900 font-bold text-sm group-hover:text-primary-600 transition-colors leading-snug">{gen.generation_name}</p>
+                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
+                </div>
+                <div className="flex items-center gap-2 mt-3">
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 border border-primary-100 rounded-lg text-xs font-medium text-primary-600 tabular-nums">
                     <Package className="w-3 h-3" />
-                    {gen.part_count.toLocaleString('tr-TR')} parca
+                    {gen.part_count.toLocaleString('tr-TR')} parça
                   </span>
                 </div>
               </button>
             ))}
           </div>
+          {genSearch && searchFilteredDbGens.length === 0 && (
+            <div className="text-center py-12">
+              <Search className="w-8 h-8 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 text-sm">&ldquo;{genSearch}&rdquo; ile eşleşen nesil bulunamadı</p>
+              <button onClick={() => setGenSearch('')} className="mt-2 text-primary-500 hover:text-primary-600 text-sm font-medium">Aramayı temizle</button>
+            </div>
+          )}
         </div>
       )}
 
       {!loading && !resolving && !error && (useAutodata ? autodataGens.length === 0 : dbGenerations.length === 0) && (
-        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-          <p className="text-gray-600 mb-4">Bu marka icin nesil bilgisi bulunamadi.</p>
+        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
+            <Car className="w-8 h-8 text-gray-400" />
+          </div>
+          <h3 className="text-gray-900 font-bold text-lg mb-2">Nesil bilgisi bulunamadı</h3>
+          <p className="text-gray-500 text-sm mb-6">WhatsApp üzerinden parça talebinde bulunabilirsiniz.</p>
           <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-md">
             <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
           </a>
         </div>
