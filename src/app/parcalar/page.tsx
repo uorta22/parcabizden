@@ -939,11 +939,6 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
     }
   }
 
-  // If a generation is selected, show the full parts explorer
-  if (selectedGen) {
-    return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} generationName={selectedGenName || undefined} />
-  }
-
   const whatsappText = `Merhaba, ${marka} ${modelName} aracim icin parca ariyorum.`
   const [genSearch, setGenSearch] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -968,6 +963,11 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
       g.generation_slug.toLowerCase().includes(q)
     )
   }, [dbGenerations, genSearch])
+
+  // If a generation is selected, show the full parts explorer
+  if (selectedGen) {
+    return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} generationName={selectedGenName || undefined} />
+  }
 
   return (
     <>
