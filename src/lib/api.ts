@@ -18,12 +18,6 @@ import type {
   AutodataModel,
   AutodataGeneration,
   SlugMatch,
-  Vehicle,
-  CategoryGroup,
-  SubCategory,
-  CatalogPart,
-  VehicleDetail,
-  CrossRef,
 } from '@/types/api'
 import type { ShopProduct } from '@/types/shop'
 
@@ -77,88 +71,23 @@ export async function getBrands(popular?: boolean): Promise<Brand[]> {
 
 // ==================== Models ====================
 
-export async function getModels(manufacturerId: number): Promise<Model[]> {
-  const res = await fetchApi<ApiResponse<Model[]>>(`/models?manufacturer_id=${manufacturerId}`)
+export async function getModels(brandId: number): Promise<Model[]> {
+  const res = await fetchApi<ApiResponse<Model[]>>(`/models?brand_id=${brandId}`)
   return res.data
 }
 
-// ==================== Segments / Vehicles ====================
+// ==================== Segments ====================
 
 export async function getSegments(modelId: number): Promise<Segment[]> {
   const res = await fetchApi<ApiResponse<Segment[]>>(`/segments?model_id=${modelId}`)
   return res.data
 }
 
-// Yeni: vehicles tablosundan araçlar (KType bazlı)
-export async function getVehicles(modelId: number): Promise<Vehicle[]> {
-  const res = await fetchApi<ApiResponse<Vehicle[]>>(`/segments?model_id=${modelId}`)
-  return res.data
-}
-
 // ==================== Years ====================
 
-export async function getYears(vehicleId: number): Promise<number[]> {
-  const res = await fetchApi<ApiResponse<number[]>>(`/years?vehicle_id=${vehicleId}`)
+export async function getYears(segmentId: number): Promise<number[]> {
+  const res = await fetchApi<ApiResponse<number[]>>(`/years?segment_id=${segmentId}`)
   return res.data
-}
-
-// ==================== Catalog Categories (v3 DB) ====================
-
-export async function getCategoryGroups(vehicleId?: number): Promise<CategoryGroup[]> {
-  const params = vehicleId ? `?vehicle_id=${vehicleId}` : ''
-  const res = await fetchApi<ApiResponse<CategoryGroup[]>>(`/categories${params}`)
-  return res.data
-}
-
-export async function getSubCategories(group: string, vehicleId?: number): Promise<SubCategory[]> {
-  let params = `?group=${encodeURIComponent(group)}`
-  if (vehicleId) params += `&vehicle_id=${vehicleId}`
-  const res = await fetchApi<ApiResponse<SubCategory[]>>(`/categories${params}`)
-  return res.data
-}
-
-// ==================== Catalog Parts (v3 DB) ====================
-
-export async function getCatalogParts(params: {
-  vehicle_id?: number
-  category_id?: number
-  group?: string
-  supplier_id?: number
-  page?: number
-  limit?: number
-}): Promise<{ data: CatalogPart[]; pagination: { page: number; limit: number; total: number; total_pages: number } }> {
-  const searchParams = new URLSearchParams()
-  if (params.vehicle_id) searchParams.set('vehicle_id', String(params.vehicle_id))
-  if (params.category_id) searchParams.set('category_id', String(params.category_id))
-  if (params.group) searchParams.set('group', params.group)
-  if (params.supplier_id) searchParams.set('supplier_id', String(params.supplier_id))
-  if (params.page) searchParams.set('page', String(params.page))
-  if (params.limit) searchParams.set('limit', String(params.limit))
-  return fetchApi<{ data: CatalogPart[]; pagination: { page: number; limit: number; total: number; total_pages: number } }>(`/parts?${searchParams}`)
-}
-
-// ==================== Vehicle Detail ====================
-
-export async function getVehicleDetail(vehicleId: number): Promise<VehicleDetail> {
-  const res = await fetchApi<ApiResponse<VehicleDetail>>(`/vehicle-detail?vehicle_id=${vehicleId}`)
-  return res.data
-}
-
-// ==================== Cross Reference ====================
-
-export async function getCrossRef(partNumber: string, supplierId?: number): Promise<CrossRef[]> {
-  let params = `?part_number=${encodeURIComponent(partNumber)}`
-  if (supplierId) params += `&supplier_id=${supplierId}`
-  const res = await fetchApi<ApiResponse<CrossRef[]>>(`/cross-ref${params}`)
-  return res.data
-}
-
-// ==================== Catalog Search ====================
-
-export async function searchCatalog(query: string, page?: number): Promise<{ data: CatalogPart[]; query: string; pagination: { page: number; limit: number; total: number; total_pages: number } }> {
-  let params = `?q=${encodeURIComponent(query)}`
-  if (page) params += `&page=${page}`
-  return fetchApi<{ data: CatalogPart[]; query: string; pagination: { page: number; limit: number; total: number; total_pages: number } }>(`/search${params}`)
 }
 
 // ==================== Auth (action-based) ====================

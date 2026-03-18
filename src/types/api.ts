@@ -9,47 +9,17 @@ export interface Brand {
 export interface Model {
   id: number
   name: string
-  full_name?: string
-  year_range?: string
-  vehicle_count?: number
 }
 
 export interface Segment {
   id: number
   name: string
-  full_name?: string
-  year_start: number | null
-  year_end: number | null
-  body_type?: string | null
-  engine_type?: string | null
+  year_start: number
+  year_end: number
+  body_type: string | null
+  engine_type: string | null
 }
 
-// Yeni DB: vehicles tablosundan gelen araç (KType bazlı)
-export interface Vehicle {
-  id: number
-  name: string
-  full_name: string
-  year_start: number | null
-  year_end: number | null
-}
-
-// assembly_group_tr bazlı ana kategori grubu
-export interface CategoryGroup {
-  name: string
-  part_count?: number
-  subcategory_count: number
-}
-
-// Alt kategori (bir assembly_group altındaki parça türü)
-export interface SubCategory {
-  id: number
-  name: string
-  short_name: string | null
-  usage_context: string | null
-  part_count?: number
-}
-
-// Eski uyumluluk için korunuyor
 export interface ApiCategory {
   id: number
   slug: string
@@ -59,18 +29,6 @@ export interface ApiCategory {
   part_count: number
 }
 
-// Yeni parça yapısı: supplier bazlı
-export interface CatalogPart {
-  id: number
-  part_number: string
-  supplier_name: string
-  supplier_id: number
-  category_name?: string
-  category_group?: string
-  category_short?: string
-}
-
-// Eski uyumluluk için korunuyor
 export interface ApiPart {
   id: number
   oem_number: string | null
@@ -80,42 +38,6 @@ export interface ApiPart {
   position: string | null
   category_slug: string
   category_name: string
-}
-
-// Araç detay bilgisi
-export interface VehicleDetail {
-  id: number
-  description: string
-  full_name: string
-  year_from: number | null
-  year_to: number | null
-  model_name: string
-  manufacturer_name: string
-  manufacturer_id: number
-  part_count: number
-  engines: VehicleEngine[]
-  attributes: Record<string, VehicleAttribute[]>
-}
-
-export interface VehicleEngine {
-  code: string | null
-  description: string | null
-  full_name: string | null
-  year_range: string | null
-}
-
-export interface VehicleAttribute {
-  type: string
-  title: string
-  value: string
-}
-
-// Çapraz referans
-export interface CrossRef {
-  part_number: string
-  supplier_name: string
-  supplier_id: number
-  type: string
 }
 
 export interface User {
