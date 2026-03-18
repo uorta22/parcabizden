@@ -24,8 +24,6 @@ jobs:
           cp natro-index.php deploy/index.php
           # php-backend altindaki tum PHP dosyalarini duz dizine kopyala
           cp php-backend/*.php deploy/
-          # .htaccess dosyasini kopyala
-          cp php-backend/.htaccess deploy/.htaccess
 
       - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -35,9 +33,11 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./deploy/
           server-dir: ./
-          dangerous-clean-slate: false
+          dangerous-clean-slate: true
           exclude: |
             **/.env
             **/error_log
             **/*.txt
             **/*.log
+            **/*.db
+            **/tmp/**
