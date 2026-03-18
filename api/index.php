@@ -13,6 +13,22 @@ $path = preg_replace('#^/api/?#', '', $uri);
 $path = trim($path, '/');
 $segments = $path ? explode('/', $path) : [];
 
+// Eski action-tabanlı istekleri yakala (?action=autodata_brands vb.)
+$legacyAction = $_GET['action'] ?? $_POST['action'] ?? '';
+if ($legacyAction) {
+    RateLimiter::check('general');
+    try {
+        require __DIR__ . '/endpoints/legacy.php';
+    } catch (PDOException $e) {
+        error_log('Legacy DB error: ' . $e->getMessage());
+        jsonResponse(['error' => 'Veritabanı hatası oluştu'], 500);
+    } catch (Exception $e) {
+        error_log('Legacy error: ' . $e->getMessage());
+        jsonResponse(['error' => 'Sunucu hatası oluştu'], 500);
+    }
+    exit;
+}
+
 // Route requests
 try {
     switch ($segments[0] ?? '') {
