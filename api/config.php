@@ -15,12 +15,15 @@ if (file_exists(__DIR__ . '/.env')) {
     }
 }
 
-// Database Configuration - Using environment variables with fallbacks
+// MySQL Database Configuration (auth, garage, users)
 define('DB_HOST', getenv('DB_HOST') ?: 'localhost');
 define('DB_NAME', getenv('DB_NAME') ?: 'parcabizden');
 define('DB_USER', getenv('DB_USER') ?: 'parcabizden_user');
 define('DB_PASS', getenv('DB_PASS') ?: 'CHANGE_ME_SECURE_PASSWORD');
 define('DB_CHARSET', getenv('DB_CHARSET') ?: 'utf8mb4');
+
+// SQLite Catalog Database (parts, vehicles, manufacturers)
+define('CATALOG_DB_PATH', getenv('CATALOG_DB_PATH') ?: __DIR__ . '/parcabizden_v3.db');
 
 // JWT Configuration - Using environment variables with fallbacks
 define('JWT_SECRET', getenv('JWT_SECRET') ?: 'CHANGE_ME_RANDOM_SECRET_KEY_MIN_32_CHARS');

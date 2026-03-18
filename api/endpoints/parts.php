@@ -1,5 +1,7 @@
 <?php
-// GET /api/parts?category=slug&brand_id=X&model_id=X&year=2020&page=1
+// GET /api/parts?vehicle_id=X&category_id=Y&page=1
+// Opsiyonel: ?group=assembly_group (ana grup bazlı filtreleme)
+// Opsiyonel: ?supplier_id=Z (tedarikçi filtresi)
 
 if ($method !== 'GET') {
     jsonResponse(['error' => 'Method not allowed'], 405);
@@ -7,71 +9,83 @@ if ($method !== 'GET') {
 
 [$page, $limit, $offset] = getPagination();
 
+$vehicleId = (int) ($_GET['vehicle_id'] ?? 0);
+$categoryId = (int) ($_GET['category_id'] ?? 0);
+$group = $_GET['group'] ?? '';
+$supplierId = (int) ($_GET['supplier_id'] ?? 0);
+
+// En az vehicle_id veya category_id gerekli — 78M satırlık tabloyu başıboş taratmayalım
+if (!$vehicleId && !$categoryId && !$supplierId) {
+    jsonResponse(['error' => 'vehicle_id, category_id veya supplier_id parametrelerinden en az biri gerekli'], 400);
+}
+
 $where = [];
 $params = [];
 
-// Filter by category slug
-if (!empty($_GET['category'])) {
-    $where[] = "c.slug = :category";
-    $params['category'] = $_GET['category'];
+if ($vehicleId) {
+    $where[] = "pv.vehicle_id = :vehicle_id";
+    $params['vehicle_id'] = $vehicleId;
 }
 
-// Filter by brand compatibility
-if (!empty($_GET['brand_id'])) {
-    $brandId = (int) $_GET['brand_id'];
-    $where[] = "EXISTS (
-        SELECT 1 FROM part_compatibility pc
-        JOIN segments s ON pc.segment_id = s.id
-        JOIN models m ON s.model_id = m.id
-        WHERE pc.part_id = p.id AND m.brand_id = :brand_id
-    )";
-    $params['brand_id'] = $brandId;
+if ($categoryId) {
+    $where[] = "pv.category_id = :category_id";
+    $params['category_id'] = $categoryId;
 }
 
-// Filter by model compatibility
-if (!empty($_GET['model_id'])) {
-    $modelId = (int) $_GET['model_id'];
-    $where[] = "EXISTS (
-        SELECT 1 FROM part_compatibility pc
-        JOIN segments s ON pc.segment_id = s.id
-        WHERE pc.part_id = p.id AND s.model_id = :model_id
-    )";
-    $params['model_id'] = $modelId;
+if ($group) {
+    $where[] = "c.assembly_group_tr = :group";
+    $params['group'] = $group;
 }
 
-// Filter by year compatibility
-if (!empty($_GET['year'])) {
-    $year = (int) $_GET['year'];
-    $where[] = "EXISTS (
-        SELECT 1 FROM part_compatibility pc
-        WHERE pc.part_id = p.id AND pc.year_start <= :year AND pc.year_end >= :year
-    )";
-    $params['year'] = $year;
+if ($supplierId) {
+    $where[] = "p.supplier_id = :supplier_id";
+    $params['supplier_id'] = $supplierId;
 }
 
-$whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+$whereClause = 'WHERE ' . implode(' AND ', $where);
 
-// Count total
-$totalSql = "SELECT COUNT(*) FROM parts p JOIN categories c ON p.category_id = c.id $whereClause";
-$total = Database::count($totalSql, $params);
+// Toplam sayım
+$totalSql = "SELECT COUNT(DISTINCT p.id)
+             FROM part_vehicles pv
+             JOIN parts p ON p.id = pv.part_id
+             JOIN categories c ON c.id = pv.category_id
+             $whereClause";
+$total = CatalogDB::count($totalSql, $params);
 
-// Fetch parts
-$sql = "SELECT p.id, p.oem_number, p.name, p.description, p.part_type, p.position,
-               c.slug AS category_slug, c.name AS category_name
-        FROM parts p
-        JOIN categories c ON p.category_id = c.id
+// Parçaları getir
+$sql = "SELECT DISTINCT p.id, p.part_number,
+               s.name as supplier_name, s.id as supplier_id,
+               c.description_tr as category_name,
+               c.assembly_group_tr as category_group,
+               c.normalized_tr as category_short
+        FROM part_vehicles pv
+        JOIN parts p ON p.id = pv.part_id
+        JOIN suppliers s ON s.id = p.supplier_id
+        JOIN categories c ON c.id = pv.category_id
         $whereClause
-        ORDER BY p.name ASC
+        ORDER BY s.name ASC, p.part_number ASC
         LIMIT $limit OFFSET $offset";
 
-$parts = Database::fetchAll($sql, $params);
+$parts = CatalogDB::fetchAll($sql, $params);
+
+$result = array_map(function($part) {
+    return [
+        'id' => (int)$part['id'],
+        'part_number' => $part['part_number'],
+        'supplier_name' => $part['supplier_name'],
+        'supplier_id' => (int)$part['supplier_id'],
+        'category_name' => $part['category_name'],
+        'category_group' => $part['category_group'],
+        'category_short' => $part['category_short'],
+    ];
+}, $parts);
 
 jsonResponse([
-    'data' => $parts,
+    'data' => $result,
     'pagination' => [
         'page' => $page,
         'limit' => $limit,
         'total' => $total,
-        'total_pages' => ceil($total / $limit)
+        'total_pages' => (int)ceil($total / $limit)
     ]
 ]);

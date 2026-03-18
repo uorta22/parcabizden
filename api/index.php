@@ -51,6 +51,16 @@ try {
             require __DIR__ . '/endpoints/search.php';
             break;
 
+        case 'vehicle-detail':
+            RateLimiter::check('general');
+            require __DIR__ . '/endpoints/vehicle-detail.php';
+            break;
+
+        case 'cross-ref':
+            RateLimiter::check('general');
+            require __DIR__ . '/endpoints/cross-ref.php';
+            break;
+
         case 'auth':
             RateLimiter::check('auth');
             $action = $segments[1] ?? '';

@@ -1,27 +1,31 @@
 <?php
-// GET /api/years?segment_id=X
+// GET /api/years?vehicle_id=X
+// Geriye uyumluluk: segment_id parametresi de kabul edilir
 
 if ($method !== 'GET') {
     jsonResponse(['error' => 'Method not allowed'], 405);
 }
 
-$segmentId = (int) ($_GET['segment_id'] ?? 0);
+$vehicleId = (int) ($_GET['vehicle_id'] ?? $_GET['segment_id'] ?? 0);
 
-if (!$segmentId) {
-    jsonResponse(['error' => 'segment_id parametresi gerekli'], 400);
+if (!$vehicleId) {
+    jsonResponse(['error' => 'vehicle_id parametresi gerekli'], 400);
 }
 
-$segment = Database::fetchOne(
-    "SELECT year_start, year_end FROM segments WHERE id = :id",
-    ['id' => $segmentId]
+$vehicle = CatalogDB::fetchOne(
+    "SELECT year_from, year_to FROM vehicles WHERE id = :id",
+    ['id' => $vehicleId]
 );
 
-if (!$segment) {
-    jsonResponse(['error' => 'Segment bulunamadı'], 404);
+if (!$vehicle) {
+    jsonResponse(['error' => 'Araç bulunamadı'], 404);
 }
 
+$yearFrom = (int)$vehicle['year_from'];
+$yearTo = $vehicle['year_to'] ? (int)$vehicle['year_to'] : (int)date('Y');
+
 $years = [];
-for ($y = $segment['year_end']; $y >= $segment['year_start']; $y--) {
+for ($y = $yearTo; $y >= $yearFrom; $y--) {
     $years[] = $y;
 }
 
