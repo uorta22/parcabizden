@@ -1026,18 +1026,38 @@ function handle_autodata_resolve_slug($pdo) {
 }
 
 function catalog_resolve_brand($pdo, $brand_slug) {
+    // Yaygın slug → katalog marka adı eşlemeleri
+    static $alias_map = [
+        'volkswagen' => 'VW',
+        'citroen' => 'CITROËN',
+        'mini' => 'MINI',
+        'ds' => 'DS',
+        'mg' => 'MG',
+        'gmc' => 'GMC',
+        'bmw' => 'BMW',
+        'daf' => 'DAF',
+        'man' => 'MAN',
+        'nsu' => 'NSU',
+        'alfa-romeo' => 'ALFA ROMEO',
+        'aston-martin' => 'ASTON MARTIN',
+        'land-rover' => 'LAND ROVER',
+        'rolls-royce' => 'ROLLS-ROYCE',
+        'mercedes-benz' => 'MERCEDES-BENZ',
+    ];
+
+    if (isset($alias_map[$brand_slug])) {
+        return $alias_map[$brand_slug];
+    }
+
     // catalog_manufacturers tablosundan slug ile marka adı bul
     try {
-        $stmt = $pdo->prepare("
-            SELECT name FROM catalog_manufacturers
-            WHERE LOWER(REPLACE(REPLACE(REPLACE(name, ' ', '-'), 'Ë', 'e'), 'É', 'e')) = :slug
-            LIMIT 1
-        ");
-        $stmt->execute([':slug' => $brand_slug]);
+        $upper = strtoupper(str_replace('-', ' ', $brand_slug));
+        $stmt = $pdo->prepare("SELECT name FROM catalog_manufacturers WHERE UPPER(name) = :upper LIMIT 1");
+        $stmt->execute([':upper' => $upper]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($row) return $row['name'];
 
-        // Daha esnek arama: LIKE ile
+        // LIKE ile esnek arama
         $like = '%' . str_replace('-', '%', $brand_slug) . '%';
         $stmt = $pdo->prepare("SELECT name FROM catalog_manufacturers WHERE LOWER(name) LIKE LOWER(:like) LIMIT 1");
         $stmt->execute([':like' => $like]);
