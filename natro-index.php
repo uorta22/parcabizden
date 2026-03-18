@@ -852,18 +852,19 @@ function handle_autodata_generations($pdo) {
     if (!$brand_name) { echo json_encode(['generations' => []]); return; }
 
     try {
-        // catalog_vehicles = generation (araç varyantı), model altındaki araçları listele
+        // catalog_vehicles gruplama — aynı description'ları birleştir
         $stmt = $pdo->prepare("
             SELECT v.description AS generation,
-                   v.year_from AS year_start,
-                   v.year_to AS year_end,
+                   MIN(v.year_from) AS year_start,
+                   MAX(v.year_to) AS year_end,
                    NULL AS body_type,
-                   1 AS mod_count
+                   COUNT(*) AS mod_count
             FROM catalog_vehicles v
             JOIN catalog_models mo ON v.model_id = mo.id
             JOIN catalog_manufacturers m ON mo.manufacturer_id = m.id
             WHERE m.name = :brand AND mo.name = :model
-            ORDER BY v.year_from DESC
+            GROUP BY v.description
+            ORDER BY MIN(v.year_from) DESC, v.description
         ");
         $stmt->execute([':brand' => $brand_name, ':model' => $model]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
