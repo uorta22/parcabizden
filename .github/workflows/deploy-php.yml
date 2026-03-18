@@ -8,6 +8,7 @@ on:
     paths:
       - 'natro-index.php'
       - 'php-backend/**'
+      - '.github/workflows/deploy-php.yml'
 
 jobs:
   deploy:
@@ -23,6 +24,8 @@ jobs:
           cp natro-index.php deploy/index.php
           # php-backend altindaki tum PHP dosyalarini duz dizine kopyala
           cp php-backend/*.php deploy/
+          # .htaccess dosyasini kopyala
+          cp php-backend/.htaccess deploy/.htaccess
 
       - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
