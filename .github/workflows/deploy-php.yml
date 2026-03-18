@@ -8,10 +8,9 @@ on:
     paths:
       - 'natro-index.php'
       - 'php-backend/**'
-      - 'api/**'
 
 jobs:
-  deploy-main:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -25,7 +24,7 @@ jobs:
           # php-backend altindaki tum PHP dosyalarini duz dizine kopyala
           cp php-backend/*.php deploy/
 
-      - name: FTP Deploy - Ana site
+      - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -39,26 +38,3 @@ jobs:
             **/error_log
             **/*.txt
             **/*.log
-
-  deploy-api:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: FTP Deploy - API
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./api/
-          server-dir: ../api.parcabizden.com.tr/
-          dangerous-clean-slate: false
-          exclude: |
-            **/.env
-            **/.env.example
-            **/error_log
-            **/*.db
-            **/*.log
-            **/*.txt
