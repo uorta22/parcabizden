@@ -12,6 +12,10 @@ if (!$modelId) {
     jsonResponse(['error' => 'model_id parametresi gerekli'], 400);
 }
 
+if (!CatalogDB::isAvailable()) {
+    jsonResponse(['error' => 'Katalog veritabanı henüz hazır değil'], 503);
+}
+
 $vehicles = CatalogDB::fetchAll(
     "SELECT v.id, v.description, v.full_name, v.year_from, v.year_to
      FROM vehicles v

@@ -62,6 +62,10 @@ class Database {
 class CatalogDB {
     private static ?PDO $instance = null;
 
+    public static function isAvailable(): bool {
+        return file_exists(CATALOG_DB_PATH);
+    }
+
     public static function getInstance(): PDO {
         if (self::$instance === null) {
             $dbPath = CATALOG_DB_PATH;

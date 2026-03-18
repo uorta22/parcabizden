@@ -12,6 +12,10 @@ if (!$vehicleId) {
     jsonResponse(['error' => 'vehicle_id parametresi gerekli'], 400);
 }
 
+if (!CatalogDB::isAvailable()) {
+    jsonResponse(['error' => 'Katalog veritabanı henüz hazır değil'], 503);
+}
+
 $vehicle = CatalogDB::fetchOne(
     "SELECT year_from, year_to FROM vehicles WHERE id = :id",
     ['id' => $vehicleId]

@@ -8,6 +8,10 @@ if ($method !== 'GET') {
     jsonResponse(['error' => 'Method not allowed'], 405);
 }
 
+if (!CatalogDB::isAvailable()) {
+    jsonResponse(['error' => 'Katalog veritabanı henüz hazır değil'], 503);
+}
+
 $vehicleId = (int) ($_GET['vehicle_id'] ?? 0);
 $group = $_GET['group'] ?? '';
 

@@ -12,6 +12,13 @@ if (!$manufacturerId) {
     jsonResponse(['error' => 'manufacturer_id parametresi gerekli'], 400);
 }
 
+// Katalog DB hazır değilse eski SQLite fallback
+if (!CatalogDB::isAvailable()) {
+    require_once __DIR__ . '/../vehicle_db.php';
+    $models = VehicleDB::getModels($manufacturerId);
+    jsonResponse(['data' => $models]);
+}
+
 $models = CatalogDB::fetchAll(
     "SELECT m.id, m.name, m.full_name, m.year_range,
             COUNT(DISTINCT v.id) as vehicle_count

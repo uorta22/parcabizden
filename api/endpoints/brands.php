@@ -8,6 +8,13 @@ if ($method !== 'GET') {
 
 $popular = isset($_GET['popular']) && $_GET['popular'] === '1';
 
+// Katalog DB hazır değilse eski SQLite fallback'i kullan
+if (!CatalogDB::isAvailable()) {
+    require_once __DIR__ . '/../vehicle_db.php';
+    $brands = VehicleDB::getBrands($popular);
+    jsonResponse(['data' => $brands]);
+}
+
 // Popüler marka ID'leri (manufacturers tablosundaki id'ler)
 $popularIds = [5, 16, 74, 138, 111, 36, 93, 35, 183, 184, 88, 84, 45, 80, 72, 21, 120, 104, 139, 77, 109, 107];
 
@@ -37,11 +44,9 @@ if ($popular) {
 // Logo dosya adını üret
 $result = array_map(function($brand) use ($logoMap) {
     $name = $brand['name'];
-    // Özel mapping varsa kullan
     if (isset($logoMap[$name])) {
         $logoFile = $logoMap[$name];
     } else {
-        // İsmi slug'a çevir: küçük harf, boşluk → tire
         $logoFile = strtolower(str_replace([' ', '.'], ['-', ''], $name)) . '.webp';
     }
 

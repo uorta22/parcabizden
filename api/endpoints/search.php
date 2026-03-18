@@ -6,6 +6,10 @@ if ($method !== 'GET') {
     jsonResponse(['error' => 'Method not allowed'], 405);
 }
 
+if (!CatalogDB::isAvailable()) {
+    jsonResponse(['error' => 'Katalog veritabanı henüz hazır değil'], 503);
+}
+
 $query = trim($_GET['q'] ?? '');
 
 // Validasyon
