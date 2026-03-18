@@ -3,6 +3,9 @@
  * Migration Receiver — POST ile gelen SQL batch'lerini MySQL'e yazar
  * Lokal makineden HTTP üzerinden veri aktarımı için
  */
+set_time_limit(0);
+ignore_user_abort(true);
+
 define('SECURITY_TOKEN', 'pBzD_import_2026_xK9');
 
 $token = $_GET['token'] ?? $_POST['token'] ?? '';
