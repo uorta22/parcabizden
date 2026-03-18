@@ -749,12 +749,21 @@ function handle_vehicle_specs($pdo) {
 
 function handle_autodata_brands($pdo) {
     try {
-        $stmt = $pdo->query("SELECT brand, COUNT(DISTINCT model) as model_count, COUNT(*) as total FROM vehicle_specs GROUP BY brand ORDER BY brand");
+        // catalog_manufacturers + catalog_models'dan marka listesi
+        $stmt = $pdo->query("
+            SELECT m.name AS brand, COUNT(DISTINCT mo.id) AS model_count, COUNT(DISTINCT v.id) AS total
+            FROM catalog_manufacturers m
+            LEFT JOIN catalog_models mo ON mo.manufacturer_id = m.id
+            LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
+            GROUP BY m.id, m.name
+            ORDER BY m.name
+        ");
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $brands = [];
         foreach ($rows as $r) {
             $slug = strtolower(trim($r['brand']));
-            $slug = preg_replace('/\s+/', '-', $slug);
+            $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+            $slug = trim($slug, '-');
             $brands[] = [
                 'name' => $r['brand'],
                 'slug' => $slug,
@@ -764,7 +773,20 @@ function handle_autodata_brands($pdo) {
         }
         echo json_encode(['brands' => $brands]);
     } catch (PDOException $e) {
-        echo json_encode(['brands' => [], 'error' => 'vehicle_specs tablosu bulunamadi']);
+        // Fallback: vehicle_specs tablosundan oku
+        try {
+            $stmt = $pdo->query("SELECT brand, COUNT(DISTINCT model) as model_count, COUNT(*) as total FROM vehicle_specs GROUP BY brand ORDER BY brand");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $brands = [];
+            foreach ($rows as $r) {
+                $slug = strtolower(trim($r['brand']));
+                $slug = preg_replace('/\s+/', '-', $slug);
+                $brands[] = ['name' => $r['brand'], 'slug' => $slug, 'model_count' => (int)$r['model_count'], 'total' => (int)$r['total']];
+            }
+            echo json_encode(['brands' => $brands]);
+        } catch (PDOException $e2) {
+            echo json_encode(['brands' => [], 'error' => 'Tablo bulunamadi']);
+        }
     }
 }
 
@@ -772,12 +794,24 @@ function handle_autodata_models($pdo) {
     $brand_slug = trim($_GET['brand'] ?? '');
     if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
 
-    // Resolve brand slug to autodata brand name
-    $brand_name = autodata_resolve_brand_name($pdo, $brand_slug);
+    // catalog_manufacturers'dan marka bul
+    $brand_name = catalog_resolve_brand($pdo, $brand_slug);
     if (!$brand_name) { echo json_encode(['models' => []]); return; }
 
     try {
-        $stmt = $pdo->prepare("SELECT DISTINCT model, COUNT(DISTINCT generation) as gen_count, MIN(year_start) as min_year, MAX(COALESCE(year_end, 2025)) as max_year FROM vehicle_specs WHERE brand = :brand GROUP BY model ORDER BY model");
+        // catalog_models + catalog_vehicles'dan model listesi
+        $stmt = $pdo->prepare("
+            SELECT mo.name AS model,
+                   COUNT(DISTINCT v.id) AS gen_count,
+                   MIN(v.year_from) AS min_year,
+                   MAX(COALESCE(v.year_to, 2025)) AS max_year
+            FROM catalog_models mo
+            JOIN catalog_manufacturers m ON mo.manufacturer_id = m.id
+            LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
+            WHERE m.name = :brand
+            GROUP BY mo.id, mo.name
+            ORDER BY mo.name
+        ");
         $stmt->execute([':brand' => $brand_name]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $models = [];
@@ -791,7 +825,21 @@ function handle_autodata_models($pdo) {
         }
         echo json_encode(['models' => $models, 'brand' => $brand_name]);
     } catch (PDOException $e) {
-        echo json_encode(['models' => []]);
+        // Fallback: vehicle_specs
+        $brand_name_fb = autodata_resolve_brand_name($pdo, $brand_slug);
+        if (!$brand_name_fb) { echo json_encode(['models' => []]); return; }
+        try {
+            $stmt = $pdo->prepare("SELECT DISTINCT model, COUNT(DISTINCT generation) as gen_count, MIN(year_start) as min_year, MAX(COALESCE(year_end, 2025)) as max_year FROM vehicle_specs WHERE brand = :brand GROUP BY model ORDER BY model");
+            $stmt->execute([':brand' => $brand_name_fb]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $models = [];
+            foreach ($rows as $r) {
+                $models[] = ['name' => $r['model'], 'gen_count' => (int)$r['gen_count'], 'min_year' => $r['min_year'] !== null ? (int)$r['min_year'] : null, 'max_year' => $r['max_year'] !== null ? (int)$r['max_year'] : null];
+            }
+            echo json_encode(['models' => $models, 'brand' => $brand_name_fb]);
+        } catch (PDOException $e2) {
+            echo json_encode(['models' => []]);
+        }
     }
 }
 
@@ -800,11 +848,23 @@ function handle_autodata_generations($pdo) {
     $model = trim($_GET['model'] ?? '');
     if (!$brand_slug || !$model) { echo json_encode(['error' => 'brand ve model parametreleri gerekli']); return; }
 
-    $brand_name = autodata_resolve_brand_name($pdo, $brand_slug);
+    $brand_name = catalog_resolve_brand($pdo, $brand_slug);
     if (!$brand_name) { echo json_encode(['generations' => []]); return; }
 
     try {
-        $stmt = $pdo->prepare("SELECT DISTINCT generation, MIN(year_start) as year_start, MAX(year_end) as year_end, body_type, COUNT(*) as mod_count FROM vehicle_specs WHERE brand = :brand AND model = :model GROUP BY generation, body_type ORDER BY MIN(year_start) DESC");
+        // catalog_vehicles = generation (araç varyantı), model altındaki araçları listele
+        $stmt = $pdo->prepare("
+            SELECT v.description AS generation,
+                   v.year_from AS year_start,
+                   v.year_to AS year_end,
+                   NULL AS body_type,
+                   1 AS mod_count
+            FROM catalog_vehicles v
+            JOIN catalog_models mo ON v.model_id = mo.id
+            JOIN catalog_manufacturers m ON mo.manufacturer_id = m.id
+            WHERE m.name = :brand AND mo.name = :model
+            ORDER BY v.year_from DESC
+        ");
         $stmt->execute([':brand' => $brand_name, ':model' => $model]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $generations = [];
@@ -819,7 +879,21 @@ function handle_autodata_generations($pdo) {
         }
         echo json_encode(['generations' => $generations]);
     } catch (PDOException $e) {
-        echo json_encode(['generations' => []]);
+        // Fallback: vehicle_specs
+        $brand_name_fb = autodata_resolve_brand_name($pdo, $brand_slug);
+        if (!$brand_name_fb) { echo json_encode(['generations' => []]); return; }
+        try {
+            $stmt = $pdo->prepare("SELECT DISTINCT generation, MIN(year_start) as year_start, MAX(year_end) as year_end, body_type, COUNT(*) as mod_count FROM vehicle_specs WHERE brand = :brand AND model = :model GROUP BY generation, body_type ORDER BY MIN(year_start) DESC");
+            $stmt->execute([':brand' => $brand_name_fb, ':model' => $model]);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $generations = [];
+            foreach ($rows as $r) {
+                $generations[] = ['name' => $r['generation'], 'year_start' => $r['year_start'] !== null ? (int)$r['year_start'] : null, 'year_end' => $r['year_end'] !== null ? (int)$r['year_end'] : null, 'body_type' => $r['body_type'], 'mod_count' => (int)$r['mod_count']];
+            }
+            echo json_encode(['generations' => $generations]);
+        } catch (PDOException $e2) {
+            echo json_encode(['generations' => []]);
+        }
     }
 }
 
@@ -949,6 +1023,30 @@ function handle_autodata_resolve_slug($pdo) {
     }
 
     echo json_encode(['matches' => $output, 'auto_selected' => $auto_selected]);
+}
+
+function catalog_resolve_brand($pdo, $brand_slug) {
+    // catalog_manufacturers tablosundan slug ile marka adı bul
+    try {
+        $stmt = $pdo->prepare("
+            SELECT name FROM catalog_manufacturers
+            WHERE LOWER(REPLACE(REPLACE(REPLACE(name, ' ', '-'), 'Ë', 'e'), 'É', 'e')) = :slug
+            LIMIT 1
+        ");
+        $stmt->execute([':slug' => $brand_slug]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) return $row['name'];
+
+        // Daha esnek arama: LIKE ile
+        $like = '%' . str_replace('-', '%', $brand_slug) . '%';
+        $stmt = $pdo->prepare("SELECT name FROM catalog_manufacturers WHERE LOWER(name) LIKE LOWER(:like) LIMIT 1");
+        $stmt->execute([':like' => $like]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) return $row['name'];
+    } catch (PDOException $e) {
+        // catalog tablosu yoksa null dön
+    }
+    return null;
 }
 
 function autodata_resolve_brand_name($pdo, $brand_slug) {
