@@ -200,13 +200,13 @@ switch ($action) {
         handleAdminEnrichPart($pdo, $uid); break;
 
     case 'db_inspect':
-        // Geçici: tablo yapısını keşfet
+        // Geçici: tablo yapısını keşfet (hafif — sadece isimler ve sütunlar)
         $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
         $result = ['tables' => []];
         foreach ($tables as $t) {
             $cols = $pdo->query("SHOW COLUMNS FROM `$t`")->fetchAll(PDO::FETCH_ASSOC);
-            $cnt = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
-            $result['tables'][$t] = ['count' => (int)$cnt, 'columns' => $cols];
+            $colNames = array_map(fn($c) => $c['Field'] . ':' . $c['Type'], $cols);
+            $result['tables'][$t] = $colNames;
         }
         echo json_encode($result, JSON_UNESCAPED_UNICODE);
         break;
