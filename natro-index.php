@@ -203,11 +203,12 @@ switch ($action) {
         // Geçici: catalog tabloları detaylı bilgi
         $q = trim($_GET['q'] ?? 'counts');
         if ($q === 'counts') {
-            // Sadece catalog_ tabloları satır sayıları
-            $tables = ['catalog_manufacturers','catalog_models','catalog_vehicles','catalog_categories','catalog_suppliers','catalog_parts','catalog_part_vehicles','catalog_part_images','catalog_engines','catalog_vehicle_engines','catalog_cross_ref','catalog_vehicle_attributes','parts','brands','generations','modifications','vehicles'];
+            // information_schema'dan tahmini satır sayıları (hızlı)
+            $stmt = $pdo->prepare("SELECT TABLE_NAME, TABLE_ROWS, DATA_LENGTH, INDEX_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA = :db ORDER BY TABLE_ROWS DESC");
+            $stmt->execute([':db' => $DB_NAME]);
             $result = [];
-            foreach ($tables as $t) {
-                try { $result[$t] = (int)$pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn(); } catch(Exception $e) { $result[$t] = 'error'; }
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $result[$r['TABLE_NAME']] = ['rows' => (int)$r['TABLE_ROWS'], 'data_mb' => round($r['DATA_LENGTH']/1048576, 1), 'index_mb' => round($r['INDEX_LENGTH']/1048576, 1)];
             }
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
         } elseif ($q === 'sample_parts') {
