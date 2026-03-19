@@ -30,7 +30,14 @@ function handle_migrate_7zap($pdo) {
         case 2: migrate_step2_brand_map($pdo); break;
         case 3: migrate_step3_gen_map($pdo); break;
         case 4: migrate_step4_category_map($pdo); break;
-        case 5: migrate_step5_parts($pdo, $offset, $batch); break;
+        case 5:
+            $auto = (int)($_GET['auto'] ?? 0);
+            if ($auto) {
+                migrate_step5_auto($pdo, $offset, $batch);
+            } else {
+                migrate_step5_parts($pdo, $offset, $batch);
+            }
+            break;
         case 6: migrate_step6_verify($pdo); break;
         default:
             echo json_encode(['error' => 'step parametresi gerekli (1-6)', 'steps' => [
@@ -529,6 +536,124 @@ function migrate_step5_parts($pdo, $offset, $batchSize) {
         'elapsed_sec' => $elapsed,
         'next_url' => "?action=migrate_7zap&step=5&offset=$nextOffset&batch=$batchSize",
     ]);
+}
+
+// ── Step 5 Auto: Tüm batch'leri arka arkaya çalıştır ──
+function migrate_step5_auto($pdo, $startOffset, $batchSize) {
+    ignore_user_abort(true);
+    set_time_limit(0);
+
+    // Çıktıyı flush ederek real-time ilerleme göster
+    header('Content-Type: text/plain; charset=utf-8');
+    if (ob_get_level()) ob_end_flush();
+
+    $oemSupplier = (int)$pdo->query("SELECT id FROM catalog_suppliers WHERE matchcode = 'OEM'")->fetchColumn();
+    if (!$oemSupplier) { echo "HATA: OEM supplier bulunamadi\n"; return; }
+
+    // Mapping cache'leri bir kez yükle
+    $genMap = [];
+    $genRows = $pdo->query("SELECT generation_slug, vehicle_id FROM migration_7zap_gen_map WHERE vehicle_id IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($genRows as $r) $genMap[$r['generation_slug']] = (int)$r['vehicle_id'];
+    echo "Gen mapping yüklendi: " . count($genMap) . " kayıt\n";
+    flush();
+
+    $checkStmt = $pdo->prepare("SELECT id FROM catalog_parts WHERE oem_number = :oem AND supplier_id = :sid LIMIT 1");
+    $insertPart = $pdo->prepare("INSERT INTO catalog_parts (supplier_id, part_number, name_tr, oem_number, source) VALUES (:sid, :pnum, :name, :oem, '7zap')");
+    $insertPV = $pdo->prepare("INSERT IGNORE INTO catalog_part_vehicles (part_id, vehicle_id, category_id) VALUES (:pid, :vid, NULL)");
+
+    $offset = $startOffset;
+    $totalInserted = 0;
+    $totalSkipped = 0;
+    $totalPV = 0;
+    $batchNum = 0;
+    $globalStart = microtime(true);
+
+    while (true) {
+        $batchStart = microtime(true);
+        $stmt = $pdo->prepare("SELECT id, oem_number, name_clean, generation_slug FROM parts ORDER BY id LIMIT :lim OFFSET :off");
+        $stmt->bindValue(':lim', $batchSize, PDO::PARAM_INT);
+        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($rows)) break;
+
+        $inserted = 0;
+        $skipped = 0;
+        $pvCount = 0;
+
+        $pdo->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $oem = trim($row['oem_number']);
+                if (!$oem) { $skipped++; continue; }
+
+                $checkStmt->execute([':oem' => $oem, ':sid' => $oemSupplier]);
+                $existingId = $checkStmt->fetchColumn();
+
+                if ($existingId) {
+                    $partId = (int)$existingId;
+                    $skipped++;
+                } else {
+                    try {
+                        $insertPart->execute([':sid' => $oemSupplier, ':pnum' => $oem, ':name' => $row['name_clean'] ?: null, ':oem' => $oem]);
+                        $partId = (int)$pdo->lastInsertId();
+                        $inserted++;
+                    } catch (PDOException $e) { continue; }
+                }
+
+                $vid = $genMap[$row['generation_slug']] ?? null;
+                if ($vid) {
+                    try {
+                        $insertPV->execute([':pid' => $partId, ':vid' => $vid]);
+                        $pvCount++;
+                    } catch (PDOException $e) {}
+                }
+            }
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo "HATA batch $batchNum offset=$offset: " . $e->getMessage() . "\n";
+            flush();
+            break;
+        }
+
+        $totalInserted += $inserted;
+        $totalSkipped += $skipped;
+        $totalPV += $pvCount;
+        $offset += $batchSize;
+        $batchNum++;
+        $batchElapsed = round(microtime(true) - $batchStart, 1);
+        $totalElapsed = round(microtime(true) - $globalStart, 0);
+
+        // Her 10 batch'te progress yaz
+        if ($batchNum % 10 === 0) {
+            echo "Batch $batchNum | offset=$offset | inserted=$totalInserted | skipped=$totalSkipped | pv=$totalPV | batch={$batchElapsed}s | total={$totalElapsed}s\n";
+            flush();
+
+            // Progress kaydet
+            try {
+                $pdo->prepare("INSERT INTO migration_7zap_progress (step, last_offset, rows_processed, status) VALUES ('parts_auto', :off, :cnt, 'in_progress')")
+                    ->execute([':off' => $offset, ':cnt' => $totalInserted]);
+            } catch (Exception $e) {}
+        }
+    }
+
+    $totalElapsed = round(microtime(true) - $globalStart, 0);
+
+    // Final progress
+    try {
+        $pdo->prepare("INSERT INTO migration_7zap_progress (step, last_offset, rows_processed, status, completed_at) VALUES ('parts_auto', :off, :cnt, 'completed', NOW())")
+            ->execute([':off' => $offset, ':cnt' => $totalInserted]);
+    } catch (Exception $e) {}
+
+    echo "\n=== TAMAMLANDI ===\n";
+    echo "Toplam batch: $batchNum\n";
+    echo "Eklenen parça: $totalInserted\n";
+    echo "Atlanan (duplicate): $totalSkipped\n";
+    echo "Part-vehicle ilişki: $totalPV\n";
+    echo "Toplam süre: {$totalElapsed}s\n";
+    flush();
 }
 
 // ── Step 6: Doğrulama ──
