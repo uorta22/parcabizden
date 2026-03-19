@@ -349,19 +349,22 @@ function migrate_step4_category_map($pdo) {
         ");
     } catch (PDOException $e) { /* zaten mevcut */ }
 
-    $pdo->exec("TRUNCATE TABLE migration_7zap_cat_map");
+    // category_id INT UNSIGNED → TEXT olarak değiştir (node_categories.category_id string)
+    $pdo->exec("DROP TABLE IF EXISTS migration_7zap_cat_map");
+    $pdo->exec("
+        CREATE TABLE migration_7zap_cat_map (
+            node_name_en VARCHAR(500) PRIMARY KEY,
+            category_id VARCHAR(50),
+            INDEX idx_cat (category_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
 
-    // node_categories'den doğrudan INSERT — catalog_categories ile eşleştir
-    // category_id zaten sayısal, catalog_categories.id ile eşleşiyorsa al
+    // node_categories'den direkt kopyala (category_id string: engine, brake, etc.)
     $pdo->exec("
         INSERT IGNORE INTO migration_7zap_cat_map (node_name_en, category_id)
-        SELECT nc.node_name_en, cc.id
-        FROM node_categories nc
-        JOIN catalog_categories cc ON cc.id = CAST(nc.category_id AS UNSIGNED)
+        SELECT node_name_en, category_id FROM node_categories
     ");
-    $directMapped = $pdo->query("SELECT ROW_COUNT()")->fetchColumn();
 
-    // category_id string ise (ör: 'engine') — bu durumda skip
     $totalNodeCats = (int)$pdo->query("SELECT COUNT(*) FROM node_categories")->fetchColumn();
     $mapped = (int)$pdo->query("SELECT COUNT(*) FROM migration_7zap_cat_map")->fetchColumn();
 
@@ -415,9 +418,6 @@ function migrate_step5_parts($pdo, $offset, $batchSize) {
     // Mapping tabloları cache'le
     $genMap = [];
     $genStmt = $pdo->prepare("SELECT vehicle_id, manufacturer_id FROM migration_7zap_gen_map WHERE generation_slug = :slug");
-
-    $catMap = [];
-    $catStmt = $pdo->prepare("SELECT category_id FROM migration_7zap_cat_map WHERE node_name_en = :node");
 
     // OEM numarası zaten varsa atla (duplicate kontrolü)
     $checkStmt = $pdo->prepare("SELECT id FROM catalog_parts WHERE oem_number = :oem AND supplier_id = :sid LIMIT 1");
@@ -478,20 +478,12 @@ function migrate_step5_parts($pdo, $offset, $batchSize) {
             $vehicleId = $genMap[$genSlug]['vehicle_id'] ?? null;
             if (!$vehicleId) continue; // Eşleşme yoksa part_vehicles ekleme
 
-            // Kategori eşleşmesi
-            $node = $row['node_name_en'];
-            if ($node && !isset($catMap[$node])) {
-                $catStmt->execute([':node' => $node]);
-                $catMap[$node] = $catStmt->fetchColumn() ?: null;
-            }
-            $catId = $catMap[$node ?? ''] ?? null;
-
-            // part_vehicles ilişkisi ekle
+            // part_vehicles ilişkisi ekle (category_id=NULL — 7zap'da INT category yok)
             try {
                 $insertPV->execute([
                     ':pid' => $partId,
                     ':vid' => $vehicleId,
-                    ':cid' => $catId,
+                    ':cid' => null,
                 ]);
                 $pvInserted++;
             } catch (PDOException $e) {
