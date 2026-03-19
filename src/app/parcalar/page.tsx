@@ -688,7 +688,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
 
       const results = await Promise.all(
         uniqueGens.map(async ({ groupKey, repGen }) => {
-          const img = await findAutodataGenerationImage(brand, repGen.name)
+          const img = await findAutodataGenerationImage(brand, modelName)
           return { groupKey, img }
         })
       )

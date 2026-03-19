@@ -150,7 +150,7 @@ export default function BrandBar() {
         const batch = cards.slice(start, start + BATCH)
         const imageResults = await Promise.all(
           batch.map((card, i) =>
-            findAutodataGenerationImage(slug, card.name)
+            findAutodataGenerationImage(slug, card.model)
               .then(img => ({ index: start + i, img }))
               .catch(() => ({ index: start + i, img: null }))
           )

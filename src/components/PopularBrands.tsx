@@ -2,13 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { Loader2, ChevronRight } from 'lucide-react'
 import { fetchAutodataBrands } from '@/lib/api'
-
-function getBrandLogo(slug: string): string {
-  return `/brands/${slug}.webp`
-}
 
 export default function PopularBrands() {
   const [brands, setBrands] = useState<{ name: string; slug: string }[]>([])
@@ -40,7 +35,22 @@ export default function PopularBrands() {
             href={`/parcalar?brand=${b.slug}&marka=${encodeURIComponent(b.name)}`}
             className="group flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all"
           >
-            <Image src={getBrandLogo(b.slug)} alt={b.name} width={48} height={48} className="object-contain" loading="lazy" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={`/brands/${b.slug}.webp`}
+              alt={b.name}
+              className="w-12 h-12 object-contain"
+              loading="lazy"
+              onError={(e) => {
+                const el = e.currentTarget
+                el.style.display = 'none'
+                const fallback = el.nextElementSibling as HTMLElement
+                if (fallback) fallback.style.display = 'flex'
+              }}
+            />
+            <div className="w-12 h-12 rounded-lg bg-gray-100 items-center justify-center text-gray-400 font-bold text-lg" style={{ display: 'none' }}>
+              {b.name.charAt(0)}
+            </div>
             <span className="text-xs text-gray-700 font-medium text-center group-hover:text-primary-600 transition-colors">{b.name}</span>
           </Link>
         ))}
