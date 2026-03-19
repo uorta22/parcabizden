@@ -69,7 +69,7 @@ function jsonResponse($data, $code = 200) {
 }
 
 // Include e-commerce & admin modules (safe — skip if file not found)
-$_pb_modules = ['products.php', 'orders.php', 'addresses.php', 'favorites.php', 'profile.php', 'password.php', 'admin-products.php', 'admin-orders.php'];
+$_pb_modules = ['products.php', 'orders.php', 'addresses.php', 'favorites.php', 'profile.php', 'password.php', 'admin-products.php', 'admin-orders.php', 'migrate-7zap.php'];
 foreach ($_pb_modules as $_m) {
     $__f = __DIR__ . '/' . $_m;
     if (file_exists($__f)) require_once $__f;
@@ -198,6 +198,12 @@ switch ($action) {
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
         if (!check_rate_limit('admin_product_write', 30, 15)) break;
         handleAdminEnrichPart($pdo, $uid); break;
+
+    case 'migrate_7zap':
+        ignore_user_abort(true);
+        set_time_limit(0);
+        handle_migrate_7zap($pdo);
+        break;
 
     case 'db_inspect':
         // Geçici: catalog tabloları detaylı bilgi
