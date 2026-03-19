@@ -103,37 +103,6 @@ switch ($action) {
     case 'autodata_models':     handle_autodata_models($pdo); break;
     case 'autodata_generations': handle_autodata_generations($pdo); break;
     case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
-    case 'fix_cyrillic':
-        $t = $_GET['token'] ?? '';
-        if ($t !== 'pBzD_import_2026_xK9') { echo json_encode(['error' => 'unauthorized']); break; }
-        $replacements = [
-            'купе' => 'Coupe',
-            'Кабриолет' => 'Cabriolet',
-            'седан' => 'Sedan',
-            'универсал' => 'Station Wagon',
-        ];
-        $results = [];
-        foreach ($replacements as $cyr => $lat) {
-            // catalog_models.name
-            $stmt = $pdo->prepare("UPDATE catalog_models SET name = REPLACE(name, :cyr, :lat) WHERE name LIKE :pattern");
-            $stmt->execute([':cyr' => $cyr, ':lat' => $lat, ':pattern' => "%{$cyr}%"]);
-            $c1 = $stmt->rowCount();
-            // catalog_models.full_name
-            $stmt = $pdo->prepare("UPDATE catalog_models SET full_name = REPLACE(full_name, :cyr, :lat) WHERE full_name LIKE :pattern");
-            $stmt->execute([':cyr' => $cyr, ':lat' => $lat, ':pattern' => "%{$cyr}%"]);
-            $c2 = $stmt->rowCount();
-            // catalog_vehicles.description
-            $stmt = $pdo->prepare("UPDATE catalog_vehicles SET description = REPLACE(description, :cyr, :lat) WHERE description LIKE :pattern");
-            $stmt->execute([':cyr' => $cyr, ':lat' => $lat, ':pattern' => "%{$cyr}%"]);
-            $c3 = $stmt->rowCount();
-            // catalog_vehicles.full_name
-            $stmt = $pdo->prepare("UPDATE catalog_vehicles SET full_name = REPLACE(full_name, :cyr, :lat) WHERE full_name LIKE :pattern");
-            $stmt->execute([':cyr' => $cyr, ':lat' => $lat, ':pattern' => "%{$cyr}%"]);
-            $c4 = $stmt->rowCount();
-            $results["{$cyr} → {$lat}"] = ['models.name' => $c1, 'models.full_name' => $c2, 'vehicles.description' => $c3, 'vehicles.full_name' => $c4];
-        }
-        echo json_encode($results, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
