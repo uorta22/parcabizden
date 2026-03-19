@@ -778,6 +778,8 @@ function handle_autodata_brands($pdo) {
         $brands = [];
         foreach ($rows as $r) {
             $slug = strtolower(trim($r['brand']));
+            // Diacritics temizle: Ë→e, É→e, Ö→o, Ü→u vb.
+            $slug = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $slug);
             $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
             $slug = trim($slug, '-');
             $brands[] = [
