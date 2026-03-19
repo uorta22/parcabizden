@@ -31,12 +31,7 @@ function handle_migrate_7zap($pdo) {
         case 3: migrate_step3_gen_map($pdo); break;
         case 4: migrate_step4_category_map($pdo); break;
         case 5:
-            $auto = (int)($_GET['auto'] ?? 0);
-            if ($auto) {
-                migrate_step5_auto($pdo, $offset, $batch);
-            } else {
-                migrate_step5_parts($pdo, $offset, $batch);
-            }
+            migrate_step5_parts($pdo, $offset, $batch);
             break;
         case 6: migrate_step6_verify($pdo); break;
         default:
@@ -400,15 +395,16 @@ function migrate_step5_parts($pdo, $offset, $batchSize) {
     // Mevcut max catalog_parts id
     $maxPartId = (int)$pdo->query("SELECT COALESCE(MAX(id), 0) FROM catalog_parts")->fetchColumn();
 
-    // 7zap parçalarını batch al
+    // 7zap parçalarını batch al (WHERE id > last_id — OFFSET'ten çok daha hızlı)
     $stmt = $pdo->prepare("
         SELECT p.id, p.oem_number, p.name_clean, p.brand_slug, p.generation_slug, p.node_name_en
         FROM parts p
+        WHERE p.id > :last_id
         ORDER BY p.id
-        LIMIT :lim OFFSET :off
+        LIMIT :lim
     ");
+    $stmt->bindValue(':last_id', $offset, PDO::PARAM_INT);
     $stmt->bindValue(':lim', $batchSize, PDO::PARAM_INT);
-    $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
     $stmt->execute();
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -510,7 +506,9 @@ function migrate_step5_parts($pdo, $offset, $batchSize) {
     }
 
     $elapsed = round(microtime(true) - $startTime, 2);
-    $nextOffset = $offset + $batchSize;
+    // next_offset = son satırın id'si (OFFSET yerine id-based cursor)
+    $lastRow = end($rows);
+    $nextOffset = $lastRow ? (int)$lastRow['id'] : $offset;
 
     // Progress kaydet
     try {
@@ -538,107 +536,7 @@ function migrate_step5_parts($pdo, $offset, $batchSize) {
     ]);
 }
 
-// ── Step 5 Auto: N batch çalıştır, sonra self-chain ile devam et ──
-function migrate_step5_auto($pdo, $startOffset, $batchSize) {
-    ignore_user_abort(true);
-    set_time_limit(300); // 5 dakika limit
-
-    $maxBatchesPerCall = 5; // Her çağrıda en fazla 5 batch (Cloudflare timeout'u önler)
-
-    $oemSupplier = (int)$pdo->query("SELECT id FROM catalog_suppliers WHERE matchcode = 'OEM'")->fetchColumn();
-    if (!$oemSupplier) { echo json_encode(['error' => 'OEM supplier bulunamadi']); return; }
-
-    // Mapping cache'i yükle
-    $genMap = [];
-    $genRows = $pdo->query("SELECT generation_slug, vehicle_id FROM migration_7zap_gen_map WHERE vehicle_id IS NOT NULL")->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($genRows as $r) $genMap[$r['generation_slug']] = (int)$r['vehicle_id'];
-
-    $checkStmt = $pdo->prepare("SELECT id FROM catalog_parts WHERE oem_number = :oem AND supplier_id = :sid LIMIT 1");
-    $insertPart = $pdo->prepare("INSERT INTO catalog_parts (supplier_id, part_number, name_tr, oem_number, source) VALUES (:sid, :pnum, :name, :oem, '7zap')");
-    $insertPV = $pdo->prepare("INSERT IGNORE INTO catalog_part_vehicles (part_id, vehicle_id, category_id) VALUES (:pid, :vid, NULL)");
-
-    $offset = $startOffset;
-    $totalInserted = 0;
-    $totalSkipped = 0;
-    $totalPV = 0;
-    $batchNum = 0;
-    $globalStart = microtime(true);
-    $done = false;
-
-    for ($b = 0; $b < $maxBatchesPerCall; $b++) {
-        $stmt = $pdo->prepare("SELECT id, oem_number, name_clean, generation_slug FROM parts ORDER BY id LIMIT :lim OFFSET :off");
-        $stmt->bindValue(':lim', $batchSize, PDO::PARAM_INT);
-        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if (empty($rows)) { $done = true; break; }
-
-        $pdo->beginTransaction();
-        try {
-            foreach ($rows as $row) {
-                $oem = trim($row['oem_number']);
-                if (!$oem) { $totalSkipped++; continue; }
-
-                $checkStmt->execute([':oem' => $oem, ':sid' => $oemSupplier]);
-                $existingId = $checkStmt->fetchColumn();
-
-                if ($existingId) {
-                    $partId = (int)$existingId;
-                    $totalSkipped++;
-                } else {
-                    try {
-                        $insertPart->execute([':sid' => $oemSupplier, ':pnum' => $oem, ':name' => $row['name_clean'] ?: null, ':oem' => $oem]);
-                        $partId = (int)$pdo->lastInsertId();
-                        $totalInserted++;
-                    } catch (PDOException $e) { continue; }
-                }
-
-                $vid = $genMap[$row['generation_slug']] ?? null;
-                if ($vid) {
-                    try { $insertPV->execute([':pid' => $partId, ':vid' => $vid]); $totalPV++; } catch (PDOException $e) {}
-                }
-            }
-            $pdo->commit();
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            echo json_encode(['error' => $e->getMessage(), 'offset' => $offset]);
-            return;
-        }
-
-        $offset += $batchSize;
-        $batchNum++;
-    }
-
-    $elapsed = round(microtime(true) - $globalStart, 1);
-
-    // Progress kaydet
-    try {
-        $pdo->prepare("INSERT INTO migration_7zap_progress (step, last_offset, rows_processed, status) VALUES ('parts_auto', :off, :cnt, :st)")
-            ->execute([':off' => $offset, ':cnt' => $totalInserted, ':st' => $done ? 'completed' : 'in_progress']);
-    } catch (Exception $e) {}
-
-    if (!$done) {
-        // Self-chain: sonraki batch'i tetikle (non-blocking)
-        $nextUrl = "https://api.parcabizden.com.tr/?action=migrate_7zap&step=5&auto=1&offset=$offset&batch=$batchSize";
-        $ctx = stream_context_create(['http' => ['method' => 'GET', 'timeout' => 3]]);
-        @file_get_contents($nextUrl, false, $ctx);
-    }
-
-    echo json_encode([
-        'step' => 5,
-        'auto' => true,
-        'status' => $done ? 'complete' : 'chaining',
-        'offset' => $startOffset,
-        'next_offset' => $offset,
-        'batches_run' => $batchNum,
-        'inserted' => $totalInserted,
-        'skipped' => $totalSkipped,
-        'pv_inserted' => $totalPV,
-        'elapsed_sec' => $elapsed,
-        'done' => $done,
-    ]);
-}
+// Step 5 auto mode kaldırıldı — lokal script ile batch çağrılacak
 
 // ── Step 6: Doğrulama ──
 function migrate_step6_verify($pdo) {
