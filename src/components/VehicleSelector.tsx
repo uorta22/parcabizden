@@ -45,22 +45,8 @@ interface BrandData {
 
 type VehicleTree = Record<string, BrandData>
 
-const brandLogoOverrides: Record<string, string> = {
-  'Mercedes-Benz': 'mercedes-benz.png',
-  'Mercedes': 'mercedes-benz.png',
-  'MINI': 'mini.png',
-  'MAN': 'man.png',
-  'Genesis': 'genesis.jpg',
-  'Lada': 'lada.jpg',
-  'Alfa Romeo': 'alfa-romeo.png',
-  'Land Rover': 'land-rover.png',
-  'Aston Martin': 'aston-martin.png',
-  'Rolls-Royce': 'rolls-royce.png',
-}
-
-function getBrandLogo(name: string): string {
-  if (brandLogoOverrides[name]) return brandLogoOverrides[name]
-  return name.toLowerCase().replace(/\s+/g, '-') + '.png'
+function getBrandLogo(slug: string): string {
+  return `${slug}.webp`
 }
 
 const brandNameToTreeKey: Record<string, string> = {
@@ -612,7 +598,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                         : 'bg-white border border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    <Image src={`/brands/${getBrandLogo(brand.name)}`} alt={brand.name} width={isModal ? 24 : 28} height={isModal ? 24 : 28} className="object-contain flex-shrink-0" />
+                    <Image src={`/brands/${getBrandLogo(brand.slug)}`} alt={brand.name} width={isModal ? 24 : 28} height={isModal ? 24 : 28} className="object-contain flex-shrink-0" />
                     <span className={`text-sm font-medium whitespace-nowrap ${selectedBrand?.slug === brand.slug ? 'text-primary-500' : 'text-gray-600'}`}>{brand.name}</span>
                   </button>
                 ))}
@@ -641,7 +627,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                         isActive ? 'bg-primary-50' : 'bg-gray-100 group-hover:bg-gray-200'
                       }`}>
                         <Image
-                          src={`/brands/${getBrandLogo(brand.name)}`}
+                          src={`/brands/${getBrandLogo(brand.slug)}`}
                           alt={brand.name}
                           width={isModal ? 28 : 32}
                           height={isModal ? 28 : 32}
@@ -738,7 +724,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center p-1.5">
-                      <Image src={`/brands/${getBrandLogo(selectedBrand.name)}`} alt={selectedBrand.name} width={28} height={28} className="object-contain" />
+                      <Image src={`/brands/${getBrandLogo(selectedBrand.slug)}`} alt={selectedBrand.name} width={28} height={28} className="object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-gray-900 font-semibold text-base">{selectedBrand.name}</h3>
@@ -818,7 +804,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                     <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center p-1.5">
-                      <Image src={`/brands/${getBrandLogo(selectedBrand.name)}`} alt={selectedBrand.name} width={28} height={28} className="object-contain" />
+                      <Image src={`/brands/${getBrandLogo(selectedBrand.slug)}`} alt={selectedBrand.name} width={28} height={28} className="object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h3 className="text-gray-900 font-semibold text-base">{selectedBrand.name} {selectedModel.name}</h3>
@@ -903,7 +889,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                             ) : selectedBrand ? (
                               <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-50">
                                 <Image
-                                  src={`/brands/${getBrandLogo(selectedBrand.name)}`}
+                                  src={`/brands/${getBrandLogo(selectedBrand.slug)}`}
                                   alt={selectedBrand.name}
                                   width={40}
                                   height={40}
@@ -973,7 +959,7 @@ export default function VehicleSelector({ mode, onSelect, isModal, isOpen, onClo
                         className="group flex flex-col items-center gap-2 p-3 rounded-xl bg-white border border-gray-200 hover:border-primary-300 hover:bg-gray-50 hover:shadow-sm transition-all duration-200"
                       >
                         <Image
-                          src={`/brands/${getBrandLogo(brand.name)}`}
+                          src={`/brands/${getBrandLogo(brand.slug)}`}
                           alt={brand.name}
                           width={isModal ? 28 : 32}
                           height={isModal ? 28 : 32}

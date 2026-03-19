@@ -23,13 +23,8 @@ function formatName(slug: string): string {
   return map[slug] || slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-function getBrandLogo(name: string): string {
-  const map: Record<string, string> = {
-    'Mercedes-Benz': 'mercedes-benz.webp', 'Alfa Romeo': 'alfa-romeo.webp',
-    'Land Rover': 'land-rover.webp', 'Aston Martin': 'aston-martin.webp',
-    'Rolls-Royce': 'rolls-royce.webp', 'MINI': 'mini.webp',
-  }
-  return `/brands/${map[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
+function getBrandLogo(slug: string): string {
+  return `/brands/${slug}.webp`
 }
 
 interface GenCard {
@@ -155,7 +150,7 @@ export default function BrandBar() {
         const batch = cards.slice(start, start + BATCH)
         const imageResults = await Promise.all(
           batch.map((card, i) =>
-            findAutodataGenerationImage(name, card.name)
+            findAutodataGenerationImage(slug, card.name)
               .then(img => ({ index: start + i, img }))
               .catch(() => ({ index: start + i, img: null }))
           )
@@ -229,7 +224,7 @@ export default function BrandBar() {
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={getBrandLogo(name)} alt={name} className="w-4 h-4 object-contain" />
+              <img src={getBrandLogo(b.slug)} alt={name} className="w-4 h-4 object-contain" />
               {name.toUpperCase()}
             </button>
           )
@@ -257,7 +252,7 @@ export default function BrandBar() {
             <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-100 bg-gray-50">
               <div className="flex items-center gap-2">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={getBrandLogo(activeBrandName)} alt={activeBrandName} className="w-5 h-5 object-contain" />
+                <img src={getBrandLogo(activeBrand!)} alt={activeBrandName} className="w-5 h-5 object-contain" />
                 <span className="text-sm font-bold text-gray-900">{activeBrandName}</span>
                 {!genLoading && genCards.length > 0 && (
                   <span className="text-xs text-gray-400">{genCards.length} nesil</span>
@@ -303,7 +298,7 @@ export default function BrandBar() {
                             <div className="w-full h-full bg-gray-100 animate-pulse" />
                           ) : (
                             /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={getBrandLogo(activeBrandName)} alt={activeBrandName} className="w-6 h-6 object-contain opacity-20" />
+                            <img src={getBrandLogo(activeBrand!)} alt={activeBrandName} className="w-6 h-6 object-contain opacity-20" />
                           )}
                         </div>
                         {/* İsim */}
@@ -356,7 +351,7 @@ export default function BrandBar() {
                       className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors text-left"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={getBrandLogo(name)} alt={name} className="w-10 h-10 object-contain flex-shrink-0" loading="lazy" />
+                      <img src={getBrandLogo(b.slug)} alt={name} className="w-10 h-10 object-contain flex-shrink-0" loading="lazy" />
                       <span className="text-sm text-gray-700 font-medium truncate">{name}</span>
                     </button>
                   )

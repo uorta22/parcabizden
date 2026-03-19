@@ -67,14 +67,7 @@ function StaticCategoriesView() {
       .finally(() => setLoading(false))
   }, [])
 
-  const getBrandLogo = (name: string): string => {
-    const map: Record<string, string> = {
-      'Mercedes-Benz': 'mercedes-benz.webp', 'Alfa Romeo': 'alfa-romeo.webp',
-      'Land Rover': 'land-rover.webp', 'Aston Martin': 'aston-martin.webp',
-      'Rolls-Royce': 'rolls-royce.webp',
-    }
-    return `/brands/${map[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
-  }
+  const getBrandLogo = (slug: string): string => `/brands/${slug}.webp`
 
   const handleBrandClick = (slug: string, name: string) => {
     router.push(`/parcalar?brand=${slug}&marka=${encodeURIComponent(name)}`)
@@ -100,7 +93,7 @@ function StaticCategoriesView() {
               className="group flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={getBrandLogo(b.name)} alt={b.name} className="w-12 h-12 object-contain" loading="lazy" />
+              <img src={getBrandLogo(b.slug)} alt={b.name} className="w-12 h-12 object-contain" loading="lazy" />
               <span className="text-xs text-gray-700 font-medium text-center group-hover:text-primary-600 transition-colors">{b.name}</span>
             </button>
           ))}
@@ -141,7 +134,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
   const modelKey = searchParams.get('model_key')
 
   // Marka logosu
-  const brandLogo = marka ? getBrandLogoPath(marka) : ''
+  const brandLogo = brand ? getBrandLogoPath(brand) : ''
 
   // Load vehicle image — önce spesifik nesil adı, sonra vehicle-tree.json, en son genel model adı
   useEffect(() => {
@@ -151,7 +144,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
     const loadImage = async () => {
       // 1. Spesifik nesil adı varsa önce onu dene (GenerationPicker'dan gelen)
       if (!cancelled && generationName) {
-        const img = await findAutodataGenerationImage(marka, generationName)
+        const img = await findAutodataGenerationImage(brand, generationName)
         if (img && !cancelled) { setVehicleImage(img); return }
       }
 
@@ -172,7 +165,7 @@ function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: 
 
       // 3. Fallback: genel model adı ile autodata görseli
       if (!cancelled && modelName) {
-        const img = await findAutodataGenerationImage(marka, modelName)
+        const img = await findAutodataGenerationImage(brand, modelName)
         if (img && !cancelled) setVehicleImage(img)
       }
     }
@@ -509,13 +502,8 @@ interface GenSpecSummary {
   transmissions: string
 }
 
-function getBrandLogoPath(name: string): string {
-  const overrides: Record<string, string> = {
-    'Alfa Romeo': 'alfa-romeo.webp', 'Aston Martin': 'aston-martin.webp',
-    'Land Rover': 'land-rover.webp', 'Mercedes-Benz': 'mercedes-benz.webp',
-    'Rolls-Royce': 'rolls-royce.webp',
-  }
-  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
+function getBrandLogoPath(slug: string): string {
+  return `/brands/${slug}.webp`
 }
 
 function summarizeSpecs(specs: VehicleSpecRow[]): GenSpecSummary | null {
@@ -571,7 +559,7 @@ function ModelPicker({ brand, marka }: { brand: string; marka: string }) {
         <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-5">
           <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={getBrandLogoPath(marka)} alt={marka} className="w-full h-full object-contain" />
+            <img src={getBrandLogoPath(brand)} alt={marka} className="w-full h-full object-contain" />
           </div>
           <div className="flex-1 text-center sm:text-left min-w-0">
             <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka}</h2>
@@ -700,7 +688,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
 
       const results = await Promise.all(
         uniqueGens.map(async ({ groupKey, repGen }) => {
-          const img = await findAutodataGenerationImage(marka, repGen.name)
+          const img = await findAutodataGenerationImage(brand, repGen.name)
           return { groupKey, img }
         })
       )
@@ -956,7 +944,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
           {/* Marka logo */}
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0 p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={getBrandLogoPath(marka)} alt={marka} className="w-full h-full object-contain drop-shadow-lg" />
+            <img src={getBrandLogoPath(brand)} alt={marka} className="w-full h-full object-contain drop-shadow-lg" />
           </div>
           <div className="flex-1 text-center sm:text-left min-w-0">
             <h2 className="text-2xl md:text-3xl font-bold text-white">{marka} {modelName}</h2>
@@ -996,7 +984,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
               ) : (
                 <div className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center flex-shrink-0">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getBrandLogoPath(marka)} alt={marka} className="w-12 h-12 object-contain opacity-30" />
+                  <img src={getBrandLogoPath(brand)} alt={marka} className="w-12 h-12 object-contain opacity-30" />
                 </div>
               )}
               <div className="flex-1 text-center sm:text-left min-w-0">
@@ -1149,7 +1137,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={getBrandLogoPath(marka)} alt={marka} className="w-12 h-12 object-contain opacity-15" />
+                          <img src={getBrandLogoPath(brand)} alt={marka} className="w-12 h-12 object-contain opacity-15" />
                         </div>
                       )}
                       {/* Yıl badge */}
@@ -1242,7 +1230,7 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={getBrandLogoPath(marka)} alt={marka} className="w-8 h-8 object-contain opacity-15" />
+                          <img src={getBrandLogoPath(brand)} alt={marka} className="w-8 h-8 object-contain opacity-15" />
                         </div>
                       )}
                     </div>

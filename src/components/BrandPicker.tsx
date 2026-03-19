@@ -20,20 +20,7 @@ interface BrandData {
 
 type VehicleTree = Record<string, BrandData>
 
-const brandLogoOverrides: Record<string, string> = {
-  'Mercedes-Benz': 'mercedes-benz.webp',
-  'Mercedes': 'mercedes-benz.webp',
-  'MINI': 'mini.webp',
-  'MAN': 'man.webp',
-  'Genesis': 'genesis.webp',
-  'Lada': 'lada.webp',
-  'Alfa Romeo': 'alfa-romeo.webp',
-  'Land Rover': 'land-rover.webp',
-}
-
-function getBrandLogoPath(brand: string): string {
-  if (brandLogoOverrides[brand]) return `/brands/${brandLogoOverrides[brand]}`
-  const slug = brand.toLowerCase().replace(/\s+/g, '-')
+function getBrandLogoPath(slug: string): string {
   return `/brands/${slug}.webp`
 }
 
@@ -144,7 +131,7 @@ export default function BrandPicker() {
                 <div className="w-10 h-10 flex items-center justify-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={getBrandLogoPath(brand.name)}
+                    src={getBrandLogoPath(brand.slug)}
                     alt={brand.name}
                     className="object-contain w-10 h-10"
                     loading="lazy"

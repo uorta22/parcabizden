@@ -6,15 +6,8 @@ import Image from 'next/image'
 import { Loader2, ChevronRight } from 'lucide-react'
 import { fetchAutodataBrands } from '@/lib/api'
 
-function getBrandLogo(name: string): string {
-  const map: Record<string, string> = {
-    'Mercedes-Benz': 'mercedes-benz.webp',
-    'Alfa Romeo': 'alfa-romeo.webp',
-    'Land Rover': 'land-rover.webp',
-    'Aston Martin': 'aston-martin.webp',
-    'Rolls-Royce': 'rolls-royce.webp',
-  }
-  return `/brands/${map[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
+function getBrandLogo(slug: string): string {
+  return `/brands/${slug}.webp`
 }
 
 export default function PopularBrands() {
@@ -47,7 +40,7 @@ export default function PopularBrands() {
             href={`/parcalar?brand=${b.slug}&marka=${encodeURIComponent(b.name)}`}
             className="group flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all"
           >
-            <Image src={getBrandLogo(b.name)} alt={b.name} width={48} height={48} className="object-contain" loading="lazy" />
+            <Image src={getBrandLogo(b.slug)} alt={b.name} width={48} height={48} className="object-contain" loading="lazy" />
             <span className="text-xs text-gray-700 font-medium text-center group-hover:text-primary-600 transition-colors">{b.name}</span>
           </Link>
         ))}

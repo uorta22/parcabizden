@@ -21,13 +21,8 @@ function formatBrandName(slug: string): string {
   return slug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
 }
 
-function getBrandLogo(name: string): string {
-  const overrides: Record<string, string> = {
-    'Mercedes-Benz': 'mercedes-benz.webp', 'Alfa Romeo': 'alfa-romeo.webp',
-    'Land Rover': 'land-rover.webp', 'Aston Martin': 'aston-martin.webp',
-    'Rolls-Royce': 'rolls-royce.webp', 'MINI': 'mini.webp',
-  }
-  return `/brands/${overrides[name] || name.toLowerCase().replace(/\s+/g, '-') + '.webp'}`
+function getBrandLogo(slug: string): string {
+  return `/brands/${slug}.webp`
 }
 
 export default function CategoryDropdown() {
@@ -109,7 +104,7 @@ export default function CategoryDropdown() {
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={getBrandLogo(displayName)}
+                              src={getBrandLogo(b.slug)}
                               alt={displayName}
                               className="w-6 h-6 object-contain flex-shrink-0"
                               loading="lazy"
@@ -143,7 +138,7 @@ export default function CategoryDropdown() {
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
-                              src={getBrandLogo(displayName)}
+                              src={getBrandLogo(b.slug)}
                               alt={displayName}
                               className="w-5 h-5 object-contain flex-shrink-0"
                               loading="lazy"

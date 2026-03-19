@@ -103,6 +103,60 @@ switch ($action) {
     case 'autodata_models':     handle_autodata_models($pdo); break;
     case 'autodata_generations': handle_autodata_generations($pdo); break;
     case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
+    case 'fix_cyrillic':
+        $t = $_GET['token'] ?? '';
+        if ($t !== 'pBzD_import_2026_xK9') { echo json_encode(['error' => 'unauthorized']); break; }
+        // normalize_cyrillic fonksiyonundaki tüm çevirileri DB'ye uygula
+        $map = [
+            'Наклонная задняя часть' => 'Hatchback',
+            'Привод на все колеса' => 'AWD',
+            'Привод на задние колеса' => 'RWD',
+            'c бортовой платформой/ходовая часть' => 'Chassis Cab',
+            'с бортовой платформой/ходовая часть' => 'Chassis Cab',
+            'бортовой платформой' => 'Flatbed',
+            'ходовая часть' => 'Chassis',
+            'Одноосный тягач' => 'Tractor',
+            'Кабриолет' => 'Cabriolet',
+            'Автомобиль' => 'Car',
+            'Самосвал' => 'Dump Truck',
+            'вездеход' => 'SUV',
+            'Вездеход' => 'SUV',
+            'универсал' => 'Station Wagon',
+            'хетчбэк' => 'Hatchback',
+            'закрытый' => 'Closed',
+            'открытый' => 'Open',
+            'автобус' => 'Bus',
+            'Фургон' => 'Van',
+            'фургон' => 'Van',
+            'бортовой' => 'Flatbed',
+            'СЕДАН' => 'Sedan',
+            'седан' => 'Sedan',
+            'купе' => 'Coupe',
+            'Пикап' => 'Pickup',
+            'тягач' => 'Tractor',
+            'тарга' => 'Targa',
+            'Кузов' => 'Body',
+            'вэн' => 'Van',
+        ];
+        $tables = [
+            ['catalog_models', ['name', 'full_name']],
+            ['catalog_vehicles', ['description', 'full_name']],
+        ];
+        $results = [];
+        foreach ($map as $cyr => $lat) {
+            $row_result = [];
+            foreach ($tables as [$table, $cols]) {
+                foreach ($cols as $col) {
+                    $stmt = $pdo->prepare("UPDATE `$table` SET `$col` = REPLACE(`$col`, :cyr, :lat) WHERE `$col` LIKE :pattern");
+                    $stmt->execute([':cyr' => $cyr, ':lat' => $lat, ':pattern' => "%{$cyr}%"]);
+                    $c = $stmt->rowCount();
+                    if ($c > 0) $row_result["{$table}.{$col}"] = $c;
+                }
+            }
+            if (!empty($row_result)) $results["{$cyr} → {$lat}"] = $row_result;
+        }
+        echo json_encode($results, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
@@ -777,11 +831,7 @@ function handle_autodata_brands($pdo) {
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $brands = [];
         foreach ($rows as $r) {
-            $slug = strtolower(trim($r['brand']));
-            // Diacritics temizle: Ë→e, É→e, Ö→o, Ü→u vb.
-            $slug = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $slug);
-            $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
-            $slug = trim($slug, '-');
+            $slug = catalog_brand_to_slug($r['brand']);
             $brands[] = [
                 'name' => $r['brand'],
                 'slug' => $slug,
@@ -1049,13 +1099,66 @@ function handle_autodata_resolve_slug($pdo) {
  * Eski URL'lerde kalan Kiril metinlerin çalışmasını sağlar
  */
 function normalize_cyrillic(string $text): string {
+    // Compound ifadeler önce (sıra önemli)
     static $map = [
-        'купе' => 'Coupe',
+        'Наклонная задняя часть' => 'Hatchback',
+        'Привод на все колеса' => 'AWD',
+        'Привод на задние колеса' => 'RWD',
+        'c бортовой платформой/ходовая часть' => 'Chassis Cab',
+        'с бортовой платформой/ходовая часть' => 'Chassis Cab',
+        'бортовой платформой' => 'Flatbed',
+        'ходовая часть' => 'Chassis',
+        'Одноосный тягач' => 'Tractor',
         'Кабриолет' => 'Cabriolet',
-        'седан' => 'Sedan',
+        'Автомобиль' => 'Car',
+        'Самосвал' => 'Dump Truck',
+        'вездеход' => 'SUV',
+        'Вездеход' => 'SUV',
         'универсал' => 'Station Wagon',
+        'хетчбэк' => 'Hatchback',
+        'закрытый' => 'Closed',
+        'открытый' => 'Open',
+        'автобус' => 'Bus',
+        'Фургон' => 'Van',
+        'фургон' => 'Van',
+        'бортовой' => 'Flatbed',
+        'СЕДАН' => 'Sedan',
+        'седан' => 'Sedan',
+        'купе' => 'Coupe',
+        'Пикап' => 'Pickup',
+        'тягач' => 'Tractor',
+        'тарга' => 'Targa',
+        'Кузов' => 'Body',
+        'вэн' => 'Van',
     ];
     return str_replace(array_keys($map), array_values($map), $text);
+}
+
+/**
+ * Katalog marka adını frontend-uyumlu slug'a çevirir
+ * VW → volkswagen, CITROËN → citroen, ALFA ROMEO → alfa-romeo
+ */
+function catalog_brand_to_slug(string $name): string {
+    // Özel eşleştirmeler — slug'ın dosya adlarıyla uyumlu olması için
+    static $slug_map = [
+        'VW' => 'volkswagen',
+        'CITROËN' => 'citroen',
+        'ŠKODA' => 'skoda',
+        'ŠVENTINĖ' => 'sventine',
+        'VW (FAW)' => 'vw-faw',
+        'VW (SVW)' => 'vw-svw',
+        'CITROËN (DF-PSA)' => 'citroen-df-psa',
+        'ŠKODA (SVW)' => 'skoda-svw',
+    ];
+    $upper = strtoupper(trim($name));
+    if (isset($slug_map[$upper])) return $slug_map[$upper];
+
+    $slug = strtolower(trim($name));
+    // Diacritics temizle: Ë→e, É→e, Ö→o, Ü→u vb.
+    $slug = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $slug) ?: $slug;
+    $slug = preg_replace('/[^a-z0-9]+/', '-', $slug);
+    $slug = trim($slug, '-');
+    return $slug;
 }
 
 function catalog_resolve_brand($pdo, $brand_slug) {
