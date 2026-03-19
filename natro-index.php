@@ -239,12 +239,29 @@ switch ($action) {
             $z = $pdo->query("SELECT DISTINCT brand_slug FROM parts ORDER BY brand_slug")->fetchAll(PDO::FETCH_COLUMN);
             $c = $pdo->query("SELECT name FROM catalog_manufacturers ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['7zap_brands' => $z, 'catalog_brands' => $c], JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'migration_analysis') {
+            $result = [];
+            // 1. Eşleşme oranı: 7zap generation_slug vs vehicles.best_7zap_slug
+            $result['total_7zap_gens'] = (int)$pdo->query("SELECT COUNT(DISTINCT generation_slug) FROM parts")->fetchColumn();
+            $result['matched_7zap_gens'] = (int)$pdo->query("SELECT COUNT(DISTINCT p.generation_slug) FROM parts p JOIN vehicles v ON v.best_7zap_slug = p.generation_slug")->fetchColumn();
+            // 2. node_name_en eşleşmesi
+            $result['unique_node_names'] = (int)$pdo->query("SELECT COUNT(DISTINCT node_name_en) FROM parts")->fetchColumn();
+            $result['matched_node_names'] = (int)$pdo->query("SELECT COUNT(DISTINCT p.node_name_en) FROM parts p JOIN node_categories nc ON nc.node_name_en = p.node_name_en")->fetchColumn();
+            // 3. Benzersiz OEM sayısı
+            $result['unique_oem_numbers'] = (int)$pdo->query("SELECT COUNT(DISTINCT oem_number) FROM parts")->fetchColumn();
+            // 4. Top 7zap gens with match status
+            $stmt = $pdo->query("
+                SELECT p.brand_slug, p.generation_slug, COUNT(*) AS part_count,
+                       (SELECT COUNT(*) FROM vehicles v WHERE v.best_7zap_slug = p.generation_slug) AS vehicle_match
+                FROM parts p
+                GROUP BY p.brand_slug, p.generation_slug
+                ORDER BY part_count DESC LIMIT 30
+            ");
+            $result['top_gens'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
         } elseif ($q === 'sample_7zap') {
-            // 7zap tabloları (parts, brands, generations, vehicles)
             $result = [];
             try { $result['parts_sample'] = $pdo->query("SELECT * FROM parts LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) { $result['parts_error'] = $e->getMessage(); }
-            try { $result['brands_sample'] = $pdo->query("SELECT * FROM brands LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
-            try { $result['generations_sample'] = $pdo->query("SELECT * FROM generations LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
             try { $result['vehicles_sample'] = $pdo->query("SELECT * FROM vehicles LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
         }
