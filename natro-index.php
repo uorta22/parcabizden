@@ -199,6 +199,18 @@ switch ($action) {
         if (!check_rate_limit('admin_product_write', 30, 15)) break;
         handleAdminEnrichPart($pdo, $uid); break;
 
+    case 'db_inspect':
+        // Geçici: tablo yapısını keşfet
+        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+        $result = ['tables' => []];
+        foreach ($tables as $t) {
+            $cols = $pdo->query("SHOW COLUMNS FROM `$t`")->fetchAll(PDO::FETCH_ASSOC);
+            $cnt = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
+            $result['tables'][$t] = ['count' => (int)$cnt, 'columns' => $cols];
+        }
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        break;
+
     default: echo json_encode(['error' => 'Invalid action']);
 }
 
