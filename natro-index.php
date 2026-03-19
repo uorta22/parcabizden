@@ -69,7 +69,7 @@ function jsonResponse($data, $code = 200) {
 }
 
 // Include e-commerce & admin modules (safe — skip if file not found)
-$_pb_modules = ['products.php', 'orders.php', 'addresses.php', 'favorites.php', 'profile.php', 'password.php', 'admin-products.php', 'admin-orders.php', 'migrate-7zap.php'];
+$_pb_modules = ['products.php', 'orders.php', 'addresses.php', 'favorites.php', 'profile.php', 'password.php', 'admin-products.php', 'admin-orders.php'];
 foreach ($_pb_modules as $_m) {
     $__f = __DIR__ . '/' . $_m;
     if (file_exists($__f)) require_once $__f;
@@ -198,93 +198,6 @@ switch ($action) {
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
         if (!check_rate_limit('admin_product_write', 30, 15)) break;
         handleAdminEnrichPart($pdo, $uid); break;
-
-    case 'migrate_7zap':
-        ignore_user_abort(true);
-        set_time_limit(0);
-        handle_migrate_7zap($pdo);
-        break;
-
-    case 'db_inspect':
-        // Geçici: catalog tabloları detaylı bilgi
-        $q = trim($_GET['q'] ?? 'counts');
-        if ($q === 'counts') {
-            // information_schema'dan tahmini satır sayıları (hızlı)
-            $stmt = $pdo->prepare("SELECT TABLE_NAME, TABLE_ROWS, DATA_LENGTH, INDEX_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA = :db ORDER BY TABLE_ROWS DESC");
-            $stmt->execute([':db' => $DB_NAME]);
-            $result = [];
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $r) {
-                $result[$r['TABLE_NAME']] = ['rows' => (int)$r['TABLE_ROWS'], 'data_mb' => round($r['DATA_LENGTH']/1048576, 1), 'index_mb' => round($r['INDEX_LENGTH']/1048576, 1)];
-            }
-            echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'sample_parts') {
-            // parts tablosundan örnek veriler
-            $stmt = $pdo->query("SELECT * FROM parts LIMIT 5");
-            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'sample_catalog_parts') {
-            $stmt = $pdo->query("SELECT p.*, s.name AS supplier_name FROM catalog_parts p LEFT JOIN catalog_suppliers s ON p.supplier_id = s.id LIMIT 10");
-            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'sample_pv') {
-            $stmt = $pdo->query("SELECT pv.*, p.part_number, s.name AS supplier, v.description AS vehicle, m.name AS model, man.name AS brand FROM catalog_part_vehicles pv JOIN catalog_parts p ON pv.part_id = p.id JOIN catalog_suppliers s ON p.supplier_id = s.id JOIN catalog_vehicles v ON pv.vehicle_id = v.id JOIN catalog_models m ON v.model_id = m.id JOIN catalog_manufacturers man ON m.manufacturer_id = man.id LIMIT 10");
-            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'analysis') {
-            $result = [];
-            // 7zap brand_slug listesi (ilk 20)
-            $stmt = $pdo->query("SELECT brand_slug, COUNT(*) AS cnt FROM parts GROUP BY brand_slug ORDER BY cnt DESC LIMIT 30");
-            $result['7zap_brands'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            // catalog marka listesi (ilk 20)
-            $stmt = $pdo->query("SELECT m.name, COUNT(DISTINCT mo.id) AS models, COUNT(DISTINCT v.id) AS vehicles FROM catalog_manufacturers m LEFT JOIN catalog_models mo ON mo.manufacturer_id = m.id LEFT JOIN catalog_vehicles v ON v.model_id = mo.id GROUP BY m.id ORDER BY vehicles DESC LIMIT 30");
-            $result['catalog_brands'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            // 7zap'dan benzersiz oem_number sayısı (approximate)
-            $result['7zap_unique_oem_approx'] = (int)$pdo->query("SELECT COUNT(DISTINCT oem_number) FROM (SELECT oem_number FROM parts LIMIT 1000000) t")->fetchColumn();
-            // catalog'da parça sayısı
-            $result['catalog_parts_count'] = (int)$pdo->query("SELECT COUNT(*) FROM catalog_parts")->fetchColumn();
-            echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'brand_match') {
-            // 7zap brand_slug vs catalog marka eşleşme
-            $z = $pdo->query("SELECT DISTINCT brand_slug FROM parts ORDER BY brand_slug")->fetchAll(PDO::FETCH_COLUMN);
-            $c = $pdo->query("SELECT name FROM catalog_manufacturers ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
-            echo json_encode(['7zap_brands' => $z, 'catalog_brands' => $c], JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'migration_analysis') {
-            // Hafif sorgular — step parametresiyle parçalı çalışır
-            $step = (int)($_GET['step'] ?? 1);
-            $result = ['step' => $step];
-            if ($step === 1) {
-                // vehicles tablosundaki eşleşme verileri
-                $stmt = $pdo->query("SELECT best_7zap_slug, brand_name, model_name FROM vehicles WHERE best_7zap_slug IS NOT NULL AND best_7zap_slug != '' LIMIT 100");
-                $result['vehicle_matches'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                $result['total_vehicles'] = (int)$pdo->query("SELECT COUNT(*) FROM vehicles")->fetchColumn();
-                $result['matched_vehicles'] = (int)$pdo->query("SELECT COUNT(*) FROM vehicles WHERE best_7zap_slug IS NOT NULL AND best_7zap_slug != ''")->fetchColumn();
-            } elseif ($step === 2) {
-                // 7zap generation_slug listesi (DISTINCT — parts_gen_summary varsa oradan)
-                $stmt = $pdo->query("SELECT brand_slug, generation_slug, part_count FROM parts_gen_summary ORDER BY part_count DESC LIMIT 100");
-                $result['gen_summary'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                $result['total_gens'] = (int)$pdo->query("SELECT COUNT(*) FROM parts_gen_summary")->fetchColumn();
-            } elseif ($step === 3) {
-                // node_name_en → category eşleşmesi
-                $stmt = $pdo->query("SELECT DISTINCT node_name_en FROM parts LIMIT 500");
-                $nodes = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                $result['sample_nodes'] = array_slice($nodes, 0, 50);
-                $result['total_sample_nodes'] = count($nodes);
-                // node_categories tablosundan eşleşme
-                $stmt = $pdo->query("SELECT node_name_en, category_id FROM node_categories LIMIT 100");
-                $result['node_category_map'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            } elseif ($step === 4) {
-                // parts tablosu index bilgisi
-                $stmt = $pdo->query("SHOW INDEX FROM parts");
-                $result['parts_indexes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-                // catalog_parts index bilgisi
-                $stmt = $pdo->query("SHOW INDEX FROM catalog_parts");
-                $result['catalog_parts_indexes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            }
-            echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        } elseif ($q === 'sample_7zap') {
-            $result = [];
-            try { $result['parts_sample'] = $pdo->query("SELECT * FROM parts LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) { $result['parts_error'] = $e->getMessage(); }
-            try { $result['vehicles_sample'] = $pdo->query("SELECT * FROM vehicles LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
-            echo json_encode($result, JSON_UNESCAPED_UNICODE);
-        }
-        break;
 
     default: echo json_encode(['error' => 'Invalid action']);
 }
