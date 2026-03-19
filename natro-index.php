@@ -221,6 +221,24 @@ switch ($action) {
         } elseif ($q === 'sample_pv') {
             $stmt = $pdo->query("SELECT pv.*, p.part_number, s.name AS supplier, v.description AS vehicle, m.name AS model, man.name AS brand FROM catalog_part_vehicles pv JOIN catalog_parts p ON pv.part_id = p.id JOIN catalog_suppliers s ON p.supplier_id = s.id JOIN catalog_vehicles v ON pv.vehicle_id = v.id JOIN catalog_models m ON v.model_id = m.id JOIN catalog_manufacturers man ON m.manufacturer_id = man.id LIMIT 10");
             echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'analysis') {
+            $result = [];
+            // 7zap brand_slug listesi (ilk 20)
+            $stmt = $pdo->query("SELECT brand_slug, COUNT(*) AS cnt FROM parts GROUP BY brand_slug ORDER BY cnt DESC LIMIT 30");
+            $result['7zap_brands'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // catalog marka listesi (ilk 20)
+            $stmt = $pdo->query("SELECT m.name, COUNT(DISTINCT mo.id) AS models, COUNT(DISTINCT v.id) AS vehicles FROM catalog_manufacturers m LEFT JOIN catalog_models mo ON mo.manufacturer_id = m.id LEFT JOIN catalog_vehicles v ON v.model_id = mo.id GROUP BY m.id ORDER BY vehicles DESC LIMIT 30");
+            $result['catalog_brands'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // 7zap'dan benzersiz oem_number sayısı (approximate)
+            $result['7zap_unique_oem_approx'] = (int)$pdo->query("SELECT COUNT(DISTINCT oem_number) FROM (SELECT oem_number FROM parts LIMIT 1000000) t")->fetchColumn();
+            // catalog'da parça sayısı
+            $result['catalog_parts_count'] = (int)$pdo->query("SELECT COUNT(*) FROM catalog_parts")->fetchColumn();
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'brand_match') {
+            // 7zap brand_slug vs catalog marka eşleşme
+            $z = $pdo->query("SELECT DISTINCT brand_slug FROM parts ORDER BY brand_slug")->fetchAll(PDO::FETCH_COLUMN);
+            $c = $pdo->query("SELECT name FROM catalog_manufacturers ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
+            echo json_encode(['7zap_brands' => $z, 'catalog_brands' => $c], JSON_UNESCAPED_UNICODE);
         } elseif ($q === 'sample_7zap') {
             // 7zap tabloları (parts, brands, generations, vehicles)
             $result = [];
