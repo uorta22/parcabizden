@@ -863,7 +863,7 @@ function handle_autodata_models($pdo) {
 
 function handle_autodata_generations($pdo) {
     $brand_slug = trim($_GET['brand'] ?? '');
-    $model = trim($_GET['model'] ?? '');
+    $model = normalize_cyrillic(trim($_GET['model'] ?? ''));
     if (!$brand_slug || !$model) { echo json_encode(['error' => 'brand ve model parametreleri gerekli']); return; }
 
     $brand_name = catalog_resolve_brand($pdo, $brand_slug);
@@ -918,8 +918,8 @@ function handle_autodata_generations($pdo) {
 
 function handle_autodata_resolve_slug($pdo) {
     $brand_slug = trim($_GET['brand'] ?? '');
-    $model = trim($_GET['model'] ?? '');
-    $generation = trim($_GET['generation'] ?? '');
+    $model = normalize_cyrillic(trim($_GET['model'] ?? ''));
+    $generation = normalize_cyrillic(trim($_GET['generation'] ?? ''));
     if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
 
     // Get all generation slugs for this brand from parts DB
@@ -1042,6 +1042,20 @@ function handle_autodata_resolve_slug($pdo) {
     }
 
     echo json_encode(['matches' => $output, 'auto_selected' => $auto_selected]);
+}
+
+/**
+ * Kiril karakter içeren model isimlerini Latin karşılığına çevirir
+ * Eski URL'lerde kalan Kiril metinlerin çalışmasını sağlar
+ */
+function normalize_cyrillic(string $text): string {
+    static $map = [
+        'купе' => 'Coupe',
+        'Кабриолет' => 'Cabriolet',
+        'седан' => 'Sedan',
+        'универсал' => 'Station Wagon',
+    ];
+    return str_replace(array_keys($map), array_values($map), $text);
 }
 
 function catalog_resolve_brand($pdo, $brand_slug) {
