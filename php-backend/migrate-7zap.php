@@ -261,134 +261,69 @@ function migrate_step2_brand_map($pdo) {
 
 // ── Step 3: Generation Mapping ──
 function migrate_step3_gen_map($pdo) {
-    // vehicles tablosundaki best_7zap_slug → catalog_vehicles eşleşmesi
-    // vehicles.brand_name ve model_name'den catalog eşleşmesini bul
     $pdo->exec("TRUNCATE TABLE migration_7zap_gen_map");
 
-    // 1. Önce tüm 7zap generation_slug'larını al (parts_gen_summary'den)
-    $genStmt = $pdo->query("SELECT brand_slug, generation_slug FROM parts_gen_summary");
-    $allGens = $genStmt->fetchAll(PDO::FETCH_ASSOC);
+    // 1. Tüm 7zap generation_slug'larını al
+    $allGens = $pdo->query("SELECT brand_slug, generation_slug FROM parts_gen_summary")->fetchAll(PDO::FETCH_ASSOC);
 
-    // 2. vehicles tablosundaki eşleşmeleri al
-    $vStmt = $pdo->query("
-        SELECT v.best_7zap_slug, v.brand_name, v.model_name,
-               cv.id AS vehicle_id, cv.model_id, cm.manufacturer_id
-        FROM vehicles v
-        JOIN catalog_vehicles cv ON cv.description LIKE CONCAT('%',
-            SUBSTRING_INDEX(REPLACE(v.model_name, '(', ''), '->', 1), '%')
-        JOIN catalog_models cm ON cv.model_id = cm.id
-        JOIN catalog_manufacturers cman ON cm.manufacturer_id = cman.id
-        WHERE v.best_7zap_slug IS NOT NULL AND v.best_7zap_slug != ''
-        LIMIT 1
-    ");
-    // Bu JOIN çok ağır olabilir, alternatif yaklaşım kullan
+    // 2. brand_slug → manufacturer_id mapping'i yükle
+    $brandMap = [];
+    $bm = $pdo->query("SELECT brand_slug, manufacturer_id FROM migration_7zap_brand_map WHERE manufacturer_id IS NOT NULL");
+    foreach ($bm->fetchAll(PDO::FETCH_ASSOC) as $r) {
+        $brandMap[$r['brand_slug']] = (int)$r['manufacturer_id'];
+    }
 
-    // Alternatif: vehicles tablosundaki brand_name ile catalog_manufacturers eşleştir,
-    // sonra model_name'den model bul, ilk vehicle'ı al
-    $matched = 0;
-    $unmatched = 0;
-
+    // 3. Her generation için manufacturer_id ile catalog_vehicles'dan en yakın vehicle'ı bul
     $insertStmt = $pdo->prepare("
         INSERT IGNORE INTO migration_7zap_gen_map
         (generation_slug, brand_slug, vehicle_id, model_id, manufacturer_id)
         VALUES (:gen_slug, :brand_slug, :vid, :mid, :manid)
     ");
 
-    // vehicles tablosundan eşleşmeleri al
-    $vehicleMatches = $pdo->query("
-        SELECT best_7zap_slug, brand_name, model_name
-        FROM vehicles
-        WHERE best_7zap_slug IS NOT NULL AND best_7zap_slug != ''
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    // manufacturer_id → ilk vehicle cache (basit eşleşme)
+    $manVehicleCache = [];
+    $vehicleStmt = $pdo->prepare("
+        SELECT v.id AS vehicle_id, v.model_id
+        FROM catalog_vehicles v
+        JOIN catalog_models m ON v.model_id = m.id
+        WHERE m.manufacturer_id = :manid
+        ORDER BY v.id LIMIT 1
+    ");
 
-    // brand_name → manufacturer_id cache
-    $brandCache = [];
-    $brandStmt = $pdo->prepare("SELECT id FROM catalog_manufacturers WHERE name = :name");
+    $matched = 0;
+    $unmatched = 0;
 
-    // Marka eşleştirme fonksiyonu
-    $resolveBrand = function($brandName) use ($pdo, &$brandCache, $brandStmt) {
-        if (isset($brandCache[$brandName])) return $brandCache[$brandName];
-        // Direkt eşleşme
-        $brandStmt->execute([':name' => strtoupper($brandName)]);
-        $id = $brandStmt->fetchColumn();
-        if ($id) { $brandCache[$brandName] = (int)$id; return (int)$id; }
-        // slug-based mapping üzerinden
-        $mapStmt = $pdo->prepare("SELECT manufacturer_id FROM migration_7zap_brand_map WHERE brand_slug = :slug");
-        $slug = strtolower(preg_replace('/[^a-z0-9]+/i', '-', $brandName));
-        $mapStmt->execute([':slug' => $slug]);
-        $id = $mapStmt->fetchColumn();
-        if ($id) { $brandCache[$brandName] = (int)$id; return (int)$id; }
-        $brandCache[$brandName] = null;
-        return null;
-    };
-
-    // Her vehicle match için: brand→manufacturer, sonra model ara, ilk vehicle'ı bul
-    $genToVehicle = []; // generation_slug → [vehicle_id, model_id, manufacturer_id]
-    foreach ($vehicleMatches as $vm) {
-        $genSlug = $vm['best_7zap_slug'];
-        if (isset($genToVehicle[$genSlug])) continue; // Zaten eşleştirildi
-
-        $manId = $resolveBrand($vm['brand_name']);
-        if (!$manId) continue;
-
-        // model_name'den model bul — "1 Serisi 5 Kapı (F20)(03.2015->)" formatında
-        // İlk paranteze kadar al, sonra catalog_models'da ara
-        $modelName = $vm['model_name'];
-        $cleanModel = preg_replace('/\s*\([^)]*\)\s*/', ' ', $modelName);
-        $cleanModel = preg_replace('/\d{2}\.\d{4}->.*/', '', $cleanModel);
-        $cleanModel = preg_replace('/\d{4}->.*/', '', $cleanModel);
-        $cleanModel = trim($cleanModel);
-
-        // catalog_models'da LIKE ile ara
-        $modelStmt = $pdo->prepare("
-            SELECT mo.id AS model_id, v.id AS vehicle_id
-            FROM catalog_models mo
-            JOIN catalog_vehicles v ON v.model_id = mo.id
-            WHERE mo.manufacturer_id = :manid
-            ORDER BY v.id
-            LIMIT 1
-        ");
-        $modelStmt->execute([':manid' => $manId]);
-        $mrow = $modelStmt->fetch(PDO::FETCH_ASSOC);
-        if ($mrow) {
-            $genToVehicle[$genSlug] = [
-                'vehicle_id' => (int)$mrow['vehicle_id'],
-                'model_id' => (int)$mrow['model_id'],
-                'manufacturer_id' => $manId,
-            ];
-        }
-    }
-
-    // Tüm generation'ları insert et
     foreach ($allGens as $gen) {
         $genSlug = $gen['generation_slug'];
         $brandSlug = $gen['brand_slug'];
+        $manId = $brandMap[$brandSlug] ?? null;
 
-        if (isset($genToVehicle[$genSlug])) {
-            $v = $genToVehicle[$genSlug];
-            $insertStmt->execute([
-                ':gen_slug' => $genSlug,
-                ':brand_slug' => $brandSlug,
-                ':vid' => $v['vehicle_id'],
-                ':mid' => $v['model_id'],
-                ':manid' => $v['manufacturer_id'],
-            ]);
-            $matched++;
+        $vid = null;
+        $mid = null;
+
+        if ($manId) {
+            if (!isset($manVehicleCache[$manId])) {
+                $vehicleStmt->execute([':manid' => $manId]);
+                $manVehicleCache[$manId] = $vehicleStmt->fetch(PDO::FETCH_ASSOC) ?: null;
+            }
+            if ($manVehicleCache[$manId]) {
+                $vid = (int)$manVehicleCache[$manId]['vehicle_id'];
+                $mid = (int)$manVehicleCache[$manId]['model_id'];
+                $matched++;
+            } else {
+                $unmatched++;
+            }
         } else {
-            // Brand mapping üzerinden en azından manufacturer_id bul
-            $mapStmt = $pdo->prepare("SELECT manufacturer_id FROM migration_7zap_brand_map WHERE brand_slug = :slug");
-            $mapStmt->execute([':slug' => $brandSlug]);
-            $manId = $mapStmt->fetchColumn();
-
-            $insertStmt->execute([
-                ':gen_slug' => $genSlug,
-                ':brand_slug' => $brandSlug,
-                ':vid' => null,
-                ':mid' => null,
-                ':manid' => $manId ?: null,
-            ]);
             $unmatched++;
         }
+
+        $insertStmt->execute([
+            ':gen_slug' => $genSlug,
+            ':brand_slug' => $brandSlug,
+            ':vid' => $vid,
+            ':mid' => $mid,
+            ':manid' => $manId,
+        ]);
     }
 
     echo json_encode([
@@ -396,7 +331,6 @@ function migrate_step3_gen_map($pdo) {
         'total_gens' => count($allGens),
         'matched_to_vehicle' => $matched,
         'unmatched' => $unmatched,
-        'vehicle_matches_used' => count($genToVehicle),
     ]);
 }
 
