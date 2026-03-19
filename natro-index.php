@@ -200,15 +200,35 @@ switch ($action) {
         handleAdminEnrichPart($pdo, $uid); break;
 
     case 'db_inspect':
-        // Geçici: tablo yapısını keşfet (hafif — sadece isimler ve sütunlar)
-        $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-        $result = ['tables' => []];
-        foreach ($tables as $t) {
-            $cols = $pdo->query("SHOW COLUMNS FROM `$t`")->fetchAll(PDO::FETCH_ASSOC);
-            $colNames = array_map(fn($c) => $c['Field'] . ':' . $c['Type'], $cols);
-            $result['tables'][$t] = $colNames;
+        // Geçici: catalog tabloları detaylı bilgi
+        $q = trim($_GET['q'] ?? 'counts');
+        if ($q === 'counts') {
+            // Sadece catalog_ tabloları satır sayıları
+            $tables = ['catalog_manufacturers','catalog_models','catalog_vehicles','catalog_categories','catalog_suppliers','catalog_parts','catalog_part_vehicles','catalog_part_images','catalog_engines','catalog_vehicle_engines','catalog_cross_ref','catalog_vehicle_attributes','parts','brands','generations','modifications','vehicles'];
+            $result = [];
+            foreach ($tables as $t) {
+                try { $result[$t] = (int)$pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn(); } catch(Exception $e) { $result[$t] = 'error'; }
+            }
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'sample_parts') {
+            // parts tablosundan örnek veriler
+            $stmt = $pdo->query("SELECT * FROM parts LIMIT 5");
+            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'sample_catalog_parts') {
+            $stmt = $pdo->query("SELECT p.*, s.name AS supplier_name FROM catalog_parts p LEFT JOIN catalog_suppliers s ON p.supplier_id = s.id LIMIT 10");
+            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'sample_pv') {
+            $stmt = $pdo->query("SELECT pv.*, p.part_number, s.name AS supplier, v.description AS vehicle, m.name AS model, man.name AS brand FROM catalog_part_vehicles pv JOIN catalog_parts p ON pv.part_id = p.id JOIN catalog_suppliers s ON p.supplier_id = s.id JOIN catalog_vehicles v ON pv.vehicle_id = v.id JOIN catalog_models m ON v.model_id = m.id JOIN catalog_manufacturers man ON m.manufacturer_id = man.id LIMIT 10");
+            echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+        } elseif ($q === 'sample_7zap') {
+            // 7zap tabloları (parts, brands, generations, vehicles)
+            $result = [];
+            try { $result['parts_sample'] = $pdo->query("SELECT * FROM parts LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) { $result['parts_error'] = $e->getMessage(); }
+            try { $result['brands_sample'] = $pdo->query("SELECT * FROM brands LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
+            try { $result['generations_sample'] = $pdo->query("SELECT * FROM generations LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
+            try { $result['vehicles_sample'] = $pdo->query("SELECT * FROM vehicles LIMIT 5")->fetchAll(PDO::FETCH_ASSOC); } catch(Exception $e) {}
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
         }
-        echo json_encode($result, JSON_UNESCAPED_UNICODE);
         break;
 
     default: echo json_encode(['error' => 'Invalid action']);
