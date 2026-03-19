@@ -103,6 +103,29 @@ switch ($action) {
     case 'autodata_models':     handle_autodata_models($pdo); break;
     case 'autodata_generations': handle_autodata_generations($pdo); break;
     case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
+    case 'db_diag':
+        $t = $_GET['token'] ?? '';
+        if ($t !== 'pBzD_import_2026_xK9') { echo json_encode(['error' => 'unauthorized']); break; }
+        $op = $_GET['op'] ?? 'indexes';
+        if ($op === 'indexes') {
+            $rows = $pdo->query("SHOW INDEX FROM catalog_part_vehicles")->fetchAll(PDO::FETCH_ASSOC);
+            $idx = [];
+            foreach ($rows as $r) { $idx[$r['Key_name']][] = $r['Column_name']; }
+            echo json_encode($idx);
+        } elseif ($op === 'create_idx') {
+            set_time_limit(0); ignore_user_abort(true);
+            $name = $_GET['name'] ?? '';
+            $cols = $_GET['cols'] ?? '';
+            if ($name && $cols) {
+                try {
+                    $pdo->exec("CREATE INDEX `$name` ON catalog_part_vehicles ($cols)");
+                    echo json_encode(['ok' => "$name created"]);
+                } catch (PDOException $e) {
+                    echo json_encode(['error' => $e->getMessage()]);
+                }
+            }
+        }
+        break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
