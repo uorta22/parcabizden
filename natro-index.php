@@ -469,8 +469,15 @@ function vin_decode($pdo) {
 }
 
 function get_brands($pdo) {
-    $stmt = $pdo->query("SELECT brand_slug, COUNT(DISTINCT generation_slug) as gen_count, COUNT(*) as part_count FROM parts GROUP BY brand_slug ORDER BY part_count DESC");
-    $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Summary tablodan hızlı okuma (17M satırlık parts'tan GROUP BY yerine)
+    try {
+        $stmt = $pdo->query("SELECT brand_slug, gen_count, part_count FROM parts_brand_summary ORDER BY part_count DESC");
+        $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Fallback: orijinal yavaş sorgu
+        $stmt = $pdo->query("SELECT brand_slug, COUNT(DISTINCT generation_slug) as gen_count, COUNT(*) as part_count FROM parts GROUP BY brand_slug ORDER BY part_count DESC");
+        $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
     $name_map = ['audi'=>'Audi','bmw'=>'BMW','volkswagen'=>'Volkswagen','mercedes-benz'=>'Mercedes-Benz','skoda'=>'Skoda','seat'=>'SEAT','porsche'=>'Porsche','volvo'=>'Volvo','toyota'=>'Toyota','nissan'=>'Nissan','honda'=>'Honda','hyundai'=>'Hyundai','kia'=>'Kia','ford'=>'Ford','renault'=>'Renault','peugeot'=>'Peugeot','citroen'=>'Citroen','fiat'=>'Fiat','opel'=>'Opel','mazda'=>'Mazda','subaru'=>'Subaru','suzuki'=>'Suzuki','mitsubishi'=>'Mitsubishi','chevrolet'=>'Chevrolet','dacia'=>'Dacia','mini'=>'MINI','alfa-romeo'=>'Alfa Romeo','land-rover'=>'Land Rover','jaguar'=>'Jaguar','infiniti'=>'Infiniti','lexus'=>'Lexus','vauxhall'=>'Vauxhall','datsun'=>'Datsun','holden'=>'Holden','scion'=>'Scion'];
     foreach ($brands as &$b) { $b['brand_name'] = isset($name_map[$b['brand_slug']]) ? $name_map[$b['brand_slug']] : ucfirst($b['brand_slug']); }
     echo json_encode(['brands' => $brands]);
@@ -479,9 +486,18 @@ function get_brands($pdo) {
 function get_generations($pdo) {
     $brand = isset($_GET['brand']) ? $_GET['brand'] : '';
     if (!$brand) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
-    $stmt = $pdo->prepare("SELECT generation_slug, COUNT(DISTINCT oem_number) as part_count FROM parts WHERE brand_slug = :brand GROUP BY generation_slug ORDER BY generation_slug");
-    $stmt->execute([':brand' => $brand]);
-    $gens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    // Summary tablodan hızlı okuma
+    try {
+        $stmt = $pdo->prepare("SELECT generation_slug, part_count FROM parts_gen_summary WHERE brand_slug = :brand ORDER BY generation_slug");
+        $stmt->execute([':brand' => $brand]);
+        $gens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        if (empty($gens)) throw new PDOException('empty');
+    } catch (PDOException $e) {
+        // Fallback: orijinal yavaş sorgu
+        $stmt = $pdo->prepare("SELECT generation_slug, COUNT(DISTINCT oem_number) as part_count FROM parts WHERE brand_slug = :brand GROUP BY generation_slug ORDER BY generation_slug");
+        $stmt->execute([':brand' => $brand]);
+        $gens = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
     foreach ($gens as &$g) { $g['generation_name'] = format_gen_slug($g['generation_slug']); }
     echo json_encode(['brand' => $brand, 'generations' => $gens]);
 }
