@@ -240,24 +240,37 @@ switch ($action) {
             $c = $pdo->query("SELECT name FROM catalog_manufacturers ORDER BY name")->fetchAll(PDO::FETCH_COLUMN);
             echo json_encode(['7zap_brands' => $z, 'catalog_brands' => $c], JSON_UNESCAPED_UNICODE);
         } elseif ($q === 'migration_analysis') {
-            $result = [];
-            // 1. Eşleşme oranı: 7zap generation_slug vs vehicles.best_7zap_slug
-            $result['total_7zap_gens'] = (int)$pdo->query("SELECT COUNT(DISTINCT generation_slug) FROM parts")->fetchColumn();
-            $result['matched_7zap_gens'] = (int)$pdo->query("SELECT COUNT(DISTINCT p.generation_slug) FROM parts p JOIN vehicles v ON v.best_7zap_slug = p.generation_slug")->fetchColumn();
-            // 2. node_name_en eşleşmesi
-            $result['unique_node_names'] = (int)$pdo->query("SELECT COUNT(DISTINCT node_name_en) FROM parts")->fetchColumn();
-            $result['matched_node_names'] = (int)$pdo->query("SELECT COUNT(DISTINCT p.node_name_en) FROM parts p JOIN node_categories nc ON nc.node_name_en = p.node_name_en")->fetchColumn();
-            // 3. Benzersiz OEM sayısı
-            $result['unique_oem_numbers'] = (int)$pdo->query("SELECT COUNT(DISTINCT oem_number) FROM parts")->fetchColumn();
-            // 4. Top 7zap gens with match status
-            $stmt = $pdo->query("
-                SELECT p.brand_slug, p.generation_slug, COUNT(*) AS part_count,
-                       (SELECT COUNT(*) FROM vehicles v WHERE v.best_7zap_slug = p.generation_slug) AS vehicle_match
-                FROM parts p
-                GROUP BY p.brand_slug, p.generation_slug
-                ORDER BY part_count DESC LIMIT 30
-            ");
-            $result['top_gens'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            // Hafif sorgular — step parametresiyle parçalı çalışır
+            $step = (int)($_GET['step'] ?? 1);
+            $result = ['step' => $step];
+            if ($step === 1) {
+                // vehicles tablosundaki eşleşme verileri
+                $stmt = $pdo->query("SELECT best_7zap_slug, brand_name, model_name FROM vehicles WHERE best_7zap_slug IS NOT NULL AND best_7zap_slug != '' LIMIT 100");
+                $result['vehicle_matches'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $result['total_vehicles'] = (int)$pdo->query("SELECT COUNT(*) FROM vehicles")->fetchColumn();
+                $result['matched_vehicles'] = (int)$pdo->query("SELECT COUNT(*) FROM vehicles WHERE best_7zap_slug IS NOT NULL AND best_7zap_slug != ''")->fetchColumn();
+            } elseif ($step === 2) {
+                // 7zap generation_slug listesi (DISTINCT — parts_gen_summary varsa oradan)
+                $stmt = $pdo->query("SELECT brand_slug, generation_slug, part_count FROM parts_gen_summary ORDER BY part_count DESC LIMIT 100");
+                $result['gen_summary'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $result['total_gens'] = (int)$pdo->query("SELECT COUNT(*) FROM parts_gen_summary")->fetchColumn();
+            } elseif ($step === 3) {
+                // node_name_en → category eşleşmesi
+                $stmt = $pdo->query("SELECT DISTINCT node_name_en FROM parts LIMIT 500");
+                $nodes = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                $result['sample_nodes'] = array_slice($nodes, 0, 50);
+                $result['total_sample_nodes'] = count($nodes);
+                // node_categories tablosundan eşleşme
+                $stmt = $pdo->query("SELECT node_name_en, category_id FROM node_categories LIMIT 100");
+                $result['node_category_map'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } elseif ($step === 4) {
+                // parts tablosu index bilgisi
+                $stmt = $pdo->query("SHOW INDEX FROM parts");
+                $result['parts_indexes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // catalog_parts index bilgisi
+                $stmt = $pdo->query("SHOW INDEX FROM catalog_parts");
+                $result['catalog_parts_indexes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
             echo json_encode($result, JSON_UNESCAPED_UNICODE);
         } elseif ($q === 'sample_7zap') {
             $result = [];
