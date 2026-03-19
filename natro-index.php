@@ -103,18 +103,6 @@ switch ($action) {
     case 'autodata_models':     handle_autodata_models($pdo); break;
     case 'autodata_generations': handle_autodata_generations($pdo); break;
     case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
-    case 'cleanup_migration':
-        $t = $_GET['token'] ?? '';
-        if ($t !== 'pBzD_import_2026_xK9') { echo json_encode(['error' => 'unauthorized']); break; }
-        $files = ['migrate-receiver.php', 'bigdump.php', 'db-check.php'];
-        $result = [];
-        foreach ($files as $f) {
-            $path = __DIR__ . '/' . $f;
-            if (file_exists($path)) { $result[$f] = @unlink($path) ? 'deleted' : 'failed'; }
-            else { $result[$f] = 'not_found'; }
-        }
-        echo json_encode($result);
-        break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
