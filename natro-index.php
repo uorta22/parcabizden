@@ -103,60 +103,6 @@ switch ($action) {
     case 'autodata_models':     handle_autodata_models($pdo); break;
     case 'autodata_generations': handle_autodata_generations($pdo); break;
     case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
-    case 'fix_cyrillic':
-        $t = $_GET['token'] ?? '';
-        if ($t !== 'pBzD_import_2026_xK9') { echo json_encode(['error' => 'unauthorized']); break; }
-        // normalize_cyrillic fonksiyonundaki tüm çevirileri DB'ye uygula
-        $map = [
-            'Наклонная задняя часть' => 'Hatchback',
-            'Привод на все колеса' => 'AWD',
-            'Привод на задние колеса' => 'RWD',
-            'c бортовой платформой/ходовая часть' => 'Chassis Cab',
-            'с бортовой платформой/ходовая часть' => 'Chassis Cab',
-            'бортовой платформой' => 'Flatbed',
-            'ходовая часть' => 'Chassis',
-            'Одноосный тягач' => 'Tractor',
-            'Кабриолет' => 'Cabriolet',
-            'Автомобиль' => 'Car',
-            'Самосвал' => 'Dump Truck',
-            'вездеход' => 'SUV',
-            'Вездеход' => 'SUV',
-            'универсал' => 'Station Wagon',
-            'хетчбэк' => 'Hatchback',
-            'закрытый' => 'Closed',
-            'открытый' => 'Open',
-            'автобус' => 'Bus',
-            'Фургон' => 'Van',
-            'фургон' => 'Van',
-            'бортовой' => 'Flatbed',
-            'СЕДАН' => 'Sedan',
-            'седан' => 'Sedan',
-            'купе' => 'Coupe',
-            'Пикап' => 'Pickup',
-            'тягач' => 'Tractor',
-            'тарга' => 'Targa',
-            'Кузов' => 'Body',
-            'вэн' => 'Van',
-        ];
-        $tables = [
-            ['catalog_models', ['name', 'full_name']],
-            ['catalog_vehicles', ['description', 'full_name']],
-        ];
-        $results = [];
-        foreach ($map as $cyr => $lat) {
-            $row_result = [];
-            foreach ($tables as [$table, $cols]) {
-                foreach ($cols as $col) {
-                    $stmt = $pdo->prepare("UPDATE `$table` SET `$col` = REPLACE(`$col`, :cyr, :lat) WHERE `$col` LIKE :pattern");
-                    $stmt->execute([':cyr' => $cyr, ':lat' => $lat, ':pattern' => "%{$cyr}%"]);
-                    $c = $stmt->rowCount();
-                    if ($c > 0) $row_result["{$table}.{$col}"] = $c;
-                }
-            }
-            if (!empty($row_result)) $results["{$cyr} → {$lat}"] = $row_result;
-        }
-        echo json_encode($results, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-        break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
