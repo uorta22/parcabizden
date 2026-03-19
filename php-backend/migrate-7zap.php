@@ -336,10 +336,9 @@ function migrate_step3_gen_map($pdo) {
 
 // ── Step 4: Category Mapping ──
 function migrate_step4_category_map($pdo) {
-    // node_categories tablosu zaten mevcut — kontrol et
+    // node_categories tablosundan direkt eşleşme (parts tablosuna dokunma!)
     $count = (int)$pdo->query("SELECT COUNT(*) FROM node_categories")->fetchColumn();
 
-    // node_name_en → catalog_categories eşleşmesi için yardımcı tablo
     try {
         $pdo->exec("
             CREATE TABLE IF NOT EXISTS migration_7zap_cat_map (
@@ -348,75 +347,29 @@ function migrate_step4_category_map($pdo) {
                 INDEX idx_cat (category_id)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         ");
-    } catch (PDOException $e) {
-        // Zaten mevcut
-    }
+    } catch (PDOException $e) { /* zaten mevcut */ }
 
     $pdo->exec("TRUNCATE TABLE migration_7zap_cat_map");
 
-    // node_categories'den catalog_categories'e eşleştir
-    $stmt = $pdo->query("
-        SELECT nc.node_name_en, nc.category_id, cc.id AS catalog_cat_id
+    // node_categories'den doğrudan INSERT — catalog_categories ile eşleştir
+    // category_id zaten sayısal, catalog_categories.id ile eşleşiyorsa al
+    $pdo->exec("
+        INSERT IGNORE INTO migration_7zap_cat_map (node_name_en, category_id)
+        SELECT nc.node_name_en, cc.id
         FROM node_categories nc
-        LEFT JOIN catalog_categories cc ON cc.id = CAST(nc.category_id AS UNSIGNED)
+        JOIN catalog_categories cc ON cc.id = CAST(nc.category_id AS UNSIGNED)
     ");
+    $directMapped = $pdo->query("SELECT ROW_COUNT()")->fetchColumn();
 
-    $insert = $pdo->prepare("INSERT IGNORE INTO migration_7zap_cat_map (node_name_en, category_id) VALUES (:node, :catid)");
-
-    $mapped = 0;
-    $unmapped = 0;
-    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        if ($row['catalog_cat_id']) {
-            $insert->execute([':node' => $row['node_name_en'], ':catid' => (int)$row['catalog_cat_id']]);
-            $mapped++;
-        } else {
-            $unmapped++;
-        }
-    }
-
-    // node_categories'de olmayanlar için — parts tablosundan distinct node'ları al
-    // ve basit keyword eşleşme ile category bul
-    $noMapStmt = $pdo->query("
-        SELECT DISTINCT p.node_name_en
-        FROM parts p
-        LEFT JOIN migration_7zap_cat_map m ON m.node_name_en = p.node_name_en
-        WHERE m.node_name_en IS NULL AND p.node_name_en IS NOT NULL
-        LIMIT 2000
-    ");
-    $noMap = $noMapStmt->fetchAll(PDO::FETCH_COLUMN);
-
-    // Keyword → category_id mapping (basit)
-    $keywordMap = [
-        'engine' => null, 'motor' => null, 'piston' => null, 'crankshaft' => null,
-        'brake' => null, 'clutch' => null, 'suspension' => null, 'steering' => null,
-        'exhaust' => null, 'radiator' => null, 'filter' => null, 'belt' => null,
-    ];
-    // Keyword mapping'i catalog_categories'den doldur
-    foreach (array_keys($keywordMap) as $kw) {
-        $s = $pdo->prepare("SELECT id FROM catalog_categories WHERE LOWER(assembly_group_en) LIKE :kw OR LOWER(description_en) LIKE :kw LIMIT 1");
-        $s->execute([':kw' => '%' . $kw . '%']);
-        $id = $s->fetchColumn();
-        if ($id) $keywordMap[$kw] = (int)$id;
-    }
-
-    $extraMapped = 0;
-    foreach ($noMap as $node) {
-        foreach ($keywordMap as $kw => $catId) {
-            if ($catId && stripos($node, $kw) !== false) {
-                $insert->execute([':node' => $node, ':catid' => $catId]);
-                $extraMapped++;
-                break;
-            }
-        }
-    }
+    // category_id string ise (ör: 'engine') — bu durumda skip
+    $totalNodeCats = (int)$pdo->query("SELECT COUNT(*) FROM node_categories")->fetchColumn();
+    $mapped = (int)$pdo->query("SELECT COUNT(*) FROM migration_7zap_cat_map")->fetchColumn();
 
     echo json_encode([
         'step' => 4,
-        'node_categories_count' => $count,
-        'direct_mapped' => $mapped,
-        'unmapped' => $unmapped,
-        'extra_keyword_mapped' => $extraMapped,
-        'remaining_unmapped' => count($noMap) - $extraMapped,
+        'node_categories_total' => $totalNodeCats,
+        'mapped_to_catalog' => $mapped,
+        'unmapped' => $totalNodeCats - $mapped,
     ]);
 }
 
