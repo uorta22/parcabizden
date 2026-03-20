@@ -282,7 +282,7 @@ export default function BrandBar() {
                         key={`${card.model}-${card.name}-${i}`}
                         onClick={() => handleGenClick(activeBrand, activeBrandName, card.model, card.name, card.yearStart)}
                         className="group text-left rounded-lg border border-gray-100 hover:border-primary-300 hover:shadow-md transition-all overflow-hidden bg-white"
-                        title={`${label} ${yearLabel}`}
+                        title={`${card.model} ${label} ${yearLabel}`}
                       >
                         {/* Görsel */}
                         <div className="aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
@@ -303,6 +303,9 @@ export default function BrandBar() {
                         </div>
                         {/* İsim */}
                         <div className="px-1.5 py-1.5">
+                          <p className="text-[10px] font-bold text-primary-600 leading-tight truncate">
+                            {card.model}
+                          </p>
                           <p className="text-[11px] font-medium text-gray-800 leading-tight truncate group-hover:text-primary-600 transition-colors">
                             {label}
                           </p>
