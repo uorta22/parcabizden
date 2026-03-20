@@ -80,6 +80,38 @@ if (!check_ip_blacklist($pdo)) { exit; }
 
 $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
+    case 'db_status':
+        // Geçici endpoint — DB durumunu kontrol et
+        $tables = ['catalog_parts','catalog_part_vehicles','catalog_vehicles','catalog_categories',
+                    'catalog_suppliers','manufacturers','models','vehicles','parts',
+                    'migration_7zap_brand_map','migration_7zap_gen_map','migration_7zap_cat_map','migration_7zap_progress'];
+        $result = [];
+        foreach ($tables as $t) {
+            try {
+                $row = $pdo->query("SELECT TABLE_ROWS, DATA_LENGTH, INDEX_LENGTH FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '$t'")->fetch(PDO::FETCH_ASSOC);
+                if ($row) {
+                    $result[$t] = [
+                        'rows' => (int)$row['TABLE_ROWS'],
+                        'data_mb' => round($row['DATA_LENGTH']/1048576, 1),
+                        'index_mb' => round($row['INDEX_LENGTH']/1048576, 1)
+                    ];
+                } else {
+                    $result[$t] = null;
+                }
+            } catch (Exception $e) { $result[$t] = 'error: '.$e->getMessage(); }
+        }
+        // Kaynak bazlı dağılım
+        try {
+            $src = $pdo->query("SELECT source, COUNT(*) as cnt FROM catalog_parts GROUP BY source")->fetchAll(PDO::FETCH_ASSOC);
+            $result['_source_distribution'] = $src;
+        } catch (Exception $e) { $result['_source_distribution'] = 'error'; }
+        // DB toplam boyut
+        try {
+            $sz = $pdo->query("SELECT SUM(DATA_LENGTH+INDEX_LENGTH) as total FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE()")->fetch(PDO::FETCH_ASSOC);
+            $result['_total_db_mb'] = round($sz['total']/1048576, 1);
+        } catch (Exception $e) {}
+        echo json_encode($result, JSON_PRETTY_PRINT);
+        break;
     case 'categories':    get_categories($pdo); break;
     case 'nodes':         get_nodes($pdo); break;
     case 'parts':         get_parts($pdo); break;
