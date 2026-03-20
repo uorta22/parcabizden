@@ -971,52 +971,108 @@ function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: s
         </div>
       </div>
 
-      {/* Resolving overlay — visual confirmation card */}
+      {/* Resolving overlay — profesyonel tam ekran loading */}
       {resolving && (
-        <div className="mb-8">
-          <div className="bg-white border-2 border-primary-200 rounded-2xl overflow-hidden shadow-md">
-            <div className="p-6 flex flex-col sm:flex-row items-center gap-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm" style={{ animation: 'fadeIn 0.3s ease-out' }}>
+          <div className="relative flex flex-col items-center gap-6 p-8 max-w-md w-full">
+            {/* Araç görseli veya marka logosu */}
+            <div className="relative w-56 h-36 rounded-2xl overflow-hidden">
               {selectedGenDisplay?.image ? (
-                <div className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl overflow-hidden bg-gray-50 flex-shrink-0">
+                <>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selectedGenDisplay.image} alt={selectedGenDisplay.name} className="w-full h-full object-contain p-2" />
-                </div>
+                  <img
+                    src={selectedGenDisplay.image}
+                    alt={selectedGenDisplay.name}
+                    className="w-full h-full object-contain p-4"
+                    style={{ animation: 'carSlideIn 0.6s ease-out' }}
+                  />
+                  {/* Parçacık efekti */}
+                  <div className="absolute inset-0 pointer-events-none">
+                    {[...Array(6)].map((_, i) => (
+                      <div
+                        key={i}
+                        className="absolute w-1.5 h-1.5 rounded-full bg-primary-400/40"
+                        style={{
+                          left: `${15 + i * 15}%`,
+                          top: `${20 + (i % 3) * 25}%`,
+                          animation: `particleFloat ${1.5 + i * 0.3}s ease-in-out infinite`,
+                          animationDelay: `${i * 0.2}s`,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </>
               ) : (
-                <div className="w-36 h-24 sm:w-44 sm:h-28 rounded-xl bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center flex-shrink-0">
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getBrandLogoPath(brand)} alt={marka} className="w-12 h-12 object-contain opacity-30" />
+                  <img src={getBrandLogoPath(brand)} alt={marka} className="w-16 h-16 object-contain opacity-30" style={{ animation: 'logoPulse 2s ease-in-out infinite' }} />
                 </div>
               )}
-              <div className="flex-1 text-center sm:text-left min-w-0">
-                {selectedGenDisplay ? (
-                  <>
-                    <h3 className="text-lg font-bold text-gray-900">{selectedGenDisplay.name}</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">{selectedGenDisplay.yearRange}</p>
-                    {selectedGenDisplay.specs && (
-                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-xs text-gray-500">
-                        {selectedGenDisplay.specs.powerRange && (
-                          <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-500" />{selectedGenDisplay.specs.powerRange}</span>
-                        )}
-                        {selectedGenDisplay.specs.fuelTypes && (
-                          <span className="flex items-center gap-1"><Fuel className="w-3 h-3 text-blue-500" />{selectedGenDisplay.specs.fuelTypes}</span>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-gray-600 font-medium">Parça kataloğu eşleştiriliyor...</p>
-                )}
-              </div>
-              <div className="flex-shrink-0 flex flex-col items-center gap-2">
-                <Loader2 className="w-7 h-7 text-primary-500 animate-spin" />
-                <span className="text-xs text-gray-400">Yükleniyor...</span>
-              </div>
             </div>
-            {/* Animated progress bar */}
-            <div className="h-1.5 bg-primary-100 overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-primary-400 to-primary-600 rounded-r-full animate-pulse" style={{ width: '60%', animation: 'pulse 1.5s ease-in-out infinite, slideRight 2s ease-in-out infinite' }} />
+
+            {/* Bilgi */}
+            <div className="text-center">
+              {selectedGenDisplay ? (
+                <>
+                  <h3 className="text-xl font-bold text-gray-900" style={{ animation: 'slideUp 0.4s ease-out 0.2s both' }}>
+                    {marka} {selectedGenDisplay.name}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1" style={{ animation: 'slideUp 0.4s ease-out 0.3s both' }}>
+                    {selectedGenDisplay.yearRange}
+                  </p>
+                  {selectedGenDisplay.specs && (
+                    <div className="flex items-center justify-center gap-4 mt-2" style={{ animation: 'slideUp 0.4s ease-out 0.4s both' }}>
+                      {selectedGenDisplay.specs.powerRange && (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Zap className="w-3 h-3 text-amber-500" />{selectedGenDisplay.specs.powerRange}
+                        </span>
+                      )}
+                      {selectedGenDisplay.specs.fuelTypes && (
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Fuel className="w-3 h-3 text-blue-500" />{selectedGenDisplay.specs.fuelTypes}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-gray-600 font-medium">Parça kataloğu hazırlanıyor...</p>
+              )}
+            </div>
+
+            {/* Animasyonlu ilerleme çubuğu */}
+            <div className="w-full max-w-xs">
+              <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 rounded-full"
+                  style={{
+                    width: '40%',
+                    animation: 'progressSlide 1.8s ease-in-out infinite',
+                  }}
+                />
+              </div>
+              <p className="text-[11px] text-gray-400 text-center mt-2" style={{ animation: 'fadeIn 0.5s ease-out 0.5s both' }}>
+                Parça kataloğu eşleştiriliyor...
+              </p>
             </div>
           </div>
+
+          {/* CSS animasyonları */}
+          <style jsx>{`
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes carSlideIn { from { opacity: 0; transform: translateX(30px) scale(0.95); } to { opacity: 1; transform: translateX(0) scale(1); } }
+            @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes logoPulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.5; } }
+            @keyframes particleFloat {
+              0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
+              50% { transform: translateY(-8px) scale(1.3); opacity: 0.7; }
+            }
+            @keyframes progressSlide {
+              0% { transform: translateX(-100%); }
+              50% { transform: translateX(150%); }
+              100% { transform: translateX(300%); }
+            }
+          `}</style>
         </div>
       )}
 
