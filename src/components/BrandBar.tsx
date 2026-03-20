@@ -114,6 +114,8 @@ export default function BrandBar() {
   const selectBrand = useCallback(async (slug: string, name: string) => {
     if (activeBrand === slug) return
 
+    const myRequestId = ++requestIdRef.current
+
     setActiveBrand(slug)
     setActiveBrandName(name)
     setShowMore(false)
@@ -133,13 +135,15 @@ export default function BrandBar() {
 
     try {
       const data = await fetchAutodataModels(slug)
+      if (requestIdRef.current !== myRequestId) return // eski istek — yoksay
       const sorted = [...(data.models || [])].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
       modelsCacheRef.current[slug] = sorted
       setModels(sorted)
     } catch {
+      if (requestIdRef.current !== myRequestId) return
       setModels([])
     } finally {
-      setModelsLoading(false)
+      if (requestIdRef.current === myRequestId) setModelsLoading(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBrand])
@@ -200,19 +204,22 @@ export default function BrandBar() {
   }, [activeBrand, activeBrandName])
 
   // Nesil hover → spec güncelle
+  const hoverIdRef = useRef(0)
   const handleGenHover = useCallback(async (gen: AutodataGeneration) => {
     setHoveredGen(gen)
     if (!activeBrand || !selectedModel) return
 
+    const myHoverId = ++hoverIdRef.current
     try {
       const data = await fetchVehicleSpecs(activeBrandName, gen.name, gen.year_start ?? undefined, selectedModel.name)
+      if (hoverIdRef.current !== myHoverId) return // eski hover — yoksay
       if (data.specs?.length > 0) {
         setHoveredGenSpec(data.specs[0])
       } else {
         setHoveredGenSpec(null)
       }
     } catch {
-      setHoveredGenSpec(null)
+      if (hoverIdRef.current === myHoverId) setHoveredGenSpec(null)
     }
   }, [activeBrand, activeBrandName, selectedModel])
 
