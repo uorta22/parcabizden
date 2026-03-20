@@ -80,38 +80,6 @@ if (!check_ip_blacklist($pdo)) { exit; }
 
 $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
-    case 'brand_stats':
-        // Geçici: Marka başına model sayısı ve yıl dağılımı
-        $sql = "SELECT m.name as brand,
-                COUNT(DISTINCT mo.id) as model_count,
-                COUNT(DISTINCT v.id) as gen_count,
-                MIN(v.year_from) as min_year,
-                MAX(COALESCE(v.year_to, 2025)) as max_year
-                FROM catalog_manufacturers m
-                LEFT JOIN catalog_models mo ON mo.manufacturer_id = m.id
-                LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
-                GROUP BY m.id, m.name
-                ORDER BY model_count DESC";
-        $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(['brands' => $rows], JSON_PRETTY_PRINT);
-        break;
-    case 'brand_models':
-        // Geçici: Belirli marka için model detayları
-        $brand = $_GET['brand'] ?? '';
-        $sql = "SELECT mo.name as model,
-                COUNT(DISTINCT v.id) as gen_count,
-                MIN(v.year_from) as min_year,
-                MAX(COALESCE(v.year_to, 2025)) as max_year
-                FROM catalog_models mo
-                JOIN catalog_manufacturers m ON mo.manufacturer_id = m.id
-                LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
-                WHERE m.name = :brand
-                GROUP BY mo.id, mo.name
-                ORDER BY max_year DESC, gen_count DESC";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([':brand' => $brand]);
-        echo json_encode(['models' => $stmt->fetchAll(PDO::FETCH_ASSOC)], JSON_PRETTY_PRINT);
-        break;
     case 'categories':    get_categories($pdo); break;
     case 'nodes':         get_nodes($pdo); break;
     case 'parts':         get_parts($pdo); break;
