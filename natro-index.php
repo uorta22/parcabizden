@@ -233,20 +233,27 @@ switch ($action) {
 
     // ── Geçici: Marka istatistik listesi ──
     case 'temp_brand_stats':
-        $stmt = $pdo->query("
-            SELECT m.name, m.slug,
-                   COUNT(DISTINCT mo.id) AS model_count,
-                   COUNT(DISTINCT v.id) AS gen_count,
-                   MIN(v.year_from) AS min_year,
-                   MAX(COALESCE(v.year_to, YEAR(NOW()))) AS max_year
-            FROM manufacturers m
-            LEFT JOIN models mo ON mo.manufacturer_id = m.id
-            LEFT JOIN vehicles v ON v.model_id = mo.id
-            GROUP BY m.id, m.name, m.slug
-            ORDER BY m.name
-        ");
-        $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        echo json_encode(['brands' => $brands, 'total' => count($brands)]);
+        try {
+            // Önce tablo yapısını kontrol et
+            $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
+            $cols_vs = $pdo->query("DESCRIBE vehicle_specs")->fetchAll(PDO::FETCH_COLUMN, 0);
+
+            // vehicle_specs tablosundan marka listesi
+            $stmt = $pdo->query("
+                SELECT brand_name AS name, brand_slug AS slug,
+                       COUNT(DISTINCT model_name) AS model_count,
+                       COUNT(DISTINCT generation_name) AS gen_count,
+                       MIN(year_from) AS min_year,
+                       MAX(COALESCE(year_to, YEAR(NOW()))) AS max_year
+                FROM vehicle_specs
+                GROUP BY brand_name, brand_slug
+                ORDER BY brand_name
+            ");
+            $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode(['brands' => $brands, 'total' => count($brands), 'tables' => $tables, 'vs_cols' => $cols_vs]);
+        } catch (Exception $e) {
+            echo json_encode(['error' => $e->getMessage()]);
+        }
         break;
 
     default: echo json_encode(['error' => 'Invalid action']);
