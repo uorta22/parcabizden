@@ -234,14 +234,9 @@ switch ($action) {
     // ── Geçici: Marka istatistik listesi ──
     case 'temp_brand_stats':
         try {
-            $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-            $info = [];
-            foreach ($tables as $t) {
-                $cols = $pdo->query("DESCRIBE `$t`")->fetchAll(PDO::FETCH_COLUMN, 0);
-                $cnt = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
-                $info[$t] = ['cols' => $cols, 'count' => (int)$cnt];
-            }
-            echo json_encode(['tables' => $info]);
+            $cols = $pdo->query("DESCRIBE vehicle_specs")->fetchAll(PDO::FETCH_COLUMN, 0);
+            $sample = $pdo->query("SELECT * FROM vehicle_specs LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+            echo json_encode(['cols' => $cols, 'sample' => $sample]);
         } catch (Exception $e) {
             echo json_encode(['error' => $e->getMessage()]);
         }
