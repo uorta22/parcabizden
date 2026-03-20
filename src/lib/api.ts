@@ -286,6 +286,7 @@ async function actionFetch<T>(params: Record<string, string>): Promise<T> {
 async function actionPost<T>(params: Record<string, string>): Promise<T> {
   const headers: Record<string, string> = {
     'Content-Type': 'application/x-www-form-urlencoded',
+    'X-Requested-With': 'XMLHttpRequest',
   }
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('token')
@@ -306,7 +307,19 @@ async function actionPost<T>(params: Record<string, string>): Promise<T> {
 
 // ── In-memory cache for categories, nodes, brands (5 min TTL) ──
 const CACHE_TTL = 5 * 60 * 1000
+const MAX_CACHE_SIZE = 100
+
 type CacheEntry<T> = { data: T; timestamp: number }
+
+// LRU benzeri cache — boyut aşılırsa en eski entry silinir
+function cacheSet<K, V>(map: Map<K, CacheEntry<V>>, key: K, value: V): void {
+  if (map.size >= MAX_CACHE_SIZE) {
+    const oldest = map.keys().next().value
+    if (oldest !== undefined) map.delete(oldest)
+  }
+  map.set(key, { data: value, timestamp: Date.now() })
+}
+
 const categoriesCache = new Map<string, CacheEntry<{ categories: VehicleCategory[]; total_parts: number }>>()
 const nodesCache = new Map<string, CacheEntry<{ nodes: VehicleNode[] }>>()
 const brandsCache: { data: { brands: AutodataBrand[] } | null; timestamp: number } = { data: null, timestamp: 0 }
@@ -319,7 +332,7 @@ export async function fetchVehicleCategories(brand: string, gen: string) {
   const data = await actionFetch<{ categories: VehicleCategory[]; total_parts: number }>({
     action: 'categories', brand, gen,
   })
-  categoriesCache.set(key, { data, timestamp: Date.now() })
+  cacheSet(categoriesCache, key, data)
   return data
 }
 
@@ -329,7 +342,7 @@ export async function fetchVehicleNodes(brand: string, gen: string, cat: string)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
 
   const data = await actionFetch<{ nodes: VehicleNode[] }>({ action: 'nodes', brand, gen, cat })
-  nodesCache.set(key, { data, timestamp: Date.now() })
+  cacheSet(nodesCache, key, data)
   return data
 }
 
@@ -356,7 +369,7 @@ export async function fetchGenerations(brand: string): Promise<GenerationsData> 
     throw new Error((data as unknown as { error: string }).error)
   }
 
-  generationsCache.set(brand, { data, timestamp: Date.now() })
+  cacheSet(generationsCache, brand, data)
   return data
 }
 
@@ -384,7 +397,7 @@ export async function fetchAutodataModels(brandSlug: string) {
   const cached = modelsCache.get(brandSlug)
   if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
   const data = await actionFetch<{ models: AutodataModel[]; brand: string }>({ action: 'autodata_models', brand: brandSlug })
-  modelsCache.set(brandSlug, { data, timestamp: Date.now() })
+  cacheSet(modelsCache, brandSlug, data)
   return data
 }
 
