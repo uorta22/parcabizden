@@ -243,6 +243,20 @@ export default function BrandBar() {
     closeDropdown()
   }
 
+  // Debounce: marka hover — hızlı geçişlerde gereksiz API çağrısı önle
+  const brandDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedSelectBrand = useCallback((slug: string, name: string) => {
+    if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current)
+    brandDebounceRef.current = setTimeout(() => selectBrand(slug, name), 200)
+  }, [selectBrand])
+
+  // Debounce: nesil hover — hızlı geçişlerde gereksiz spec API çağrısı önle
+  const genDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const debouncedGenHover = useCallback((gen: AutodataGeneration) => {
+    if (genDebounceRef.current) clearTimeout(genDebounceRef.current)
+    genDebounceRef.current = setTimeout(() => handleGenHover(gen), 300)
+  }, [handleGenHover])
+
   // Gösterilen spec: hover edilen nesil > model genel
   const activeSpec = hoveredGenSpec || modelSpec
 
@@ -268,7 +282,7 @@ export default function BrandBar() {
           return (
             <button
               key={b.slug}
-              onMouseEnter={() => selectBrand(b.slug, name)}
+              onMouseEnter={() => debouncedSelectBrand(b.slug, name)}
               onClick={() => handleBrandOnlyClick(b.slug, name)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold tracking-wide rounded-md transition-all whitespace-nowrap ${
                 isActive
@@ -501,8 +515,8 @@ export default function BrandBar() {
                             <button
                               key={`${gen.name}-${i}`}
                               onClick={() => handleGenClick(gen)}
-                              onMouseEnter={() => handleGenHover(gen)}
-                              onMouseLeave={() => { setHoveredGen(null); setHoveredGenSpec(null) }}
+                              onMouseEnter={() => debouncedGenHover(gen)}
+                              onMouseLeave={() => { if (genDebounceRef.current) clearTimeout(genDebounceRef.current); setHoveredGen(null); setHoveredGenSpec(null) }}
                               className={`group flex items-center gap-3 px-3 py-3 rounded-lg border transition-all text-left ${
                                 isHovered
                                   ? 'border-primary-400 bg-primary-50 shadow-sm'

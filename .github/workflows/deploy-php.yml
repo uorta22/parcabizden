@@ -22,8 +22,13 @@ jobs:
           mkdir -p deploy
           # natro-index.php → index.php olarak kopyala
           cp natro-index.php deploy/index.php
-          # php-backend altindaki tum PHP dosyalarini duz dizine kopyala
-          cp php-backend/*.php deploy/
+          # php-backend altindaki modulleri kopyala (migration scriptleri hariç)
+          for f in php-backend/*.php; do
+            case "$(basename "$f")" in
+              migrate-*.php|bigdump.php) echo "SKIP: $f" ;;
+              *) cp "$f" deploy/ ;;
+            esac
+          done
 
       - name: FTP Deploy
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

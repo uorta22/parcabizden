@@ -26,11 +26,15 @@ import { favoriteAdd, favoriteRemove } from '@/lib/api'
 function OemCopyBadge({ oem }: { oem: string }) {
   const [copied, setCopied] = useState(false)
   const { toast } = useToast()
-  const copy = () => {
-    navigator.clipboard.writeText(oem)
-    setCopied(true)
-    toast('OEM numarası kopyalandı', 'success')
-    setTimeout(() => setCopied(false), 1500)
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(oem)
+      setCopied(true)
+      toast('OEM numarası kopyalandı', 'success')
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      toast('Kopyalama başarısız — OEM: ' + oem, 'info')
+    }
   }
   return (
     <button
@@ -44,15 +48,7 @@ function OemCopyBadge({ oem }: { oem: string }) {
   )
 }
 
-// ── Kategori adları ──
-const CATEGORY_NAMES: Record<string, string> = {
-  engine: 'Motor', turbo_intake: 'Turbo & Emme', fuel: 'Yakıt Sistemi',
-  exhaust: 'Egzoz', transmission: 'Şanzıman', brake: 'Fren',
-  suspension: 'Süspansiyon', wheel_tyre: 'Jant & Lastik', body_exterior: 'Kaporta & Dış',
-  glass_mirror: 'Cam & Ayna', lighting: 'Aydınlatma', electrical: 'Elektrik',
-  climate: 'Klima & Isıtma', interior: 'İç Aksam', audio_media: 'Ses & Medya',
-  tow_transport: 'Çeki & Taşıma', other: 'Diğer',
-}
+import { CATEGORY_NAMES } from '@/data/categories'
 
 // ── Fiyat formatlayıcı ──
 function formatPrice(price: number): string {
@@ -388,14 +384,18 @@ function PartDetailContent() {
                         </span>
                       )}
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                        !productInfo || productInfo.in_stock !== false
+                        productInfo?.in_stock === true
                           ? 'bg-green-50 text-green-700 border border-green-200'
-                          : 'bg-gray-100 text-gray-500 border border-gray-200'
+                          : productInfo?.in_stock === false
+                            ? 'bg-gray-100 text-gray-500 border border-gray-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
                       }`}>
-                        {!productInfo || productInfo.in_stock !== false ? (
+                        {productInfo?.in_stock === true ? (
                           <><CheckCircle2 className="w-3.5 h-3.5" /> Stokta Var</>
-                        ) : (
+                        ) : productInfo?.in_stock === false ? (
                           <><AlertCircle className="w-3.5 h-3.5" /> Stokta Yok</>
+                        ) : (
+                          <><Info className="w-3.5 h-3.5" /> Sorgulayınız</>
                         )}
                       </span>
                     </div>

@@ -1543,8 +1543,12 @@ function handle_maintenance_remove($pdo) {
 // ==================== Rate Limiting ====================
 
 function get_client_ip(): string {
-    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-    return trim(explode(',', $ip)[0]);
+    // Cloudflare arkasında: CF-Connecting-IP en güvenilir kaynak
+    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+        return trim($_SERVER['HTTP_CF_CONNECTING_IP']);
+    }
+    // Doğrudan bağlantı: REMOTE_ADDR kullan (X-Forwarded-For client tarafından manipüle edilebilir)
+    return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 }
 
 function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
@@ -1796,7 +1800,7 @@ function handle_profile($pdo) {
             'city' => $user['city'] ?? null,
             'district' => $user['district'] ?? null,
             'postal_code' => $user['postal_code'] ?? null,
-            'tc_no' => $user['tc_no'] ?? null,
+            'tc_no' => ($user['tc_no'] ?? null) ? ('***' . substr($user['tc_no'], -4)) : null,
             'is_admin' => (bool)($user['is_admin'] ?? false),
         ]]);
     } catch (Exception $e) {
@@ -2093,7 +2097,8 @@ function send_reset_email($email, $name, $token) {
 }
 
 function handle_chat_webhook($pdo) {
-    $verify_token = getenv('WHATSAPP_WEBHOOK_VERIFY') ?: 'parcabizden_webhook_2024';
+    $verify_token = getenv('WHATSAPP_WEBHOOK_VERIFY');
+    if (!$verify_token) { http_response_code(500); echo json_encode(['error' => 'Webhook not configured']); return; }
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $mode = $_GET['hub_mode'] ?? '';
         $token = $_GET['hub_verify_token'] ?? '';
@@ -2104,7 +2109,7 @@ function handle_chat_webhook($pdo) {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $input = file_get_contents('php://input');
         $data = json_decode($input, true);
-        @file_put_contents(__DIR__ . '/webhook_log.txt', date('Y-m-d H:i:s') . " " . $input . "\n", FILE_APPEND);
+        @file_put_contents(sys_get_temp_dir() . '/parcabizden_webhook.log', date('Y-m-d H:i:s') . " " . $input . "\n", FILE_APPEND);
         if (isset($data['entry'][0]['changes'][0]['value']['messages'][0])) {
             $msg = $data['entry'][0]['changes'][0]['value']['messages'][0];
             $adminMessage = $msg['text']['body'] ?? '';
