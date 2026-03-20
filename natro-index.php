@@ -234,23 +234,14 @@ switch ($action) {
     // ── Geçici: Marka istatistik listesi ──
     case 'temp_brand_stats':
         try {
-            // Önce tablo yapısını kontrol et
             $tables = $pdo->query("SHOW TABLES")->fetchAll(PDO::FETCH_COLUMN);
-            $cols_vs = $pdo->query("DESCRIBE vehicle_specs")->fetchAll(PDO::FETCH_COLUMN, 0);
-
-            // vehicle_specs tablosundan marka listesi
-            $stmt = $pdo->query("
-                SELECT brand_name AS name, brand_slug AS slug,
-                       COUNT(DISTINCT model_name) AS model_count,
-                       COUNT(DISTINCT generation_name) AS gen_count,
-                       MIN(year_from) AS min_year,
-                       MAX(COALESCE(year_to, YEAR(NOW()))) AS max_year
-                FROM vehicle_specs
-                GROUP BY brand_name, brand_slug
-                ORDER BY brand_name
-            ");
-            $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['brands' => $brands, 'total' => count($brands), 'tables' => $tables, 'vs_cols' => $cols_vs]);
+            $info = [];
+            foreach ($tables as $t) {
+                $cols = $pdo->query("DESCRIBE `$t`")->fetchAll(PDO::FETCH_COLUMN, 0);
+                $cnt = $pdo->query("SELECT COUNT(*) FROM `$t`")->fetchColumn();
+                $info[$t] = ['cols' => $cols, 'count' => (int)$cnt];
+            }
+            echo json_encode(['tables' => $info]);
         } catch (Exception $e) {
             echo json_encode(['error' => $e->getMessage()]);
         }
