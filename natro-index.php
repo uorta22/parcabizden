@@ -235,15 +235,16 @@ switch ($action) {
     case 'temp_brand_stats':
         try {
             $stmt = $pdo->query("
-                SELECT brand,
-                       COUNT(DISTINCT model) AS model_count,
-                       COUNT(DISTINCT generation) AS gen_count,
-                       COUNT(*) AS total_specs,
-                       MIN(year_start) AS min_year,
-                       MAX(COALESCE(year_end, YEAR(NOW()))) AS max_year
-                FROM vehicle_specs
-                GROUP BY brand
-                ORDER BY brand
+                SELECT m.id, m.name,
+                       COUNT(DISTINCT mo.id) AS model_count,
+                       COUNT(DISTINCT v.id) AS gen_count,
+                       MIN(v.year_from) AS min_year,
+                       MAX(COALESCE(v.year_to, 2025)) AS max_year
+                FROM catalog_manufacturers m
+                LEFT JOIN catalog_models mo ON mo.manufacturer_id = m.id
+                LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
+                GROUP BY m.id, m.name
+                ORDER BY m.name
             ");
             $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
             echo json_encode(['brands' => $brands, 'total' => count($brands)]);
