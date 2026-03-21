@@ -231,5 +231,63 @@ switch ($action) {
         };
         break;
 
+    // ── Geçici: Parçalanmış model analizi ──
+    case 'temp_model_analysis':
+        try {
+            $stmt = $pdo->query("
+                SELECT m.name AS brand, mo.name AS model, COUNT(DISTINCT v.id) AS gen_count,
+                       MIN(v.year_from) AS min_year, MAX(COALESCE(v.year_to, 2025)) AS max_year
+                FROM catalog_manufacturers m
+                JOIN catalog_models mo ON mo.manufacturer_id = m.id
+                LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
+                GROUP BY m.name, mo.name
+                ORDER BY m.name, mo.name
+            ");
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $bodyTypes = ['Sedan','Avant','Sportback','Cabriolet','Cabrio','Limousine','Coupe','Coupé',
+                'Hatchback','Wagon','Estate','Van','Chassis','Variant','Convertible','Roadster',
+                'Spider','Spyder','Touring','Break','Berline','SW','Cab','Pickup','Kombi',
+                'Panorama','Cross','Plus','Pro','Long','Gran','Grand','Sport','GT','CC'];
+
+            $byBrand = [];
+            foreach ($rows as $r) {
+                $model = $r['model'];
+                $clean = preg_replace('/\s*\(.*\)\s*$/', '', $model);
+                $parts = explode(' ', trim($clean));
+                $base = $parts[0];
+                // İkinci kelime body type ise base sadece ilk kelime
+                // Değilse tüm clean adı base
+                if (count($parts) > 1 && in_array($parts[1], $bodyTypes)) {
+                    $base = $parts[0];
+                } elseif (count($parts) > 1) {
+                    $base = trim($clean);
+                }
+                $byBrand[$r['brand']][$base][] = [
+                    'name' => $model,
+                    'gens' => (int)$r['gen_count'],
+                ];
+            }
+
+            $fragmented = [];
+            foreach ($byBrand as $brand => $bases) {
+                foreach ($bases as $base => $models) {
+                    if (count($models) >= 2) {
+                        $fragmented[] = [
+                            'brand' => $brand,
+                            'base' => $base,
+                            'count' => count($models),
+                            'variants' => array_map(fn($m) => $m['name'] . ' (' . $m['gens'] . ' nesil)', $models),
+                        ];
+                    }
+                }
+            }
+
+            echo json_encode(['groups' => $fragmented, 'total' => count($fragmented)]);
+        } catch (Exception $e) {
+            echo json_encode(['error' => $e->getMessage()]);
+        }
+        break;
+
     default: echo json_encode(['error' => 'Invalid action']);
 }
