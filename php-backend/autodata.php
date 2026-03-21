@@ -213,8 +213,11 @@ function extract_base_model(string $name): string {
     // 1. Parantez içini kaldır
     $clean = preg_replace('/\s*\(.*\)\s*$/', '', trim($name));
 
-    // 2. Romen rakamlarını kaldır (herhangi bir pozisyonda)
-    $clean = preg_replace('/\b(I{1,3}|IV|V|VI{0,3})\b/u', '', $clean);
+    // 2. Yapışık romen rakamlarını ayır (ör: "OCTAVIAII" → "OCTAVIA II")
+    $clean = preg_replace('/((?:VIII|VII|VI|IV|V|III|II|I))$/', ' $1', $clean);
+
+    // 3. Romen rakamlarını kaldır (en uzun eşleşme önce)
+    $clean = preg_replace('/\b(VIII|VII|VI|IV|V|III|II|I)\b/', '', $clean);
     $clean = preg_replace('/\s{2,}/', ' ', trim($clean));
 
     // 3. Kasa tipi / varyant kelimelerini kaldır
@@ -244,6 +247,9 @@ function extract_base_model(string $name): string {
 function group_models(array $rawModels): array {
     $groups = [];
     foreach ($rawModels as $r) {
+        // 0 nesilli modelleri atla
+        if ((int)$r['gen_count'] === 0) continue;
+
         $base = extract_base_model($r['model']);
         if (!isset($groups[$base])) {
             $groups[$base] = [
