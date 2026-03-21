@@ -227,7 +227,7 @@ function extract_base_model(string $name): string {
         'Spider','Spyder','Touring','Break','Berline','Cab','Pickup','Pick-up',
         'Kombi','Panorama','Cross','Crossback','Tourer','Countryman','Clubman','Paceman',
         'Crossover','MPV','SUV','Targa','Speedster','Turismo',
-        'Allroad','Station','Combi','Praktik','Forman',
+        'Allroad','Station','Combi','Praktik','Forman','Spaceback',
         'SW','CC','GT','GTE','GTI','RS','ST','Sport','Plus','Pro','Long',
         'Gran','Grand',
     ];
