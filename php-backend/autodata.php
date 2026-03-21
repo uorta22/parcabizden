@@ -259,14 +259,21 @@ function group_models(array $rawModels): array {
 
     // sub_models tek elemanlıysa gereksiz — sadece çoklu olanları tut
     $result = [];
+    $seen = [];
     foreach ($groups as $g) {
+        // Duplikasyon kontrolü (unicode/encoding farklılıklarına karşı)
+        $key = mb_strtolower($g['name']);
+        if (isset($seen[$key])) continue;
+        $seen[$key] = true;
+
         if (count($g['sub_models']) === 1) {
-            // Tek varyant — orijinal ismi kullan
+            // Tek varyant — temizlenmiş base ismi kullan (parantez ve kod olmadan)
             $result[] = [
-                'name' => $g['sub_models'][0],
+                'name' => $g['name'],
                 'gen_count' => $g['gen_count'],
                 'min_year' => $g['min_year'],
                 'max_year' => $g['max_year'],
+                'sub_models' => $g['sub_models'],
             ];
         } else {
             // Çoklu varyant — base model altında grupla
