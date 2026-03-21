@@ -231,37 +231,5 @@ switch ($action) {
         };
         break;
 
-    // ── Geçici: Egzotik marka temizleme ──
-    case 'temp_brand_cleanup2':
-        $remove = [
-            'ABARTH','ALPINA','ALPINE','ASTON MARTIN','BENTLEY','BUGATTI',
-            'BYD','CHERY','CHRYSLER','CUPRA','DAEWOO','DAIHATSU',
-            'DODGE','DS','FERRARI','GEELY','GENESIS','GREAT WALL','HAVAL',
-            'HONGQI','INFINITI','ISUZU','IVECO','LADA','LAMBORGHINI',
-            'LANCIA','LOTUS','MASERATI','MCLAREN','MG','NIO',
-            'ROLLS-ROYCE','ROVER','SAAB','SMART','SSANGYONG','TOFAS'
-        ];
-        $mode = $_GET['mode'] ?? 'preview';
-        if ($mode === 'execute') {
-            $deleted = [];
-            foreach ($remove as $name) {
-                $s = $pdo->prepare("SELECT id FROM catalog_manufacturers WHERE name = ?");
-                $s->execute([$name]);
-                $mid = $s->fetchColumn();
-                if (!$mid) continue;
-                $pdo->prepare("DELETE v FROM catalog_vehicles v JOIN catalog_models mo ON v.model_id = mo.id WHERE mo.manufacturer_id = ?")->execute([$mid]);
-                $pdo->prepare("DELETE FROM catalog_models WHERE manufacturer_id = ?")->execute([$mid]);
-                $pdo->prepare("DELETE FROM catalog_manufacturers WHERE id = ?")->execute([$mid]);
-                $deleted[] = $name;
-            }
-            $placeholders = implode(',', array_fill(0, count($remove), '?'));
-            $pdo->prepare("DELETE FROM vehicle_specs WHERE brand IN ($placeholders)")->execute($remove);
-            $remaining = $pdo->query("SELECT COUNT(*) FROM catalog_manufacturers")->fetchColumn();
-            echo json_encode(['deleted' => $deleted, 'deleted_count' => count($deleted), 'remaining' => (int)$remaining]);
-        } else {
-            echo json_encode(['to_remove' => $remove, 'count' => count($remove)]);
-        }
-        break;
-
     default: echo json_encode(['error' => 'Invalid action']);
 }
