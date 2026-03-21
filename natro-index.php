@@ -231,25 +231,62 @@ switch ($action) {
         };
         break;
 
-    // ── Geçici: Marka istatistik listesi ──
-    case 'temp_brand_stats':
-        try {
-            $stmt = $pdo->query("
-                SELECT m.id, m.name,
-                       COUNT(DISTINCT mo.id) AS model_count,
-                       COUNT(DISTINCT v.id) AS gen_count,
-                       MIN(v.year_from) AS min_year,
-                       MAX(COALESCE(v.year_to, 2025)) AS max_year
-                FROM catalog_manufacturers m
-                LEFT JOIN catalog_models mo ON mo.manufacturer_id = m.id
-                LEFT JOIN catalog_vehicles v ON v.model_id = mo.id
-                GROUP BY m.id, m.name
-                ORDER BY m.name
-            ");
-            $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode(['brands' => $brands, 'total' => count($brands)]);
-        } catch (Exception $e) {
-            echo json_encode(['error' => $e->getMessage()]);
+    // ── Geçici: Marka temizleme ──
+    case 'temp_brand_cleanup':
+        $mode = $_GET['mode'] ?? 'preview';
+        // Türkiye pazarıyla ilgisiz, niş, egzotik, bölgesel, tarihi markalar
+        $remove = [
+            'AC','ACURA','AIXAM','AMC','ARO','ARTEGA','ASIA MOTORS',
+            'AUSTIN','AUSTIN-HEALEY','AUTO UNION','AUTOBIANCHI',
+            'BARKAS','BAW','BEDFORD','BERTONE','BITTER','BOGDAN','BOND',
+            'BORGWARD','BRILLIANCE','BRISTOL','BUICK',
+            'CADILLAC','CALLAWAY','CARBODIES','CATERHAM',
+            'CHANGAN','CHANGFENG','CHECKER','CMC',
+            'DAF','DAIMLER','DALLAS','DATSUN','DE LOREAN','DE TOMASO',
+            'DERWAYS','EMGRAND (GEELY)','ENGLON (GEELY)',
+            'FAW TIANJIN','FISKER','FSO',
+            'GAC GONOW','GAZ','GINETTA','GLAS','GMC',
+            'HAFEI','HINDUSTAN','HOBBYCAR','HUANGHAI','HUMMER',
+            'INDIGO','INNOCENTI','IRMSCHER','ISDERA','ISH','IZH',
+            'JAC','JENSEN','JMC',
+            'KTM','LANDWIND (JMC)','LDV','LIFAN','LIGIER','LINCOLN','LTI','LUXGEN',
+            'MAHINDRA','MAN','MARCOS','MAYBACH','MEGA','METROCAB',
+            'MIDDLEBRIDGE','MINELLI','MITSUOKA','MORGAN','MORRIS','MOSKVICH',
+            'NSU','OLTCIT','OSCA','PANOZ','PANTHER','PAYKAN',
+            'PIAGGIO','PININFARINA','PREMIER','PROTON','PUCH',
+            'RANGER','RAVON','RAYTON FISSORE','RELIANT',
+            'RENAULT TRUCKS','RILEY','RUF',
+            'SAMSUNG','SANTANA','SHELBY','SHUANGHUAN','SIPANI',
+            'SPECTRE','SPYKER','STANDARD','STEYR','STREETSCOOTER',
+            'TAGAZ','TALBOT','TATA','TAZZARI','THINK',
+            'TRABANT','TRIUMPH','TVR','UAZ','UMM','VECTOR',
+            'WARTBURG','WESTFIELD','WIESMANN','WOLSELEY','YULON',
+            'ZASTAVA','ZAZ','ZHONGXING (ZTE)'
+        ];
+
+        if ($mode === 'execute') {
+            $deleted = [];
+            foreach ($remove as $name) {
+                // Manufacturer ID bul
+                $s = $pdo->prepare("SELECT id FROM catalog_manufacturers WHERE name = ?");
+                $s->execute([$name]);
+                $mid = $s->fetchColumn();
+                if (!$mid) continue;
+
+                // İlişkili verileri sil: vehicles → models → manufacturer
+                $pdo->prepare("DELETE v FROM catalog_vehicles v JOIN catalog_models mo ON v.model_id = mo.id WHERE mo.manufacturer_id = ?")->execute([$mid]);
+                $pdo->prepare("DELETE FROM catalog_models WHERE manufacturer_id = ?")->execute([$mid]);
+                $pdo->prepare("DELETE FROM catalog_manufacturers WHERE id = ?")->execute([$mid]);
+                $deleted[] = $name;
+            }
+            // vehicle_specs'ten de sil
+            $placeholders = implode(',', array_fill(0, count($remove), '?'));
+            $pdo->prepare("DELETE FROM vehicle_specs WHERE brand IN ($placeholders)")->execute($remove);
+
+            $remaining = $pdo->query("SELECT COUNT(*) FROM catalog_manufacturers")->fetchColumn();
+            echo json_encode(['deleted' => $deleted, 'deleted_count' => count($deleted), 'remaining' => (int)$remaining]);
+        } else {
+            echo json_encode(['to_remove' => $remove, 'count' => count($remove)]);
         }
         break;
 
