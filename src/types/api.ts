@@ -144,6 +144,7 @@ export interface AutodataModel {
   gen_count: number
   min_year: number | null
   max_year: number | null
+  sub_models?: string[]
 }
 
 export interface AutodataGeneration {

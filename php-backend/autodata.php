@@ -203,6 +203,88 @@ function handle_autodata_brands($pdo) {
     }
 }
 
+// Kasa tipi varyant kelimeleri — base model adından ayırmak için
+function get_body_type_keywords(): array {
+    return ['Sedan','Avant','Sportback','Cabriolet','Cabrio','Limousine','Coupe','Coupé',
+        'Hatchback','Wagon','Estate','Van','Chassis','Variant','Convertible','Roadster',
+        'Spider','Spyder','Touring','Break','Berline','SW','Cab','Pickup','Pick-up',
+        'Kombi','Panorama','Cross','Crossback','Plus','Pro','Long','Gran','Grand',
+        'Sport','GT','CC','Allroad','Tourer','Countryman','Clubman','Paceman',
+        'Crossover','MPV','SUV','Targa','Speedster','Turismo'];
+}
+
+// Model adından base model çıkar
+// Örn: "A3 Cabriolet (8P7)" → "A3"
+// Örn: "A4 Allroad (8KH, B8)" → "A4"
+// Örn: "OCTAVIA III (5E3)" → "OCTAVIA"
+function extract_base_model(string $name): string {
+    // Parantez içini kaldır
+    $clean = preg_replace('/\s*\(.*\)\s*$/', '', trim($name));
+    // Romen rakamı sonekini kaldır (I, II, III, IV, V, VI)
+    $clean = preg_replace('/\s+(I{1,3}|IV|V|VI)$/i', '', $clean);
+    $parts = explode(' ', $clean);
+    if (count($parts) <= 1) return $clean;
+
+    $bodyTypes = get_body_type_keywords();
+    // İkinci kelime body type ise, base sadece ilk kelime
+    if (in_array($parts[1], $bodyTypes)) {
+        return $parts[0];
+    }
+    // Aksi halde tüm temizlenmiş adı kullan
+    return $clean;
+}
+
+// Modelleri base name'e göre grupla
+function group_models(array $rawModels): array {
+    $groups = [];
+    foreach ($rawModels as $r) {
+        $base = extract_base_model($r['model']);
+        if (!isset($groups[$base])) {
+            $groups[$base] = [
+                'name' => $base,
+                'sub_models' => [],
+                'gen_count' => 0,
+                'min_year' => null,
+                'max_year' => null,
+            ];
+        }
+        $g = &$groups[$base];
+        $g['sub_models'][] = $r['model'];
+        $g['gen_count'] += (int)$r['gen_count'];
+        $minY = $r['min_year'] !== null ? (int)$r['min_year'] : null;
+        $maxY = $r['max_year'] !== null ? (int)$r['max_year'] : null;
+        if ($minY !== null && ($g['min_year'] === null || $minY < $g['min_year'])) $g['min_year'] = $minY;
+        if ($maxY !== null && ($g['max_year'] === null || $maxY > $g['max_year'])) $g['max_year'] = $maxY;
+    }
+
+    // sub_models tek elemanlıysa gereksiz — sadece çoklu olanları tut
+    $result = [];
+    foreach ($groups as $g) {
+        if (count($g['sub_models']) === 1) {
+            // Tek varyant — orijinal ismi kullan
+            $result[] = [
+                'name' => $g['sub_models'][0],
+                'gen_count' => $g['gen_count'],
+                'min_year' => $g['min_year'],
+                'max_year' => $g['max_year'],
+            ];
+        } else {
+            // Çoklu varyant — base model altında grupla
+            $result[] = [
+                'name' => $g['name'],
+                'gen_count' => $g['gen_count'],
+                'min_year' => $g['min_year'],
+                'max_year' => $g['max_year'],
+                'sub_models' => $g['sub_models'],
+            ];
+        }
+    }
+
+    // İsme göre sırala
+    usort($result, fn($a, $b) => strnatcasecmp($a['name'], $b['name']));
+    return $result;
+}
+
 function handle_autodata_models($pdo) {
     $brand_slug = trim($_GET['brand'] ?? '');
     if (!$brand_slug) { echo json_encode(['error' => 'brand parametresi gerekli']); return; }
@@ -212,7 +294,6 @@ function handle_autodata_models($pdo) {
     if (!$brand_name) { echo json_encode(['models' => []]); return; }
 
     try {
-        // catalog_models + catalog_vehicles'dan model listesi
         $stmt = $pdo->prepare("
             SELECT mo.name AS model,
                    COUNT(DISTINCT v.id) AS gen_count,
@@ -227,15 +308,7 @@ function handle_autodata_models($pdo) {
         ");
         $stmt->execute([':brand' => $brand_name]);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $models = [];
-        foreach ($rows as $r) {
-            $models[] = [
-                'name' => $r['model'],
-                'gen_count' => (int)$r['gen_count'],
-                'min_year' => $r['min_year'] !== null ? (int)$r['min_year'] : null,
-                'max_year' => $r['max_year'] !== null ? (int)$r['max_year'] : null,
-            ];
-        }
+        $models = group_models($rows);
         echo json_encode(['models' => $models, 'brand' => $brand_name]);
     } catch (PDOException $e) {
         // Fallback: vehicle_specs
@@ -245,10 +318,7 @@ function handle_autodata_models($pdo) {
             $stmt = $pdo->prepare("SELECT DISTINCT model, COUNT(DISTINCT generation) as gen_count, MIN(year_start) as min_year, MAX(COALESCE(year_end, 2025)) as max_year FROM vehicle_specs WHERE brand = :brand GROUP BY model ORDER BY model");
             $stmt->execute([':brand' => $brand_name_fb]);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            $models = [];
-            foreach ($rows as $r) {
-                $models[] = ['name' => $r['model'], 'gen_count' => (int)$r['gen_count'], 'min_year' => $r['min_year'] !== null ? (int)$r['min_year'] : null, 'max_year' => $r['max_year'] !== null ? (int)$r['max_year'] : null];
-            }
+            $models = group_models($rows);
             echo json_encode(['models' => $models, 'brand' => $brand_name_fb]);
         } catch (PDOException $e2) {
             echo json_encode(['models' => []]);
@@ -265,7 +335,35 @@ function handle_autodata_generations($pdo) {
     if (!$brand_name) { echo json_encode(['generations' => []]); return; }
 
     try {
-        // catalog_vehicles gruplama — aynı description'ları birleştir
+        // Gruplandırılmış model mi kontrol et — base name ile eşleşen tüm alt modelleri bul
+        $modelStmt = $pdo->prepare("
+            SELECT mo.name FROM catalog_models mo
+            JOIN catalog_manufacturers m ON mo.manufacturer_id = m.id
+            WHERE m.name = :brand
+        ");
+        $modelStmt->execute([':brand' => $brand_name]);
+        $allModels = $modelStmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Birebir eşleşme varsa direkt kullan, yoksa base model eşleşmesi
+        $matchedModels = [];
+        if (in_array($model, $allModels)) {
+            $matchedModels = [$model];
+        } else {
+            // Base model eşleşmesi — bu model adıyla başlayan tüm alt modelleri bul
+            foreach ($allModels as $m) {
+                if (extract_base_model($m) === $model) {
+                    $matchedModels[] = $m;
+                }
+            }
+        }
+
+        if (empty($matchedModels)) {
+            echo json_encode(['generations' => []]);
+            return;
+        }
+
+        // catalog_vehicles gruplama — eşleşen tüm modellerin nesilleri
+        $placeholders = implode(',', array_fill(0, count($matchedModels), '?'));
         $stmt = $pdo->prepare("
             SELECT v.description AS generation,
                    MIN(v.year_from) AS year_start,
@@ -275,11 +373,11 @@ function handle_autodata_generations($pdo) {
             FROM catalog_vehicles v
             JOIN catalog_models mo ON v.model_id = mo.id
             JOIN catalog_manufacturers m ON mo.manufacturer_id = m.id
-            WHERE m.name = :brand AND mo.name = :model
+            WHERE m.name = ? AND mo.name IN ($placeholders)
             GROUP BY v.description
             ORDER BY MIN(v.year_from) DESC, v.description
         ");
-        $stmt->execute([':brand' => $brand_name, ':model' => $model]);
+        $stmt->execute(array_merge([$brand_name], $matchedModels));
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         $generations = [];
         foreach ($rows as $r) {
