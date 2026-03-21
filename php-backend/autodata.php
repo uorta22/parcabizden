@@ -203,35 +203,41 @@ function handle_autodata_brands($pdo) {
     }
 }
 
-// Kasa tipi varyant kelimeleri — base model adından ayırmak için
-function get_body_type_keywords(): array {
-    return ['Sedan','Avant','Sportback','Cabriolet','Cabrio','Limousine','Coupe','Coupé',
-        'Hatchback','Wagon','Estate','Van','Chassis','Variant','Convertible','Roadster',
-        'Spider','Spyder','Touring','Break','Berline','SW','Cab','Pickup','Pick-up',
-        'Kombi','Panorama','Cross','Crossback','Plus','Pro','Long','Gran','Grand',
-        'Sport','GT','CC','Allroad','Tourer','Countryman','Clubman','Paceman',
-        'Crossover','MPV','SUV','Targa','Speedster','Turismo'];
-}
-
 // Model adından base model çıkar
 // Örn: "A3 Cabriolet (8P7)" → "A3"
 // Örn: "A4 Allroad (8KH, B8)" → "A4"
 // Örn: "OCTAVIA III (5E3)" → "OCTAVIA"
+// Örn: "FABIA I Combi (6Y5)" → "FABIA"
+// Örn: "SUPERB III Station Wagon (3V5)" → "SUPERB"
 function extract_base_model(string $name): string {
-    // Parantez içini kaldır
+    // 1. Parantez içini kaldır
     $clean = preg_replace('/\s*\(.*\)\s*$/', '', trim($name));
-    // Romen rakamı sonekini kaldır (I, II, III, IV, V, VI)
-    $clean = preg_replace('/\s+(I{1,3}|IV|V|VI)$/i', '', $clean);
-    $parts = explode(' ', $clean);
-    if (count($parts) <= 1) return $clean;
 
-    $bodyTypes = get_body_type_keywords();
-    // İkinci kelime body type ise, base sadece ilk kelime
-    if (in_array($parts[1], $bodyTypes)) {
-        return $parts[0];
+    // 2. Romen rakamlarını kaldır (herhangi bir pozisyonda)
+    $clean = preg_replace('/\b(I{1,3}|IV|V|VI{0,3})\b/u', '', $clean);
+    $clean = preg_replace('/\s{2,}/', ' ', trim($clean));
+
+    // 3. Kasa tipi / varyant kelimelerini kaldır
+    $bodyWords = [
+        'Sedan','Avant','Sportback','Cabriolet','Cabrio','Limousine','Coupe','Coupé',
+        'Hatchback','Wagon','Estate','Van','Chassis','Variant','Convertible','Roadster',
+        'Spider','Spyder','Touring','Break','Berline','Cab','Pickup','Pick-up',
+        'Kombi','Panorama','Cross','Crossback','Tourer','Countryman','Clubman','Paceman',
+        'Crossover','MPV','SUV','Targa','Speedster','Turismo',
+        'Allroad','Station','Combi','Praktik','Forman',
+        'SW','CC','GT','GTE','GTI','RS','ST','Sport','Plus','Pro','Long',
+        'Gran','Grand',
+    ];
+
+    $parts = explode(' ', $clean);
+    $base = [];
+    foreach ($parts as $p) {
+        if (in_array($p, $bodyWords)) break; // İlk body word'de dur
+        $base[] = $p;
     }
-    // Aksi halde tüm temizlenmiş adı kullan
-    return $clean;
+
+    $result = implode(' ', $base);
+    return $result ?: $parts[0]; // Boş kalırsa ilk kelimeyi kullan
 }
 
 // Modelleri base name'e göre grupla
