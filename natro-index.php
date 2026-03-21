@@ -233,16 +233,15 @@ switch ($action) {
 
     // TEMP: DB model isimlerini çek
     case 'temp_list_models':
-        $brand = trim($_GET['brand'] ?? '');
-        if ($brand) {
-            // Belirli marka için modeller
-            $stmt = $pdo->prepare('SELECT m.id, m.name, m.manufacturer_id FROM catalog_models m JOIN catalog_manufacturers mfr ON m.manufacturer_id = mfr.id WHERE LOWER(mfr.name) = LOWER(:brand) ORDER BY m.name');
-            $stmt->execute([':brand' => $brand]);
-        } else {
-            // Tüm markalar ve model sayıları
-            $stmt = $pdo->query('SELECT mfr.name as brand, COUNT(m.id) as model_count FROM catalog_manufacturers mfr LEFT JOIN catalog_models m ON m.manufacturer_id = mfr.id GROUP BY mfr.id, mfr.name ORDER BY mfr.name');
-        }
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC), JSON_UNESCAPED_UNICODE);
+        $page = max(1, intval($_GET['page'] ?? 1));
+        $perPage = 500;
+        $offset = ($page - 1) * $perPage;
+        $stmt = $pdo->prepare('SELECT mfr.name as brand, m.id as model_id, m.name as model_name FROM catalog_models m JOIN catalog_manufacturers mfr ON m.manufacturer_id = mfr.id ORDER BY mfr.name, m.name LIMIT :lim OFFSET :off');
+        $stmt->bindValue(':lim', $perPage, PDO::PARAM_INT);
+        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        $total = $pdo->query('SELECT COUNT(*) FROM catalog_models')->fetchColumn();
+        echo json_encode(['page' => $page, 'total' => (int)$total, 'per_page' => $perPage, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)], JSON_UNESCAPED_UNICODE);
         break;
 
     default: echo json_encode(['error' => 'Invalid action']);
