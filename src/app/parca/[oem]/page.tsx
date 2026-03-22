@@ -7,7 +7,7 @@ import { useParams, useSearchParams } from 'next/navigation'
 import {
   Copy, Check, MessageCircle, Loader2, Package, AlertCircle,
   Car, Wrench, Info, CheckCircle2, ShoppingCart, Minus, Plus, Heart,
-  Shield, Truck, BadgeCheck, ChevronRight,
+  Shield, Truck, BadgeCheck, ChevronRight, Star,
 } from 'lucide-react'
 import { searchOemParts } from '@/lib/api'
 import type { OemSearchResult, ProductEnrichment } from '@/lib/api'
@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
 import Breadcrumb from '@/components/Breadcrumb'
 import { favoriteAdd, favoriteRemove } from '@/lib/api'
+import { CATEGORY_NAMES } from '@/data/categories'
 
 // ── OEM Kopyala Butonu ──
 function OemCopyBadge({ oem }: { oem: string }) {
@@ -40,21 +41,22 @@ function OemCopyBadge({ oem }: { oem: string }) {
   return (
     <button
       onClick={copy}
-      className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl font-mono transition-all hover:border-primary-400 hover:shadow-md"
+      className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 border border-gray-200 rounded-lg font-mono transition-all"
       title="OEM numarasını kopyala"
     >
-      <span className="tracking-wider text-sm text-gray-700">{oem}</span>
-      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-gray-400" />}
+      <span className="tracking-wider text-sm text-gray-700 font-semibold">{oem}</span>
+      {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5 text-gray-400" />}
     </button>
   )
 }
-
-import { CATEGORY_NAMES } from '@/data/categories'
 
 // ── Fiyat formatlayıcı ──
 function formatPrice(price: number): string {
   return price.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 0 })
 }
+
+// ── Tab türü ──
+type TabKey = 'aciklama' | 'uyumlu' | 'teknik'
 
 function PartDetailContent() {
   const params = useParams()
@@ -84,6 +86,9 @@ function PartDetailContent() {
   const [addedToCart, setAddedToCart] = useState(false)
   const [isFavorite, setIsFavorite] = useState(false)
   const [favLoading, setFavLoading] = useState(false)
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState<TabKey>('aciklama')
 
   useEffect(() => {
     setLoading(true)
@@ -233,6 +238,13 @@ function PartDetailContent() {
   const primaryBrandName = primaryBrandSlug ? formatBrandSlug(primaryBrandSlug) : (marka || oemGuess?.brand || '')
   const brandLogoUrl = primaryBrandName ? getBrandLogoUrl(primaryBrandName) : null
 
+  // Teknik spec
+  const partSpec = findPartSpec(displayPartName, catId || undefined)
+
+  // Otomatik oluşturulan açıklama
+  const autoDescription = partSpec?.description
+    ?? `Bu parça ${displayPartName} (${oem}), ${primaryBrandName || marka} araçlar için tasarlanmış orijinal OEM yedek parçadır.${displayCatName ? ` ${displayCatName} kategorisinde yer almaktadır.` : ''} Araç uyumluluğundan emin olmak için OEM numarasını kontrol ediniz.`
+
   // Sepete ekle
   const handleAddToCart = () => {
     if (!productInfo || !hasPrice) return
@@ -276,22 +288,26 @@ function PartDetailContent() {
 
   const catGradient = getCategoryColor(catId || 'other')
 
+  // Stok durumu badge içeriği
+  const stockBadge = (() => {
+    if (productInfo?.in_stock === true) {
+      return { label: 'Stokta Var', className: 'bg-green-50 text-green-700 border border-green-200' as const, icon: <CheckCircle2 className="w-3.5 h-3.5" /> }
+    }
+    if (productInfo?.in_stock === false) {
+      return { label: 'Stokta Yok', className: 'bg-gray-100 text-gray-500 border border-gray-200' as const, icon: <AlertCircle className="w-3.5 h-3.5" /> }
+    }
+    return { label: 'Sorgulayınız', className: 'bg-amber-50 text-amber-700 border border-amber-200' as const, icon: <Info className="w-3.5 h-3.5" /> }
+  })()
+
+  // Tab tanımları
+  const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
+    { key: 'aciklama', label: 'Ürün Açıklaması', icon: <Info className="w-4 h-4" /> },
+    { key: 'uyumlu', label: `Uyumlu Araçlar${modelRows.length > 0 ? ` (${modelRows.length})` : ''}`, icon: <Car className="w-4 h-4" /> },
+    { key: 'teknik', label: 'Teknik Özellikler', icon: <Wrench className="w-4 h-4" /> },
+  ]
+
   return (
     <div className="min-h-screen bg-gray-50">
-
-      {/* Breadcrumb */}
-      <div className="bg-white border-b border-gray-100">
-        <div className="container mx-auto px-4 py-3">
-          <Breadcrumb
-            items={[
-              { label: 'Ana Sayfa', href: '/' },
-              { label: 'Parçalar', href: '/parcalar' },
-              ...(marka ? [{ label: `${marka} ${modelName}`, href: `/parcalar?brand=${brand}&gen=${gen}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(modelName)}` }] : []),
-              { label: oem },
-            ]}
-          />
-        </div>
-      </div>
 
       {/* Loading */}
       {loading && (
@@ -318,13 +334,13 @@ function PartDetailContent() {
         <>
           {/* ── Hero Bölümü ── */}
           <div className="bg-white border-b border-gray-200">
-            <div className="container mx-auto px-4 py-8 md:py-12">
+            <div className="container mx-auto px-4 py-8 md:py-10">
               <div className="max-w-6xl mx-auto">
                 <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-start">
 
                   {/* Sol: Görsel */}
                   <div className="relative">
-                    <div className="aspect-square rounded-2xl overflow-hidden border border-gray-200 bg-gray-50 relative">
+                    <div className="aspect-[4/3] rounded-2xl overflow-hidden border border-gray-200 relative bg-gradient-to-br from-gray-50 via-white to-gray-100">
                       {productImage ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
@@ -333,8 +349,9 @@ function PartDetailContent() {
                           className="w-full h-full object-contain p-8"
                         />
                       ) : brandLogoUrl ? (
-                        <div className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${catGradient} bg-opacity-5`}
-                          style={{ background: `linear-gradient(135deg, rgba(249,250,251,1) 0%, rgba(243,244,246,1) 100%)` }}
+                        <div
+                          className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br ${catGradient} bg-opacity-5`}
+                          style={{ background: 'linear-gradient(135deg, rgba(249,250,251,1) 0%, rgba(243,244,246,1) 100%)' }}
                         >
                           <Image
                             src={brandLogoUrl}
@@ -357,7 +374,7 @@ function PartDetailContent() {
                         <button
                           onClick={handleToggleFavorite}
                           disabled={favLoading}
-                          className={`absolute top-4 right-4 p-3 rounded-xl transition-all shadow-sm ${
+                          className={`absolute top-4 right-4 p-2.5 rounded-xl transition-all shadow-sm ${
                             isFavorite
                               ? 'bg-red-50 text-red-500 hover:bg-red-100 border border-red-200'
                               : 'bg-white text-gray-400 hover:text-red-500 hover:bg-red-50 border border-gray-200'
@@ -374,66 +391,130 @@ function PartDetailContent() {
                         </span>
                       )}
                     </div>
+
+                    {/* Orijinal OEM etiketi */}
+                    <div className="mt-3 flex items-center gap-2">
+                      <BadgeCheck className="w-4 h-4 text-blue-500" />
+                      <span className="text-xs text-gray-500 font-medium">Orijinal OEM Parça</span>
+                    </div>
                   </div>
 
-                  {/* Sağ: Ürün Bilgileri + Satın Al */}
-                  <div className="space-y-6">
-                    {/* Kategori + Stok */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      {displayCatName && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
-                          {catId && <CategoryIcon id={catId} className="text-gray-400" size={14} strokeWidth={2} />}
-                          {displayCatName}
-                        </span>
-                      )}
-                      {displayNodeName && (
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-600">
-                          <Package className="w-3.5 h-3.5 text-gray-400" />
-                          {displayNodeName}
-                        </span>
-                      )}
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold ${
-                        productInfo?.in_stock === true
-                          ? 'bg-green-50 text-green-700 border border-green-200'
-                          : productInfo?.in_stock === false
-                            ? 'bg-gray-100 text-gray-500 border border-gray-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}>
-                        {productInfo?.in_stock === true ? (
-                          <><CheckCircle2 className="w-3.5 h-3.5" /> Stokta Var</>
-                        ) : productInfo?.in_stock === false ? (
-                          <><AlertCircle className="w-3.5 h-3.5" /> Stokta Yok</>
-                        ) : (
-                          <><Info className="w-3.5 h-3.5" /> Sorgulayınız</>
-                        )}
-                      </span>
+                  {/* Sag: Ürün Bilgi Paneli */}
+                  <div className="space-y-5">
+
+                    {/* Breadcrumb */}
+                    <div className="text-xs">
+                      <Breadcrumb
+                        items={[
+                          { label: 'Ana Sayfa', href: '/' },
+                          { label: 'Parçalar', href: '/parcalar' },
+                          ...(marka ? [{ label: `${marka} ${modelName}`, href: `/parcalar?brand=${brand}&gen=${gen}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(modelName)}` }] : []),
+                          { label: oem },
+                        ]}
+                      />
                     </div>
 
                     {/* Başlık */}
-                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight">
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
                       {displayPartName}
                     </h1>
 
-                    {/* OEM + Araç */}
-                    <div className="flex flex-wrap items-center gap-3">
-                      <OemCopyBadge oem={oem} />
-                      {marka && (
-                        <div className="inline-flex items-center gap-2 px-3 py-2 bg-primary-50 border border-primary-200 rounded-xl">
-                          <Car className="w-4 h-4 text-primary-500 flex-shrink-0" />
-                          <span className="text-sm text-primary-700 font-medium">{marka} {modelName}</span>
-                        </div>
-                      )}
+                    {/* Rating placeholder */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-0.5">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star key={i} className="w-4 h-4 text-gray-200 fill-gray-200" />
+                        ))}
+                      </div>
+                      <span className="text-xs text-gray-400 hover:underline cursor-pointer">İlk yorumu yapın</span>
                     </div>
 
-                    {/* Fiyat Kartı */}
-                    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6 space-y-5">
+                    {/* Ürün Bilgi Tablosu */}
+                    <div className="border border-gray-200 rounded-xl overflow-hidden">
+                      <table className="w-full text-sm">
+                        <tbody>
+                          {/* OEM Numarası */}
+                          <tr className="bg-white border-b border-gray-100">
+                            <td className="px-4 py-3 text-gray-500 font-medium w-2/5 whitespace-nowrap">OEM Numarası</td>
+                            <td className="px-4 py-3 text-gray-900">
+                              <OemCopyBadge oem={oem} />
+                            </td>
+                          </tr>
+
+                          {/* Marka */}
+                          {primaryBrandName && (
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                              <td className="px-4 py-3 text-gray-500 font-medium">Marka</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <BrandLogo brand={primaryBrandName} size={20} />
+                                  <span className="text-gray-900 font-medium">{primaryBrandName}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Kategori */}
+                          {displayCatName && (
+                            <tr className="bg-white border-b border-gray-100">
+                              <td className="px-4 py-3 text-gray-500 font-medium">Kategori</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5 text-gray-900">
+                                  {catId && <CategoryIcon id={catId} className="text-gray-400" size={14} strokeWidth={2} />}
+                                  {displayCatName}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Parça Grubu */}
+                          {displayNodeName && (
+                            <tr className="bg-gray-50 border-b border-gray-100">
+                              <td className="px-4 py-3 text-gray-500 font-medium">Parça Grubu</td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5 text-gray-900">
+                                  <Package className="w-3.5 h-3.5 text-gray-400" />
+                                  {displayNodeName}
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Stok Durumu */}
+                          <tr className="bg-white border-b border-gray-100">
+                            <td className="px-4 py-3 text-gray-500 font-medium">Stok Durumu</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold ${stockBadge.className}`}>
+                                {stockBadge.icon}
+                                {stockBadge.label}
+                              </span>
+                            </td>
+                          </tr>
+
+                          {/* Durum */}
+                          <tr className="bg-gray-50">
+                            <td className="px-4 py-3 text-gray-500 font-medium">Durum</td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-1.5 text-blue-700 font-medium">
+                                <BadgeCheck className="w-3.5 h-3.5 text-blue-500" />
+                                Orijinal OEM Parça
+                              </div>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Fiyat + Adet + Butonlar */}
+                    <div className="space-y-4">
+                      {/* Fiyat */}
                       {hasPrice ? (
                         <div>
                           {hasDiscount && (
-                            <span className="text-sm text-gray-400 line-through">{formatPrice(productInfo!.price!)}</span>
+                            <span className="text-sm text-gray-400 line-through block">{formatPrice(productInfo!.price!)}</span>
                           )}
                           <div className="flex items-baseline gap-3">
-                            <p className="text-4xl font-bold text-gray-900">{formatPrice(displayPrice)}</p>
+                            <p className="text-3xl font-bold text-gray-900">{formatPrice(displayPrice)}</p>
                             {hasDiscount && (
                               <span className="inline-flex items-center px-2.5 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-lg">
                                 %{Math.round((1 - productInfo!.discount_price! / productInfo!.price!) * 100)} tasarruf
@@ -443,8 +524,8 @@ function PartDetailContent() {
                         </div>
                       ) : (
                         <div>
-                          <p className="text-xl font-bold text-gray-700">Fiyat bilgisi için iletişime geçin</p>
-                          <p className="text-sm text-gray-400 mt-1">WhatsApp ile anında fiyat alın</p>
+                          <p className="text-lg font-bold text-gray-700">Fiyat bilgisi için iletişime geçin</p>
+                          <p className="text-sm text-gray-400 mt-0.5">WhatsApp ile anında fiyat alın</p>
                         </div>
                       )}
 
@@ -461,19 +542,19 @@ function PartDetailContent() {
                               <Plus className="w-4 h-4 text-gray-500" />
                             </button>
                           </div>
-                          {hasPrice && quantity > 1 && (
+                          {quantity > 1 && (
                             <span className="text-sm text-gray-400">Toplam: {formatPrice(displayPrice * quantity)}</span>
                           )}
                         </div>
                       )}
 
-                      {/* Butonlar */}
+                      {/* Eylem butonları */}
                       <div className="flex flex-col gap-3">
                         {hasPrice && (
                           <button
                             onClick={handleAddToCart}
                             disabled={addedToCart}
-                            className={`w-full flex items-center justify-center gap-2.5 py-4 rounded-xl font-bold transition-all text-base ${
+                            className={`w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold transition-all text-base ${
                               addedToCart ? 'bg-green-500 text-white shadow-green-200 shadow-lg' : 'bg-primary-500 hover:bg-primary-600 text-dark-900 hover:shadow-lg hover:shadow-primary-200'
                             }`}
                           >
@@ -484,7 +565,7 @@ function PartDetailContent() {
                           href={getWhatsAppUrl(whatsappMessage)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className={`w-full flex items-center justify-center gap-2.5 py-4 rounded-xl font-bold transition-all text-base ${
+                          className={`w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-bold transition-all text-base ${
                             hasPrice
                               ? 'bg-green-600 hover:bg-green-700 text-white'
                               : 'bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-200 animate-pulse hover:animate-none'
@@ -496,19 +577,19 @@ function PartDetailContent() {
                       </div>
                     </div>
 
-                    {/* Güven Badge'leri */}
-                    <div className="grid grid-cols-3 gap-3">
-                      <div className="flex flex-col items-center gap-1.5 p-3 bg-white border border-gray-200 rounded-xl">
-                        <Shield className="w-5 h-5 text-blue-500" />
-                        <span className="text-[11px] text-gray-500 font-medium text-center leading-tight">Orijinal Parça Garantisi</span>
+                    {/* Güven Badge'leri — yatay sıra */}
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl">
+                        <Shield className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                        <span className="text-[11px] text-gray-500 font-medium leading-tight">Orijinal Parça Garantisi</span>
                       </div>
-                      <div className="flex flex-col items-center gap-1.5 p-3 bg-white border border-gray-200 rounded-xl">
-                        <Truck className="w-5 h-5 text-primary-500" />
-                        <span className="text-[11px] text-gray-500 font-medium text-center leading-tight">Hızlı Kargo</span>
+                      <div className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl">
+                        <Truck className="w-4 h-4 text-primary-500 flex-shrink-0" />
+                        <span className="text-[11px] text-gray-500 font-medium leading-tight">Hızlı Kargo</span>
                       </div>
-                      <div className="flex flex-col items-center gap-1.5 p-3 bg-white border border-gray-200 rounded-xl">
-                        <BadgeCheck className="w-5 h-5 text-green-500" />
-                        <span className="text-[11px] text-gray-500 font-medium text-center leading-tight">Güvenli Ödeme</span>
+                      <div className="flex items-center gap-2 p-3 bg-white border border-gray-200 rounded-xl">
+                        <BadgeCheck className="w-4 h-4 text-green-500 flex-shrink-0" />
+                        <span className="text-[11px] text-gray-500 font-medium leading-tight">Güvenli Ödeme</span>
                       </div>
                     </div>
                   </div>
@@ -517,176 +598,200 @@ function PartDetailContent() {
             </div>
           </div>
 
-          {/* ── Alt Bölümler ── */}
-          <div className="container mx-auto px-4 py-8 md:py-12">
+          {/* ── Tab Bölümü (Alt İçerik) ── */}
+          <div className="container mx-auto px-4 py-8 md:py-10">
             <div className="max-w-6xl mx-auto space-y-8">
 
-              {/* ── Uyumlu Markalar ── */}
-              {brandSlugs.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-5 border-b border-gray-100">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-                          <Car className="w-5 h-5 text-primary-500" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-bold text-gray-900">Uyumlu Markalar</h2>
-                          <p className="text-xs text-gray-500">Bu OEM numaralı parça aşağıdaki markalarda kullanılır</p>
-                        </div>
-                      </div>
-                      {groupLabel && (
-                        <span className="hidden sm:inline-flex px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-full text-xs font-medium">
-                          {groupLabel}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    {groupLabel && (
-                      <div className="mb-4 sm:hidden">
-                        <span className="inline-flex px-3 py-1 bg-blue-50 text-blue-600 border border-blue-200 rounded-full text-xs font-medium">
-                          {groupLabel}
-                        </span>
+              {/* Tab Navigasyonu */}
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                {/* Tab Başlıkları */}
+                <div className="flex border-b border-gray-200 overflow-x-auto">
+                  {tabs.map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`flex items-center gap-2 px-5 py-4 text-sm font-medium whitespace-nowrap transition-all border-b-2 -mb-px ${
+                        activeTab === tab.key
+                          ? 'border-primary-500 text-primary-600 bg-primary-50/50'
+                          : 'border-transparent text-gray-500 hover:text-gray-900 hover:border-gray-300'
+                      }`}
+                    >
+                      {tab.icon}
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tab: Ürün Açıklaması */}
+                {activeTab === 'aciklama' && (
+                  <div className="p-6 space-y-4">
+                    <p className="text-gray-700 text-sm leading-relaxed">{autoDescription}</p>
+                    {partSpec && partSpec.specs.length > 0 && (
+                      <ul className="space-y-2 mt-4">
+                        {partSpec.specs.map((s, i) => (
+                          <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                            <CheckCircle2 className="w-4 h-4 text-primary-500 flex-shrink-0 mt-0.5" />
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {!partSpec && (
+                      <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                        Daha fazla bilgi için OEM numarasını kontrol edin veya WhatsApp&apos;tan iletişime geçin.
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-3">
-                      {brandSlugs.map(slug => {
-                        const formatted = formatBrandSlug(slug)
-                        const count = brandGroups.get(slug)?.length || 0
-                        return (
-                          <Link
-                            key={slug}
-                            href={`/parcalar?brand=${slug}&marka=${encodeURIComponent(formatted)}`}
-                            className="inline-flex items-center gap-2.5 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all group"
-                          >
-                            <BrandLogo brand={formatted} size={28} />
-                            <div>
-                              <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">{formatted}</span>
-                              <span className="text-xs text-gray-400 ml-1.5">({count})</span>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-400 transition-colors" />
-                          </Link>
-                        )
-                      })}
-                    </div>
                   </div>
-                </div>
-              )}
+                )}
 
-              {/* ── Uyumlu Modeller Tablosu ── */}
-              {modelRows.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                  <div className="px-6 py-5 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center">
-                        <Wrench className="w-5 h-5 text-green-600" />
+                {/* Tab: Uyumlu Araçlar */}
+                {activeTab === 'uyumlu' && (
+                  <div>
+                    {/* Uyumlu Markalar */}
+                    {brandSlugs.length > 0 && (
+                      <div className="p-6 border-b border-gray-100">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-semibold text-gray-900">Uyumlu Markalar</h3>
+                            {groupLabel && (
+                              <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-200 rounded-full text-xs font-medium">
+                                {groupLabel}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {brandSlugs.map(slug => {
+                            const formatted = formatBrandSlug(slug)
+                            const count = brandGroups.get(slug)?.length || 0
+                            return (
+                              <Link
+                                key={slug}
+                                href={`/parcalar?brand=${slug}&marka=${encodeURIComponent(formatted)}`}
+                                className="inline-flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl hover:border-primary-300 hover:bg-primary-50 hover:shadow-sm transition-all group"
+                              >
+                                <BrandLogo brand={formatted} size={22} />
+                                <span className="text-sm font-medium text-gray-900 group-hover:text-primary-600 transition-colors">{formatted}</span>
+                                <span className="text-xs text-gray-400">({count})</span>
+                                <ChevronRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary-400 transition-colors" />
+                              </Link>
+                            )
+                          })}
+                        </div>
                       </div>
-                      <div>
-                        <h2 className="text-lg font-bold text-gray-900">Uyumlu Modeller</h2>
-                        <p className="text-xs text-gray-500">{modelRows.length} farklı araç-nesil kombinasyonu</p>
-                      </div>
-                    </div>
-                  </div>
+                    )}
 
-                  {/* Tablo — Masaüstü */}
-                  <div className="hidden md:block overflow-x-auto max-h-[400px] overflow-y-auto">
-                    <table className="w-full">
-                      <thead className="sticky top-0 z-10">
-                        <tr className="bg-gray-50 border-b border-gray-200">
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Marka</th>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</th>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Kasa Kodu</th>
-                          <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Grup</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100">
-                        {modelRows.map((row, i) => (
-                          <tr key={`${row.brandSlug}-${row.genSlug}-${i}`} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-3.5">
-                              <div className="flex items-center gap-2.5">
-                                <BrandLogo brand={row.brand} size={24} />
-                                <span className="text-sm font-medium text-gray-900">{row.brand}</span>
+                    {/* Uyumlu Modeller Tablosu */}
+                    {modelRows.length > 0 ? (
+                      <>
+                        {/* Masaüstü tablosu */}
+                        <div className="hidden md:block overflow-x-auto max-h-[480px] overflow-y-auto">
+                          <table className="w-full">
+                            <thead className="sticky top-0 z-10">
+                              <tr className="bg-gray-50 border-b border-gray-200">
+                                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Marka</th>
+                                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Model</th>
+                                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Kasa Kodu</th>
+                                <th className="text-left px-6 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">Grup</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {modelRows.map((row, i) => (
+                                <tr key={`${row.brandSlug}-${row.genSlug}-${i}`} className={`hover:bg-gray-50 transition-colors ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                                  <td className="px-6 py-3.5">
+                                    <div className="flex items-center gap-2.5">
+                                      <BrandLogo brand={row.brand} size={22} />
+                                      <span className="text-sm font-medium text-gray-900">{row.brand}</span>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-3.5 text-sm text-gray-700">{row.model}</td>
+                                  <td className="px-6 py-3.5">
+                                    {row.chassis ? (
+                                      <span className="inline-flex px-2.5 py-1 bg-gray-100 border border-gray-200 rounded-lg text-xs font-mono text-gray-600">{row.chassis}</span>
+                                    ) : (
+                                      <span className="text-gray-300">—</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-3.5 text-xs text-gray-500">{row.nodeName || '—'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Mobil kartlar */}
+                        <div className="md:hidden divide-y divide-gray-100 max-h-[480px] overflow-y-auto">
+                          {modelRows.map((row, i) => (
+                            <div key={`${row.brandSlug}-${row.genSlug}-${i}`} className={`px-5 py-4 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
+                              <div className="flex items-center gap-2 mb-2">
+                                <BrandLogo brand={row.brand} size={18} />
+                                <span className="text-sm font-semibold text-gray-900">{row.brand}</span>
                               </div>
-                            </td>
-                            <td className="px-6 py-3.5 text-sm text-gray-700">{row.model}</td>
-                            <td className="px-6 py-3.5">
-                              {row.chassis ? (
-                                <span className="inline-flex px-2.5 py-1 bg-gray-100 border border-gray-200 rounded-lg text-xs font-mono text-gray-600">{row.chassis}</span>
-                              ) : (
-                                <span className="text-gray-300">—</span>
-                              )}
-                            </td>
-                            <td className="px-6 py-3.5 text-xs text-gray-500">{row.nodeName || '—'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Kartlar — Mobil */}
-                  <div className="md:hidden divide-y divide-gray-100 max-h-[400px] overflow-y-auto">
-                    {modelRows.map((row, i) => (
-                      <div key={`${row.brandSlug}-${row.genSlug}-${i}`} className="px-5 py-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <BrandLogo brand={row.brand} size={20} />
-                          <span className="text-sm font-semibold text-gray-900">{row.brand}</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
-                          <div>
-                            <span className="text-xs text-gray-400">Model</span>
-                            <p className="text-gray-700">{row.model}</p>
-                          </div>
-                          <div>
-                            <span className="text-xs text-gray-400">Kasa Kodu</span>
-                            <p className="text-gray-700 font-mono text-xs">{row.chassis || '—'}</p>
-                          </div>
-                          {row.nodeName && (
-                            <div>
-                              <span className="text-xs text-gray-400">Grup</span>
-                              <p className="text-gray-700 text-xs">{row.nodeName}</p>
+                              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                                <div>
+                                  <span className="text-xs text-gray-400">Model</span>
+                                  <p className="text-gray-700">{row.model}</p>
+                                </div>
+                                <div>
+                                  <span className="text-xs text-gray-400">Kasa Kodu</span>
+                                  <p className="text-gray-700 font-mono text-xs">{row.chassis || '—'}</p>
+                                </div>
+                                {row.nodeName && (
+                                  <div>
+                                    <span className="text-xs text-gray-400">Grup</span>
+                                    <p className="text-gray-700 text-xs">{row.nodeName}</p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Teknik Özellikler ── */}
-              {(() => {
-                const spec = findPartSpec(displayPartName, catId || undefined)
-                if (!spec) return null
-                return (
-                  <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
-                    <div className="px-6 py-5 border-b border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-                          <Info className="w-5 h-5 text-purple-600" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-bold text-gray-900">Teknik Özellikler</h2>
-                          <p className="text-xs text-gray-500">{spec.title}</p>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="p-6 space-y-4">
-                      <p className="text-gray-600 text-sm leading-relaxed">{spec.description}</p>
-                      {spec.specs.length > 0 && (
-                        <ul className="space-y-2">
-                          {spec.specs.map((s, i) => (
-                            <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
-                              <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
-                              {s}
-                            </li>
                           ))}
-                        </ul>
-                      )}
-                    </div>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="p-6 text-center text-gray-400 text-sm">
+                        <Car className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                        Uyumlu araç bilgisi bulunamadı.
+                      </div>
+                    )}
                   </div>
-                )
-              })()}
+                )}
+
+                {/* Tab: Teknik Özellikler */}
+                {activeTab === 'teknik' && (
+                  <div className="p-6">
+                    {partSpec ? (
+                      <div className="space-y-4">
+                        <h3 className="text-base font-semibold text-gray-900">{partSpec.title}</h3>
+                        <p className="text-sm text-gray-600 leading-relaxed">{partSpec.description}</p>
+                        {partSpec.specs.length > 0 && (
+                          <div className="border border-gray-200 rounded-xl overflow-hidden">
+                            <table className="w-full text-sm">
+                              <tbody>
+                                {partSpec.specs.map((s, i) => (
+                                  <tr key={i} className={`border-b border-gray-100 last:border-0 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                                    <td className="px-4 py-3">
+                                      <div className="flex items-start gap-2 text-gray-700">
+                                        <CheckCircle2 className="w-4 h-4 text-purple-500 flex-shrink-0 mt-0.5" />
+                                        {s}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400 text-sm">
+                        <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                        <p>Bu parça için teknik özellik bilgisi mevcut değil.</p>
+                        <p className="mt-1 text-xs">Detaylı bilgi için WhatsApp&apos;tan iletişime geçebilirsiniz.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* ── Alt CTA ── */}
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-8 md:p-10">
