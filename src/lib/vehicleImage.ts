@@ -190,6 +190,67 @@ export async function findAutodataImage(
   return null
 }
 
+// ==================== TecDoc Model Image Lookup ====================
+
+type ModelManifest = Record<string, string[]>
+let cachedManifest: ModelManifest | null = null
+
+async function loadModelManifest(): Promise<ModelManifest> {
+  if (cachedManifest) return cachedManifest
+  try {
+    const res = await fetch('/models/manifest.json')
+    if (!res.ok) { cachedManifest = {}; return {} }
+    cachedManifest = await res.json()
+    return cachedManifest!
+  } catch {
+    cachedManifest = {}
+    return {}
+  }
+}
+
+// Marka adını manifest key'ine çevir (Alfa Romeo → alfa_romeo, Mercedes-Benz → mercedes-benz)
+function toManifestBrandKey(brandName: string): string {
+  return brandName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')
+}
+
+// Model adını manifest'teki dosya adıyla eşleştir
+function findModelInManifest(models: string[], modelName: string): string | null {
+  const search = modelName.toLowerCase().replace(/[^a-z0-9]/g, '')
+  if (!search) return null
+
+  // Tam eşleşme
+  for (const m of models) {
+    if (m.replace(/-/g, '') === search) return m
+  }
+
+  // Model adı manifest key ile başlıyorsa (ör: "focus" → "focus")
+  for (const m of models) {
+    const mClean = m.replace(/-/g, '')
+    if (mClean.startsWith(search) || search.startsWith(mClean)) return m
+  }
+
+  return null
+}
+
+export async function findTecdocModelImage(
+  brandName: string,
+  modelName: string
+): Promise<string | null> {
+  const manifest = await loadModelManifest()
+
+  // Marka key'ini bul — underscore ve tire varyantlarını dene
+  const keyUnderscore = toManifestBrandKey(brandName)
+  const keyDash = brandSlug(brandName)
+  const brandModels = manifest[keyUnderscore] || manifest[keyDash]
+  if (!brandModels || brandModels.length === 0) return null
+
+  const brandKey = manifest[keyUnderscore] ? keyUnderscore : keyDash
+  const match = findModelInManifest(brandModels, modelName)
+  if (!match) return null
+
+  return `/models/${brandKey}/${match}.webp`
+}
+
 // Model bazlı görsel cache — aynı marka+model için tek görsel kullan
 const modelImageCache = new Map<string, string | null>()
 
@@ -238,6 +299,13 @@ export async function findAutodataGenerationImage(
     }
   } catch {
     // tree load failed, ignore
+  }
+
+  // 3. Fallback to TecDoc model görselleri
+  const tecdocResult = await findTecdocModelImage(brandName, modelName)
+  if (tecdocResult) {
+    modelImageCache.set(cacheKey, tecdocResult)
+    return tecdocResult
   }
 
   modelImageCache.set(cacheKey, null)
