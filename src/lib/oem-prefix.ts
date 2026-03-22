@@ -86,7 +86,7 @@ const VW_GROUP_PREFIX: Record<string, [string, string]> = {
   '5L': ['Skoda', 'skoda'],   // Yeti
   '6Y': ['Skoda', 'skoda'],   // Fabia I
   '6U': ['Skoda', 'skoda'],   // Felicia
-  '6V': ['Skoda', 'skoda'],   // Roomster (dikkat: VW Polo ile çakışma - 3. karakter ayırır)
+  // '6V': Skoda Roomster — VW Polo VI ile çakışıyor, kaldırıldı
 
   // SEAT
   '1M': ['SEAT', 'seat'],   // Toledo/Leon

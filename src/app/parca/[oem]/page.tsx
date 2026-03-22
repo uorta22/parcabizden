@@ -215,7 +215,12 @@ function PartDetailContent() {
 
   const displayCatName = catName || (catId ? CATEGORY_NAMES[catId] || catId : '')
   const displayNodeName = nodeName || node || ''
-  const displayPartName = partName || (oemGuess ? `${oemGuess.brand} Yedek Parça` : oem)
+  // Parça adı fallback zinciri: API sonucu → marka+kategori → kategori → marka tahmini → ham OEM
+  const displayPartName = partName
+    || (displayNodeName && (oemGuess?.brand || marka)
+      ? `${oemGuess?.brand || marka} ${displayNodeName}`
+      : displayNodeName)
+    || (oemGuess ? `${oemGuess.brand} Yedek Parça` : oem)
 
   // Fiyat bilgileri
   const hasPrice = productInfo && (productInfo.price != null && productInfo.price > 0)
