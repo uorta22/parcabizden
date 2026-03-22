@@ -16,6 +16,7 @@ import { BrandLogo, getBrandLogoUrl } from '@/components/BrandLogos'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
 import { findPartSpec } from '@/data/part-descriptions'
 import { findBrandGroup, formatBrandSlug, parseGenerationSlug } from '@/lib/brand-groups'
+import { guessOemBrand } from '@/lib/oem-prefix'
 import { useCart } from '@/contexts/CartContext'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/contexts/ToastContext'
@@ -209,9 +210,12 @@ function PartDetailContent() {
     })
   }, [allResults])
 
+  // OEM prefix'inden marka tahmini (API sonucu boşsa bile)
+  const oemGuess = useMemo(() => guessOemBrand(oem), [oem])
+
   const displayCatName = catName || (catId ? CATEGORY_NAMES[catId] || catId : '')
   const displayNodeName = nodeName || node || ''
-  const displayPartName = partName || oem
+  const displayPartName = partName || (oemGuess ? `${oemGuess.brand} Yedek Parça` : oem)
 
   // Fiyat bilgileri
   const hasPrice = productInfo && (productInfo.price != null && productInfo.price > 0)
@@ -220,8 +224,8 @@ function PartDetailContent() {
 
   // Görsel: productInfo thumbnail varsa onu kullan, yoksa marka logosu
   const productImage = productInfo?.thumbnail || null
-  const primaryBrandSlug = brandSlugs[0] || ''
-  const primaryBrandName = primaryBrandSlug ? formatBrandSlug(primaryBrandSlug) : (marka || '')
+  const primaryBrandSlug = brandSlugs[0] || oemGuess?.brandSlug || ''
+  const primaryBrandName = primaryBrandSlug ? formatBrandSlug(primaryBrandSlug) : (marka || oemGuess?.brand || '')
   const brandLogoUrl = primaryBrandName ? getBrandLogoUrl(primaryBrandName) : null
 
   // Sepete ekle
