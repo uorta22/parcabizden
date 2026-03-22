@@ -117,8 +117,18 @@ function normalize(s: string): string {
 function stripModelSuffix(s: string): string {
   return s
     .replace(/[-\s]?(klasse|serisi|series|class|reihe)\b/gi, '')
-    .replace(/[-\s]?(sedan|hatchback|wagon|touring|coupe|cabrio|cabriolet|roadster|sportback|avant|kombi|station\s*wagon)\b/gi, '')
+    .replace(/[-\s]?(sedan|hatchback|wagon|touring|coupe|cabrio|cabriolet|roadster|sportback|avant|kombi|station\s*wagon|active\s*tourer|gran\s*tourer|gran\s*coupe|active|tourer|gran|compact|berlina|limousine|liftback|fastback|crossback|suv|mpv|van)\b/gi, '')
     .trim()
+}
+
+// Kısa model adından çekirdek tanımlayıcıyı çıkar
+// "2 Active" → "2", "X3" → "x3", "3 Serisi" → "3", "A-Klasse" → "a"
+function extractModelCore(modelName: string): string {
+  const stripped = stripModelSuffix(modelName)
+    .replace(/\d{4}\s*-?\s*\d{0,4}\s*$/g, '') // Yılları kaldır
+    .trim()
+  const core = stripped.split(/[\s/]+/)[0] || ''
+  return core.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
 // Extract parenthesized and non-parenthesized parts
@@ -192,6 +202,15 @@ export async function findAutodataImage(
       // Autodata model adı yıl içerir ("A-Serisi 1997 -"), sadece model kısmını al
       const modelBase = normalize(stripModelSuffix(img.model.replace(/\d{4}\s*-?\s*\d{0,4}\s*$/, '').trim()))
       if (modelBase === searchStripped) return img.image
+    }
+  }
+
+  // Core model match — kısa/sayısal model adları için (ör: "2 Active" ↔ "2 Serisi")
+  const searchCore = extractModelCore(modelOrGeneration)
+  if (searchCore.length >= 1) {
+    for (const img of brandMatches) {
+      const imgCore = extractModelCore(img.model)
+      if (imgCore && imgCore === searchCore) return img.image
     }
   }
 
