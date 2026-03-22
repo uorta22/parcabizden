@@ -283,21 +283,62 @@ function PartDetailContent() {
     }
   }
 
-  // WhatsApp mesajı
-  const whatsappMessage = `Merhaba, aşağıdaki parça için ${hasPrice ? 'sipariş vermek' : 'fiyat bilgisi almak'} istiyorum.\n\nParça: ${displayPartName}\nOEM No: ${oem}${marka ? `\nAraç: ${marka} ${modelName}` : ''}${displayCatName ? `\nKategori: ${displayCatName}` : ''}${displayNodeName ? `\nGrup: ${displayNodeName}` : ''}${hasPrice ? `\nFiyat: ${formatPrice(displayPrice)}\nAdet: ${quantity}` : ''}`
+  // WhatsApp mesajı — zengin bilgili şablon
+  const whatsappMessage = (() => {
+    const lines: string[] = [
+      `Merhaba, aşağıdaki parça için ${hasPrice ? 'sipariş vermek' : 'fiyat ve stok bilgisi almak'} istiyorum.`,
+      '',
+      `*${displayPartName}*`,
+      `OEM No: ${oem}`,
+    ]
+
+    // Marka bilgisi
+    if (primaryBrandName) lines.push(`Marka: ${primaryBrandName}`)
+
+    // Araç bilgisi
+    if (marka && modelName) {
+      lines.push(`Araç: ${marka} ${modelName}`)
+    }
+
+    // Uyumlu araçlar (ilk 3 tanesi)
+    if (modelRows.length > 0) {
+      const uniqueModels = Array.from(new Set(modelRows.map(r => `${r.brand} ${r.model}${r.chassis ? ` (${r.chassis})` : ''}`)))
+      const shown = uniqueModels.slice(0, 3)
+      lines.push(`Uyumlu Araçlar: ${shown.join(', ')}${uniqueModels.length > 3 ? ` +${uniqueModels.length - 3} araç daha` : ''}`)
+    }
+
+    // Kategori + Grup
+    if (displayCatName) lines.push(`Kategori: ${displayCatName}`)
+    if (displayNodeName) lines.push(`Parça Grubu: ${displayNodeName}`)
+
+    // Marka grubu (VAG, Stellantis vs.)
+    if (groupLabel) lines.push(`Grup: ${groupLabel}`)
+
+    // Fiyat + adet
+    if (hasPrice) {
+      lines.push('')
+      lines.push(`Fiyat: ${formatPrice(displayPrice)}`)
+      if (quantity > 1) lines.push(`Adet: ${quantity} (Toplam: ${formatPrice(displayPrice * quantity)})`)
+      else lines.push(`Adet: ${quantity}`)
+    }
+
+    // Sayfa linki
+    if (typeof window !== 'undefined') {
+      lines.push('')
+      lines.push(window.location.href)
+    }
+
+    return lines.join('\n')
+  })()
 
   const catGradient = getCategoryColor(catId || 'other')
 
-  // Stok durumu badge içeriği
-  const stockBadge = (() => {
-    if (productInfo?.in_stock === true) {
-      return { label: 'Stokta Var', className: 'bg-green-50 text-green-700 border border-green-200' as const, icon: <CheckCircle2 className="w-3.5 h-3.5" /> }
-    }
-    if (productInfo?.in_stock === false) {
-      return { label: 'Stokta Yok', className: 'bg-gray-100 text-gray-500 border border-gray-200' as const, icon: <AlertCircle className="w-3.5 h-3.5" /> }
-    }
-    return { label: 'Sorgulayınız', className: 'bg-amber-50 text-amber-700 border border-amber-200' as const, icon: <Info className="w-3.5 h-3.5" /> }
-  })()
+  // Stok durumu — DB'deki tüm parçalar stokta
+  const stockBadge = {
+    label: 'Stokta Var',
+    className: 'bg-green-50 text-green-700 border border-green-200' as const,
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+  }
 
   // Tab tanımları
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
