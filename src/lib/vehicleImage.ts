@@ -112,6 +112,15 @@ function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
+// Almanca/İngilizce/Türkçe model suffix'lerini standartlaştır
+// "C-Klasse" → "c", "C-Serisi" → "c", "C-Class" → "c", "3 Series" → "3"
+function stripModelSuffix(s: string): string {
+  return s
+    .replace(/[-\s]?(klasse|serisi|series|class|reihe)\b/gi, '')
+    .replace(/[-\s]?(sedan|hatchback|wagon|touring|coupe|cabrio|cabriolet|roadster|sportback|avant|kombi|station\s*wagon)\b/gi, '')
+    .trim()
+}
+
 // Extract parenthesized and non-parenthesized parts
 function extractParts(s: string): string[] {
   const parts: string[] = []
@@ -174,6 +183,18 @@ export async function findAutodataImage(
     if (modelNorm.startsWith(searchNorm) || searchNorm.startsWith(modelNorm)) return img.image
   }
 
+  // Suffix-stripped match — "C-Klasse" ↔ "C-Serisi" ↔ "C-Class"
+  const searchStripped = normalize(stripModelSuffix(modelOrGeneration.replace(/\([^)]*\)/g, '')))
+  if (searchStripped.length >= 1) {
+    for (const img of brandMatches) {
+      const modelStripped = normalize(stripModelSuffix(img.model))
+      if (modelStripped === searchStripped) return img.image
+      // Autodata model adı yıl içerir ("A-Serisi 1997 -"), sadece model kısmını al
+      const modelBase = normalize(stripModelSuffix(img.model.replace(/\d{4}\s*-?\s*\d{0,4}\s*$/, '').trim()))
+      if (modelBase === searchStripped) return img.image
+    }
+  }
+
   // Brand-stripped generation match — kisa model isimleri icin (orn: "02")
   for (const { img, stripped } of genNormFull) {
     if (stripped.startsWith(searchNorm) || searchNorm.startsWith(stripped)) return img.image
@@ -190,81 +211,24 @@ export async function findAutodataImage(
   return null
 }
 
-// ==================== TecDoc Model Image Lookup ====================
-
-type ModelManifest = Record<string, string[]>
-let cachedManifest: ModelManifest | null = null
-
-async function loadModelManifest(): Promise<ModelManifest> {
-  if (cachedManifest) return cachedManifest
-  try {
-    const res = await fetch('/models/manifest.json')
-    if (!res.ok) { cachedManifest = {}; return {} }
-    cachedManifest = await res.json()
-    return cachedManifest!
-  } catch {
-    cachedManifest = {}
-    return {}
-  }
-}
-
-// Marka adını manifest key'ine çevir (Alfa Romeo → alfa_romeo, Mercedes-Benz → mercedes-benz)
-function toManifestBrandKey(brandName: string): string {
-  return brandName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '')
-}
-
-// Model adını manifest'teki dosya adıyla eşleştir
-function findModelInManifest(models: string[], modelName: string): string | null {
-  const search = modelName.toLowerCase().replace(/[^a-z0-9]/g, '')
-  if (!search) return null
-
-  // Tam eşleşme
-  for (const m of models) {
-    if (m.replace(/-/g, '') === search) return m
-  }
-
-  // Model adı manifest key ile başlıyorsa (ör: "focus" → "focus")
-  for (const m of models) {
-    const mClean = m.replace(/-/g, '')
-    if (mClean.startsWith(search) || search.startsWith(mClean)) return m
-  }
-
-  return null
-}
-
-export async function findTecdocModelImage(
-  brandName: string,
-  modelName: string
-): Promise<string | null> {
-  const manifest = await loadModelManifest()
-
-  // Marka key'ini bul — underscore ve tire varyantlarını dene
-  const keyUnderscore = toManifestBrandKey(brandName)
-  const keyDash = brandSlug(brandName)
-  const brandModels = manifest[keyUnderscore] || manifest[keyDash]
-  if (!brandModels || brandModels.length === 0) return null
-
-  const brandKey = manifest[keyUnderscore] ? keyUnderscore : keyDash
-  const match = findModelInManifest(brandModels, modelName)
-  if (!match) return null
-
-  return `/models/${brandKey}/${match}.webp`
-}
-
 // Model bazlı görsel cache — aynı marka+model için tek görsel kullan
 const modelImageCache = new Map<string, string | null>()
 
 function extractModelName(generationName: string): string {
   // "Egea (357) HB / CROSS (2016->)" → "egea"
-  // "3 Serisi Sedan (G20N)(2022->)" → "3serisi"
+  // "3 Serisi Sedan (G20N)(2022->)" → "3serisi" → "3"
+  // "C-Klasse (204)(2007->)" → "c"
   // "Golf II (191/193)(08.1983-1992)" → "golf"
+  // "CR-V (2016->)" → "crv"
   const cleaned = generationName
     .replace(/\([^)]*\)/g, '') // Parantez içini kaldır
     .replace(/\d{4}\s*-?>?\s*\d{0,4}/g, '') // Yılları kaldır
     .replace(/[IVXLC]+$/i, '') // Sonundaki romen rakamlarını kaldır
     .trim()
+  // Suffix'leri kaldır (Klasse, Serisi, Class, Series vs.)
+  const strippedSuffix = stripModelSuffix(cleaned)
   // İlk kelimeyi al (model adı)
-  const firstWord = cleaned.split(/[\s/]+/)[0]
+  const firstWord = strippedSuffix.split(/[\s/]+/)[0]
   return firstWord.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
@@ -299,13 +263,6 @@ export async function findAutodataGenerationImage(
     }
   } catch {
     // tree load failed, ignore
-  }
-
-  // 3. Fallback to TecDoc model görselleri
-  const tecdocResult = await findTecdocModelImage(brandName, modelName)
-  if (tecdocResult) {
-    modelImageCache.set(cacheKey, tecdocResult)
-    return tecdocResult
   }
 
   modelImageCache.set(cacheKey, null)
