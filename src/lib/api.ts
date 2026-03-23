@@ -631,3 +631,69 @@ export async function adminEnrichPart(data: {
   if (data.in_stock !== undefined) params.in_stock = data.in_stock
   return actionPost<{ product: ShopProduct; action: 'created' | 'updated' }>(params)
 }
+
+// ==================== Reviews ====================
+
+const REVIEWS_API = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/reviews.php`
+  : 'https://api.parcabizden.com.tr/reviews.php'
+
+export interface Review {
+  id: number
+  author_name: string
+  rating: number
+  title: string | null
+  comment: string
+  verified: number
+  helpful_count: number
+  created_at: string
+}
+
+export interface ReviewSummary {
+  total: number
+  average: number
+  distribution: Record<number, number>
+}
+
+export async function reviewList(oemNumber: string, page = 1, sort = 'newest'): Promise<{
+  reviews: Review[]
+  total: number
+  page: number
+  pages: number
+}> {
+  const params = new URLSearchParams({ action: 'list', oem_number: oemNumber, page: String(page), sort })
+  const res = await fetch(`${REVIEWS_API}?${params}`)
+  return res.json()
+}
+
+export async function reviewSummary(oemNumber: string): Promise<ReviewSummary> {
+  const params = new URLSearchParams({ action: 'summary', oem_number: oemNumber })
+  const res = await fetch(`${REVIEWS_API}?${params}`)
+  return res.json()
+}
+
+export async function reviewAdd(data: {
+  oem_number: string
+  author_name: string
+  rating: number
+  title?: string
+  comment: string
+}): Promise<{ status: string; review_id: number; message: string }> {
+  const res = await fetch(`${REVIEWS_API}?action=add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  const json = await res.json()
+  if (!res.ok) throw new Error(json.error || 'Yorum eklenemedi')
+  return json
+}
+
+export async function reviewHelpful(reviewId: number): Promise<{ status: string }> {
+  const res = await fetch(`${REVIEWS_API}?action=helpful`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ review_id: reviewId }),
+  })
+  return res.json()
+}

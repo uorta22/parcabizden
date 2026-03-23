@@ -7,10 +7,10 @@ import { useParams, useSearchParams } from 'next/navigation'
 import {
   Copy, Check, MessageCircle, Loader2, Package, AlertCircle,
   Car, Wrench, Info, CheckCircle2, ShoppingCart, Minus, Plus, Heart,
-  Shield, Truck, BadgeCheck, ChevronRight, Star,
+  Shield, Truck, BadgeCheck, ChevronRight, Star, ThumbsUp, Send,
 } from 'lucide-react'
-import { searchOemParts } from '@/lib/api'
-import type { OemSearchResult, ProductEnrichment } from '@/lib/api'
+import { searchOemParts, reviewList, reviewSummary, reviewAdd, reviewHelpful } from '@/lib/api'
+import type { OemSearchResult, ProductEnrichment, Review, ReviewSummary } from '@/lib/api'
 import { getWhatsAppUrl, siteConfig } from '@/lib/config'
 import { BrandLogo, getBrandLogoUrl } from '@/components/BrandLogos'
 import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
@@ -56,7 +56,7 @@ function formatPrice(price: number): string {
 }
 
 // ── Tab türü ──
-type TabKey = 'aciklama' | 'uyumlu' | 'teknik'
+type TabKey = 'aciklama' | 'uyumlu' | 'teknik' | 'yorumlar'
 
 function PartDetailContent() {
   const params = useParams()
@@ -90,6 +90,20 @@ function PartDetailContent() {
   // Tab state
   const [activeTab, setActiveTab] = useState<TabKey>('aciklama')
 
+  // Review state
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [reviewSummaryData, setReviewSummaryData] = useState<ReviewSummary | null>(null)
+  const [reviewsLoading, setReviewsLoading] = useState(false)
+  const [reviewPage, setReviewPage] = useState(1)
+  const [reviewPages, setReviewPages] = useState(1)
+  const [reviewSort, setReviewSort] = useState('newest')
+  const [helpedIds, setHelpedIds] = useState<Set<number>>(new Set())
+
+  // Yorum formu state
+  const [showReviewForm, setShowReviewForm] = useState(false)
+  const [reviewFormData, setReviewFormData] = useState({ author_name: '', rating: 5, title: '', comment: '' })
+  const [reviewSubmitting, setReviewSubmitting] = useState(false)
+
   useEffect(() => {
     setLoading(true)
     setError('')
@@ -109,6 +123,61 @@ function PartDetailContent() {
       .catch(e => setError(e instanceof Error ? e.message : 'Veri yüklenirken hata oluştu'))
       .finally(() => setLoading(false))
   }, [oem])
+
+  // Yorumları ve özeti yükle
+  useEffect(() => {
+    reviewSummary(oem).then(setReviewSummaryData).catch(() => {})
+  }, [oem])
+
+  const loadReviews = (page: number, sort: string) => {
+    setReviewsLoading(true)
+    reviewList(oem, page, sort)
+      .then(data => {
+        setReviews(data.reviews || [])
+        setReviewPages(data.pages || 1)
+        setReviewPage(data.page || 1)
+      })
+      .catch(() => {})
+      .finally(() => setReviewsLoading(false))
+  }
+
+  useEffect(() => {
+    if (activeTab === 'yorumlar') {
+      loadReviews(reviewPage, reviewSort)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, reviewSort])
+
+  const handleReviewSubmit = async () => {
+    if (reviewSubmitting) return
+    setReviewSubmitting(true)
+    try {
+      await reviewAdd({
+        oem_number: oem,
+        author_name: reviewFormData.author_name,
+        rating: reviewFormData.rating,
+        title: reviewFormData.title || undefined,
+        comment: reviewFormData.comment,
+      })
+      toast('Yorumunuz eklendi!', 'success')
+      setShowReviewForm(false)
+      setReviewFormData({ author_name: '', rating: 5, title: '', comment: '' })
+      // Yeniden yükle
+      loadReviews(1, reviewSort)
+      reviewSummary(oem).then(setReviewSummaryData).catch(() => {})
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Yorum eklenemedi', 'error')
+    } finally {
+      setReviewSubmitting(false)
+    }
+  }
+
+  const handleHelpful = async (reviewId: number) => {
+    if (helpedIds.has(reviewId)) return
+    setHelpedIds(prev => new Set(prev).add(reviewId))
+    await reviewHelpful(reviewId)
+    setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, helpful_count: r.helpful_count + 1 } : r))
+  }
 
   // JSON-LD Schema — Product + BreadcrumbList
   useEffect(() => {
@@ -341,10 +410,12 @@ function PartDetailContent() {
   }
 
   // Tab tanımları
+  const reviewCount = reviewSummaryData?.total || 0
   const tabs: { key: TabKey; label: string; icon: React.ReactNode }[] = [
     { key: 'aciklama', label: 'Ürün Açıklaması', icon: <Info className="w-4 h-4" /> },
     { key: 'uyumlu', label: `Uyumlu Araçlar${modelRows.length > 0 ? ` (${modelRows.length})` : ''}`, icon: <Car className="w-4 h-4" /> },
     { key: 'teknik', label: 'Teknik Özellikler', icon: <Wrench className="w-4 h-4" /> },
+    { key: 'yorumlar', label: `Yorumlar${reviewCount > 0 ? ` (${reviewCount})` : ''}`, icon: <Star className="w-4 h-4" /> },
   ]
 
   return (
@@ -460,14 +531,29 @@ function PartDetailContent() {
                       {displayPartName}
                     </h1>
 
-                    {/* Rating placeholder */}
+                    {/* Rating */}
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-0.5">
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} className="w-4 h-4 text-gray-200 fill-gray-200" />
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              reviewSummaryData && i < Math.round(reviewSummaryData.average)
+                                ? 'text-amber-400 fill-amber-400'
+                                : 'text-gray-200 fill-gray-200'
+                            }`}
+                          />
                         ))}
                       </div>
-                      <span className="text-xs text-gray-400 hover:underline cursor-pointer">İlk yorumu yapın</span>
+                      <button
+                        onClick={() => setActiveTab('yorumlar')}
+                        className="text-xs text-gray-500 hover:text-primary-600 hover:underline"
+                      >
+                        {reviewSummaryData && reviewSummaryData.total > 0
+                          ? `${reviewSummaryData.average} / 5 (${reviewSummaryData.total} yorum)`
+                          : 'İlk yorumu yapın'
+                        }
+                      </button>
                     </div>
 
                     {/* Ürün Bilgi Tablosu */}
@@ -828,6 +914,251 @@ function PartDetailContent() {
                         <Wrench className="w-8 h-8 mx-auto mb-2 text-gray-200" />
                         <p>Bu parça için teknik özellik bilgisi mevcut değil.</p>
                         <p className="mt-1 text-xs">Detaylı bilgi için WhatsApp&apos;tan iletişime geçebilirsiniz.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Tab: Yorumlar */}
+                {activeTab === 'yorumlar' && (
+                  <div className="p-6 space-y-6">
+
+                    {/* Puan Özeti + Yorum Yaz Butonu */}
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {/* Sol: Puan özeti */}
+                      <div className="flex items-center gap-6 flex-1">
+                        {reviewSummaryData && reviewSummaryData.total > 0 ? (
+                          <>
+                            <div className="text-center">
+                              <div className="text-4xl font-bold text-gray-900">{reviewSummaryData.average}</div>
+                              <div className="flex items-center gap-0.5 mt-1 justify-center">
+                                {Array.from({ length: 5 }).map((_, i) => (
+                                  <Star
+                                    key={i}
+                                    className={`w-4 h-4 ${i < Math.round(reviewSummaryData.average) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="text-xs text-gray-400 mt-1">{reviewSummaryData.total} yorum</div>
+                            </div>
+                            <div className="flex-1 space-y-1.5">
+                              {[5, 4, 3, 2, 1].map(star => {
+                                const count = reviewSummaryData.distribution[star] || 0
+                                const pct = reviewSummaryData.total > 0 ? (count / reviewSummaryData.total) * 100 : 0
+                                return (
+                                  <div key={star} className="flex items-center gap-2 text-xs">
+                                    <span className="w-3 text-gray-500 text-right">{star}</span>
+                                    <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
+                                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <span className="w-6 text-gray-400 text-right">{count}</span>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-sm text-gray-400">
+                            Henüz yorum yapılmamış. İlk yorumu siz yapın!
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sağ: Yorum yaz butonu */}
+                      <div className="flex-shrink-0">
+                        <button
+                          onClick={() => setShowReviewForm(!showReviewForm)}
+                          className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 font-bold rounded-xl transition-colors text-sm flex items-center gap-2"
+                        >
+                          <Star className="w-4 h-4" />
+                          Yorum Yaz
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Yorum Formu */}
+                    {showReviewForm && (
+                      <div className="border border-primary-200 bg-primary-50/30 rounded-xl p-5 space-y-4">
+                        <h4 className="font-semibold text-gray-900 text-sm">Yorum Yazın</h4>
+
+                        {/* Puanlama */}
+                        <div>
+                          <label className="text-xs text-gray-500 font-medium block mb-1.5">Puanınız</label>
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: 5 }).map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => setReviewFormData(prev => ({ ...prev, rating: i + 1 }))}
+                                className="p-0.5 transition-transform hover:scale-110"
+                              >
+                                <Star
+                                  className={`w-7 h-7 ${i < reviewFormData.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-300'}`}
+                                />
+                              </button>
+                            ))}
+                            <span className="text-sm text-gray-500 ml-2">{reviewFormData.rating}/5</span>
+                          </div>
+                        </div>
+
+                        {/* İsim */}
+                        <div>
+                          <label className="text-xs text-gray-500 font-medium block mb-1.5">Adınız *</label>
+                          <input
+                            type="text"
+                            value={reviewFormData.author_name}
+                            onChange={e => setReviewFormData(prev => ({ ...prev, author_name: e.target.value }))}
+                            placeholder="Adınızı yazın"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-400 outline-none"
+                            maxLength={100}
+                          />
+                        </div>
+
+                        {/* Başlık (opsiyonel) */}
+                        <div>
+                          <label className="text-xs text-gray-500 font-medium block mb-1.5">Başlık <span className="text-gray-400">(opsiyonel)</span></label>
+                          <input
+                            type="text"
+                            value={reviewFormData.title}
+                            onChange={e => setReviewFormData(prev => ({ ...prev, title: e.target.value }))}
+                            placeholder="Yorum başlığı"
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-400 outline-none"
+                            maxLength={255}
+                          />
+                        </div>
+
+                        {/* Yorum */}
+                        <div>
+                          <label className="text-xs text-gray-500 font-medium block mb-1.5">Yorumunuz *</label>
+                          <textarea
+                            value={reviewFormData.comment}
+                            onChange={e => setReviewFormData(prev => ({ ...prev, comment: e.target.value }))}
+                            placeholder="Bu ürün hakkındaki düşüncelerinizi paylaşın (en az 10 karakter)"
+                            rows={4}
+                            className="w-full px-4 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-primary-300 focus:border-primary-400 outline-none resize-none"
+                            maxLength={2000}
+                          />
+                          <div className="text-xs text-gray-400 text-right mt-1">{reviewFormData.comment.length}/2000</div>
+                        </div>
+
+                        {/* Butonlar */}
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={handleReviewSubmit}
+                            disabled={reviewSubmitting || !reviewFormData.author_name || reviewFormData.comment.length < 10}
+                            className="px-5 py-2.5 bg-primary-500 hover:bg-primary-600 text-dark-900 font-bold rounded-xl transition-colors text-sm flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {reviewSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                            Gönder
+                          </button>
+                          <button
+                            onClick={() => setShowReviewForm(false)}
+                            className="px-4 py-2.5 text-gray-500 hover:text-gray-700 text-sm font-medium"
+                          >
+                            İptal
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sıralama */}
+                    {reviews.length > 0 && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-gray-500">{reviewSummaryData?.total || 0} yorum</span>
+                        <select
+                          value={reviewSort}
+                          onChange={e => setReviewSort(e.target.value)}
+                          className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 text-gray-700 focus:ring-2 focus:ring-primary-300 outline-none"
+                        >
+                          <option value="newest">En Yeni</option>
+                          <option value="oldest">En Eski</option>
+                          <option value="highest">En Yüksek Puan</option>
+                          <option value="lowest">En Düşük Puan</option>
+                          <option value="helpful">En Faydalı</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Yorum Listesi */}
+                    {reviewsLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 className="w-6 h-6 text-primary-500 animate-spin" />
+                      </div>
+                    ) : reviews.length > 0 ? (
+                      <div className="space-y-4">
+                        {reviews.map(review => (
+                          <div key={review.id} className="border border-gray-200 rounded-xl p-5">
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="font-semibold text-sm text-gray-900">{review.author_name}</span>
+                                  {review.verified === 1 && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 border border-green-200 rounded-full text-[10px] font-medium">
+                                      <BadgeCheck className="w-3 h-3" />
+                                      Doğrulanmış
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex items-center gap-0.5">
+                                    {Array.from({ length: 5 }).map((_, i) => (
+                                      <Star key={i} className={`w-3.5 h-3.5 ${i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-gray-200 fill-gray-200'}`} />
+                                    ))}
+                                  </div>
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(review.created_at).toLocaleDateString('tr-TR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            {review.title && <h5 className="font-medium text-sm text-gray-900 mb-1">{review.title}</h5>}
+                            <p className="text-sm text-gray-600 leading-relaxed">{review.comment}</p>
+                            <div className="mt-3 flex items-center">
+                              <button
+                                onClick={() => handleHelpful(review.id)}
+                                disabled={helpedIds.has(review.id)}
+                                className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+                                  helpedIds.has(review.id)
+                                    ? 'bg-primary-50 text-primary-600 border border-primary-200'
+                                    : 'text-gray-400 hover:text-primary-600 hover:bg-gray-50 border border-gray-200'
+                                }`}
+                              >
+                                <ThumbsUp className="w-3.5 h-3.5" />
+                                Faydalı ({review.helpful_count})
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Sayfalama */}
+                        {reviewPages > 1 && (
+                          <div className="flex justify-center gap-2 pt-2">
+                            {Array.from({ length: reviewPages }).map((_, i) => (
+                              <button
+                                key={i}
+                                onClick={() => { setReviewPage(i + 1); loadReviews(i + 1, reviewSort) }}
+                                className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${
+                                  reviewPage === i + 1
+                                    ? 'bg-primary-500 text-dark-900'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                              >
+                                {i + 1}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 text-gray-400 text-sm">
+                        <Star className="w-8 h-8 mx-auto mb-2 text-gray-200" />
+                        <p>Henüz yorum yapılmamış.</p>
+                        <button
+                          onClick={() => setShowReviewForm(true)}
+                          className="mt-2 text-primary-600 hover:underline text-sm font-medium"
+                        >
+                          İlk yorumu siz yazın
+                        </button>
                       </div>
                     )}
                   </div>
