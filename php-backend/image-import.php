@@ -230,21 +230,41 @@ if ($action === 'import_status') {
 
 // ─── ACTION: link_to_parts ──────────────────────────────────────
 // part_images tablosundaki görselleri parts tablosuna bağla
-// parts.oem_number ile eşleştirip products.thumbnail güncelle
+// 3 aşamalı eşleştirme: direkt OEM → cross_ref → supplier part_number
 if ($action === 'link_to_parts') {
-    // part_images → parts eşleştirmesi
-    // TecDoc'ta supplier part_number ile OEM eşleşmesi cross_ref üzerinden olur
-    // Ama direkt eşleşme de olabilir
-    $updated = $pdo->exec("
+    $stats = ['direct' => 0, 'cross_ref' => 0, 'total' => 0];
+
+    // Aşama 1: Direkt eşleşme — part_images.part_number = products.oem_number
+    $direct = $pdo->exec("
         UPDATE products p
         INNER JOIN part_images pi ON pi.part_number = p.oem_number AND pi.uploaded = 1
         SET p.thumbnail = CONCAT('/uploads/', pi.file_path)
         WHERE p.thumbnail IS NULL OR p.thumbnail = ''
     ");
+    $stats['direct'] = (int)$direct;
+
+    // Aşama 2: cross_ref üzerinden eşleşme
+    // cross_ref tablosunda supplier_part_number → oem_number eşleşmeleri var
+    try {
+        $crossRef = $pdo->exec("
+            UPDATE products p
+            INNER JOIN catalog_cross_ref cr ON cr.oem_number = p.oem_number
+            INNER JOIN part_images pi ON pi.part_number = cr.supplier_part_number AND pi.uploaded = 1
+            SET p.thumbnail = CONCAT('/uploads/', pi.file_path)
+            WHERE p.thumbnail IS NULL OR p.thumbnail = ''
+        ");
+        $stats['cross_ref'] = (int)$crossRef;
+    } catch (PDOException $e) {
+        // catalog_cross_ref tablosu yoksa atla
+        $stats['cross_ref_error'] = $e->getMessage();
+    }
+
+    $stats['total'] = $stats['direct'] + $stats['cross_ref'];
 
     echo json_encode([
         'status' => 'ok',
-        'products_updated' => $updated,
+        'products_updated' => $stats['total'],
+        'details' => $stats,
     ]);
     exit;
 }

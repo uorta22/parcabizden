@@ -173,17 +173,41 @@ function search_oem($pdo) {
             $products_map[$pr['oem_number']] = $pr;
         }
     }
+
+    // part_images'dan görsel eşleştirmesi (products.thumbnail boşsa fallback)
+    $images_map = [];
+    if (!empty($oem_list)) {
+        try {
+            $ph = implode(',', array_fill(0, count($oem_list), '?'));
+            $img_stmt = $pdo->prepare("SELECT part_number, file_path FROM part_images WHERE part_number IN ($ph) AND uploaded = 1 AND file_path IS NOT NULL GROUP BY part_number");
+            $img_stmt->execute(array_values($oem_list));
+            while ($img = $img_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $images_map[$img['part_number']] = '/uploads/' . $img['file_path'];
+            }
+        } catch (PDOException $e) {
+            // part_images tablosu henüz yoksa atla
+        }
+    }
+
     foreach ($results as &$r) {
         if (isset($products_map[$r['oem_number']])) {
             $pr = $products_map[$r['oem_number']];
+            // Thumbnail fallback: products → part_images
+            $thumb = $pr['thumbnail'];
+            if (empty($thumb) && isset($images_map[$r['oem_number']])) {
+                $thumb = $images_map[$r['oem_number']];
+            }
             $r['product'] = [
                 'id' => (int)$pr['id'],
                 'slug' => $pr['slug'],
                 'price' => $pr['price'] !== null ? (float)$pr['price'] : null,
                 'discount_price' => $pr['discount_price'] !== null ? (float)$pr['discount_price'] : null,
-                'thumbnail' => $pr['thumbnail'],
+                'thumbnail' => $thumb,
                 'in_stock' => (bool)$pr['in_stock'],
             ];
+        } elseif (isset($images_map[$r['oem_number']])) {
+            // products tablosunda yoksa bile part_images'dan görsel göster
+            $r['part_image'] = $images_map[$r['oem_number']];
         }
     }
     unset($r);
