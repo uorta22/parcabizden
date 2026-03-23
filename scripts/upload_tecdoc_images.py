@@ -1,13 +1,13 @@
-"""
-TecDoc Parça Görseli Batch Upload Script (Windows)
+r"""
+TecDoc Parca Gorseli Batch Upload Script (Windows)
 
-Bu script Windows makinesindeki E:\TecDoc\images\ klasöründeki görselleri
-PHP backend'e batch halinde yükler.
+Bu script Windows makinesindeki E:\TecDoc\images\ klasorundeki gorselleri
+PHP backend'e batch halinde yukler.
 
-Kullanım:
+Kullanim:
     python upload_tecdoc_images.py --url https://parcabizden.com.tr/php-backend/image-import.php
     python upload_tecdoc_images.py --url https://parcabizden.com.tr/php-backend/image-import.php --start 100
-    python upload_tecdoc_images.py --url https://parcabizden.com.tr/php-backend/image-import.php --csv E:\TecDoc\article_images.csv
+    python upload_tecdoc_images.py --url https://parcabizden.com.tr/php-backend/image-import.php --csv
 
 Gereksinimler:
     pip install requests
@@ -157,7 +157,14 @@ def get_status(url: str) -> dict:
     return response.json()
 
 
-def run_image_upload(url: str, start_folder: int = 1, end_folder: int = 4999) -> None:
+def run_image_upload(
+    url: str,
+    start_folder: int = 1,
+    end_folder: int = 4999,
+    image_dir: Path = IMAGE_DIR,
+    csv_path: Path = CSV_PATH,
+    batch_size: int = BATCH_SIZE,
+) -> None:
     """Ana upload döngüsü — klasörleri dolaşıp batch yükle."""
     progress = load_progress()
 
@@ -167,14 +174,14 @@ def run_image_upload(url: str, start_folder: int = 1, end_folder: int = 4999) ->
         logger.info("Kaldığımız yerden devam: klasör %d", effective_start)
 
     # CSV metadata yükle
-    metadata_index = load_csv_metadata(CSV_PATH)
+    metadata_index = load_csv_metadata(csv_path)
 
     total_uploaded = progress["total_uploaded"]
     total_skipped = progress["total_skipped"]
     total_errors = progress["total_errors"]
 
     for folder_num in range(effective_start, end_folder + 1):
-        folder_path = IMAGE_DIR / str(folder_num)
+        folder_path = image_dir / str(folder_num)
 
         if not folder_path.exists() or not folder_path.is_dir():
             continue
@@ -194,10 +201,10 @@ def run_image_upload(url: str, start_folder: int = 1, end_folder: int = 4999) ->
         )
 
         # Batch'lere böl
-        for batch_start in range(0, len(images), BATCH_SIZE):
-            batch = images[batch_start:batch_start + BATCH_SIZE]
-            batch_num = batch_start // BATCH_SIZE + 1
-            total_batches = (len(images) + BATCH_SIZE - 1) // BATCH_SIZE
+        for batch_start in range(0, len(images), batch_size):
+            batch = images[batch_start:batch_start + batch_size]
+            batch_num = batch_start // batch_size + 1
+            total_batches = (len(images) + batch_size - 1) // batch_size
 
             for attempt in range(1, MAX_RETRIES + 1):
                 try:
@@ -316,10 +323,9 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    global IMAGE_DIR, CSV_PATH, BATCH_SIZE
-    IMAGE_DIR = Path(args.image_dir)
-    CSV_PATH = Path(args.csv_path)
-    BATCH_SIZE = args.batch_size
+    image_dir = Path(args.image_dir)
+    csv_path = Path(args.csv_path)
+    batch_size = args.batch_size
 
     if args.reset:
         if PROGRESS_FILE.exists():
@@ -347,9 +353,9 @@ def main() -> None:
         return
 
     if args.csv:
-        run_csv_migrate(args.url, CSV_PATH)
+        run_csv_migrate(args.url, csv_path)
     else:
-        run_image_upload(args.url, args.start, args.end)
+        run_image_upload(args.url, args.start, args.end, image_dir, csv_path, batch_size)
 
 
 if __name__ == "__main__":
