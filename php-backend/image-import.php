@@ -212,10 +212,21 @@ if ($action === 'import_status') {
     $pending = $total - $uploaded;
 
     // Disk kullanımı
-    $diskUsage = 0;
-    if (is_dir(UPLOAD_DIR)) {
-        $output = shell_exec("du -sh " . escapeshellarg(UPLOAD_DIR) . " 2>/dev/null");
-        $diskUsage = trim(explode("\t", $output ?: '0')[0]);
+    $diskUsage = '0B';
+    try {
+        if (is_dir(UPLOAD_DIR)) {
+            $bytes = 0;
+            $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(UPLOAD_DIR, FilesystemIterator::SKIP_DOTS));
+            foreach ($it as $file) {
+                if ($file->isFile()) $bytes += $file->getSize();
+            }
+            if ($bytes >= 1073741824) $diskUsage = round($bytes / 1073741824, 1) . 'G';
+            elseif ($bytes >= 1048576) $diskUsage = round($bytes / 1048576, 1) . 'M';
+            elseif ($bytes >= 1024) $diskUsage = round($bytes / 1024, 1) . 'K';
+            else $diskUsage = $bytes . 'B';
+        }
+    } catch (Exception $e) {
+        $diskUsage = 'N/A';
     }
 
     echo json_encode([
