@@ -280,4 +280,64 @@ if ($action === 'link_to_parts') {
     exit;
 }
 
-echo json_encode(['error' => 'Geçersiz action. Kullanım: upload_batch, migrate_csv, import_status, link_to_parts']);
+// ─── ACTION: scan_directory ─────────────────────────────────────
+// FTP ile yüklenen dosyaları tarayıp part_images tablosuna kaydet
+if ($action === 'scan_directory') {
+    if (!is_dir(UPLOAD_DIR)) {
+        echo json_encode(['error' => 'Upload dizini bulunamadı: ' . UPLOAD_DIR]);
+        exit;
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT IGNORE INTO part_images (supplier_id, part_number, picture_name, file_path, uploaded)
+        VALUES (0, '', :pic, :fp, 1)
+    ");
+
+    $scanned = 0;
+    $inserted = 0;
+    $startTime = microtime(true);
+
+    // uploads/parts/ altındaki klasörleri tara
+    $folders = glob(UPLOAD_DIR . '*', GLOB_ONLYDIR);
+    $totalFolders = count($folders);
+
+    $pdo->beginTransaction();
+
+    foreach ($folders as $folder) {
+        $folderName = basename($folder);
+        $files = glob($folder . '/*.{jpg,jpeg,png,gif,bmp,webp,tif,tiff}', GLOB_BRACE);
+
+        foreach ($files as $file) {
+            $fileName = basename($file);
+            $relativePath = "parts/$folderName/$fileName";
+
+            $stmt->execute([
+                ':pic' => $fileName,
+                ':fp'  => $relativePath,
+            ]);
+
+            if ($stmt->rowCount() > 0) $inserted++;
+            $scanned++;
+
+            // Her 10K kayıtta commit
+            if ($scanned % 10000 === 0) {
+                $pdo->commit();
+                $pdo->beginTransaction();
+            }
+        }
+    }
+
+    $pdo->commit();
+    $elapsed = round(microtime(true) - $startTime, 1);
+
+    echo json_encode([
+        'status' => 'ok',
+        'folders_scanned' => $totalFolders,
+        'files_scanned' => $scanned,
+        'new_records' => $inserted,
+        'elapsed_seconds' => $elapsed,
+    ]);
+    exit;
+}
+
+echo json_encode(['error' => 'Geçersiz action. Kullanım: upload_batch, migrate_csv, import_status, link_to_parts, scan_directory']);
