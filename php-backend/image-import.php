@@ -15,7 +15,7 @@
 
 // ─── Konfigürasyon ───────────────────────────────────────────────
 define('SECRET_KEY', 'parcabizden_img_2024_secret'); // Python script'te de aynı olmalı
-define('UPLOAD_DIR', __DIR__ . '/../uploads/parts/');  // Görsellerin kaydedileceği dizin
+define('UPLOAD_DIR', __DIR__ . '/uploads/parts/');  // Görsellerin kaydedileceği dizin (FTP erişilebilir)
 define('MAX_BATCH_SIZE', 50);  // Tek seferde max dosya sayısı
 define('MAX_FILE_SIZE', 5 * 1024 * 1024); // 5MB per file
 
