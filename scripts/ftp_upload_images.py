@@ -26,7 +26,7 @@ from pathlib import Path
 # ─── Konfigürasyon ───────────────────────────────────────────────
 FTP_HOST = "ftp.umastudio.com.tr"
 FTP_USER = "deployer@parcabizden.com.tr"
-FTP_PASS = "sv9VI0i_.k5@9-XV"
+FTP_PASS = "Tp-_HgiUhqE?.C0P"
 FTP_PORT = 21
 
 # Sunucudaki hedef dizin (FTP root'a göre)
