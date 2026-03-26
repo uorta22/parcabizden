@@ -280,6 +280,72 @@ if ($action === 'link_to_parts') {
     exit;
 }
 
+// ─── ACTION: move_old_uploads ───────────────────────────────────
+// Eski yoldaki görselleri yeni yola taşı (../uploads/parts → ./uploads/parts)
+if ($action === 'move_old_uploads') {
+    $oldDir = __DIR__ . '/../uploads/parts/';
+    $newDir = __DIR__ . '/uploads/parts/';
+
+    if (!is_dir($oldDir)) {
+        echo json_encode(['error' => 'Eski dizin bulunamadı: ' . $oldDir, 'new_dir' => $newDir]);
+        exit;
+    }
+
+    if (!is_dir($newDir)) {
+        mkdir($newDir, 0755, true);
+    }
+
+    $moved = 0;
+    $skipped = 0;
+    $errors = 0;
+
+    // Eski dizindeki klasörleri tara
+    $folders = glob($oldDir . '*', GLOB_ONLYDIR);
+
+    foreach ($folders as $folder) {
+        $folderName = basename($folder);
+        $targetFolder = $newDir . $folderName . '/';
+
+        // Hedef klasör zaten varsa, içindeki dosyaları taşı
+        if (!is_dir($targetFolder)) {
+            // Klasörü komple taşı (hızlı)
+            if (rename($folder, $targetFolder)) {
+                $moved++;
+            } else {
+                $errors++;
+            }
+        } else {
+            // Klasör varsa dosyaları tek tek taşı
+            $files = glob($folder . '/*');
+            foreach ($files as $file) {
+                $fileName = basename($file);
+                $target = $targetFolder . $fileName;
+                if (!file_exists($target)) {
+                    if (rename($file, $target)) {
+                        $moved++;
+                    } else {
+                        $errors++;
+                    }
+                } else {
+                    $skipped++;
+                }
+            }
+            // Boş klasörü sil
+            @rmdir($folder);
+        }
+    }
+
+    echo json_encode([
+        'status' => 'ok',
+        'moved' => $moved,
+        'skipped' => $skipped,
+        'errors' => $errors,
+        'old_dir' => $oldDir,
+        'new_dir' => $newDir,
+    ]);
+    exit;
+}
+
 // ─── ACTION: scan_directory ─────────────────────────────────────
 // FTP ile yüklenen dosyaları tarayıp part_images tablosuna kaydet
 if ($action === 'scan_directory') {
