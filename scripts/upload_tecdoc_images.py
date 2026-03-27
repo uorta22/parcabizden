@@ -17,6 +17,7 @@ import argparse
 import csv
 import json
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -24,7 +25,7 @@ from pathlib import Path
 import requests
 
 # ─── Konfigürasyon ───────────────────────────────────────────────
-SECRET_KEY = "parcabizden_img_2024_secret"
+SECRET_KEY = os.environ.get("IMG_UPLOAD_SECRET", "")
 BATCH_SIZE = 30          # Tek seferde yüklenecek dosya sayısı
 MAX_RETRIES = 3          # Hata durumunda tekrar deneme
 RETRY_DELAY = 5          # Tekrar deneme arası bekleme (sn)
@@ -322,6 +323,10 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE, help="Batch büyüklüğü (varsayılan: 30)")
 
     args = parser.parse_args()
+
+    if not SECRET_KEY:
+        logger.error("IMG_UPLOAD_SECRET environment variable tanımlanmalı!")
+        sys.exit(1)
 
     image_dir = Path(args.image_dir)
     csv_path = Path(args.csv_path)

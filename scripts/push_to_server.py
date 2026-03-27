@@ -15,8 +15,8 @@ import time
 import glob
 import requests
 
-RECEIVER_URL = "https://api.parcabizden.com.tr/migrate-receiver.php"
-TOKEN = "pBzD_import_2026_xK9"
+RECEIVER_URL = os.environ.get("RECEIVER_URL", "https://api.parcabizden.com.tr/migrate-receiver.php")
+TOKEN = os.environ.get("MIGRATE_TOKEN", "")
 SQL_DIR = os.path.join(os.path.dirname(__file__), "sql_export")
 
 # Tablo sırası
@@ -145,6 +145,11 @@ def main():
     print("  ParcaBizden — SQL → MySQL Migration (HTTP)")
     print("=" * 55)
     print()
+
+    if not TOKEN:
+        print("HATA: MIGRATE_TOKEN environment variable tanımlanmalı!")
+        print("Örnek: export MIGRATE_TOKEN=token_here")
+        sys.exit(1)
 
     # Sunucu durumunu kontrol et
     print("Sunucu durumu kontrol ediliyor...")

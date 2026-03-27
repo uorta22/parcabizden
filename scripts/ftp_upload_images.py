@@ -18,16 +18,17 @@ import argparse
 import ftplib
 import json
 import logging
+import os
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 # ─── Konfigürasyon ───────────────────────────────────────────────
-FTP_HOST = "ftp.umastudio.com.tr"
-FTP_USER = "deployer@parcabizden.com.tr"
-FTP_PASS = "Tp-_HgiUhqE?.C0P"
-FTP_PORT = 21
+FTP_HOST = os.environ.get("FTP_HOST", "ftp.umastudio.com.tr")
+FTP_USER = os.environ.get("FTP_USER", "")
+FTP_PASS = os.environ.get("FTP_PASS", "")
+FTP_PORT = int(os.environ.get("FTP_PORT", "21"))
 
 # Sunucudaki hedef dizin (FTP root'a göre)
 # Natro'da genelde FTP root = site klasörü
@@ -352,6 +353,11 @@ def main() -> None:
         logger.info("  Toplam atlanan: %d", progress["total_skipped"])
         logger.info("  Toplam hata: %d", progress["total_errors"])
         return
+
+    if not FTP_USER or not FTP_PASS:
+        logger.error("FTP_USER ve FTP_PASS environment variable'ları tanımlanmalı!")
+        logger.error("Örnek: set FTP_USER=deployer@domain.com && set FTP_PASS=sifre")
+        sys.exit(1)
 
     if args.test:
         check_connection()

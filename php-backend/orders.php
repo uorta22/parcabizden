@@ -108,7 +108,7 @@ function handleOrderCreate($db, $userId) {
                 ':oid' => $orderId,
                 ':pid' => $productId ?: null,
                 ':pname' => $productName ?: ('Urun #' . $productId),
-                ':pimg' => $product['thumbnail'] ?? null,
+                ':pimg' => isset($product) ? ($product['thumbnail'] ?? null) : null,
                 ':qty' => max(1, intval($item['quantity'])),
                 ':price' => floatval($item['unit_price'] ?? 0),
                 ':hp' => !empty($item['has_price']) ? 1 : 0,

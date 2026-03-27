@@ -231,18 +231,5 @@ switch ($action) {
         };
         break;
 
-    // TEMP: DB model isimlerini çek
-    case 'temp_list_models':
-        $page = max(1, intval($_GET['page'] ?? 1));
-        $perPage = 500;
-        $offset = ($page - 1) * $perPage;
-        $stmt = $pdo->prepare('SELECT mfr.name as brand, m.id as model_id, m.name as model_name FROM catalog_models m JOIN catalog_manufacturers mfr ON m.manufacturer_id = mfr.id ORDER BY mfr.name, m.name LIMIT :lim OFFSET :off');
-        $stmt->bindValue(':lim', $perPage, PDO::PARAM_INT);
-        $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-        $total = $pdo->query('SELECT COUNT(*) FROM catalog_models')->fetchColumn();
-        echo json_encode(['page' => $page, 'total' => (int)$total, 'per_page' => $perPage, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)], JSON_UNESCAPED_UNICODE);
-        break;
-
     default: echo json_encode(['error' => 'Invalid action']);
 }
