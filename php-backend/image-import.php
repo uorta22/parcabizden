@@ -245,26 +245,30 @@ if ($action === 'import_status') {
 if ($action === 'link_to_parts') {
     $stats = ['direct' => 0, 'cross_ref' => 0, 'total' => 0];
 
+    // API base URL — görseller Natro'da, frontend Vercel'de olduğu için full URL gerekli
+    $apiBase = rtrim(getenv('API_BASE_URL') ?: 'https://api.parcabizden.com.tr', '/');
+
     // Aşama 1: Direkt eşleşme — part_images.part_number = products.oem_number
-    $direct = $pdo->exec("
+    $stmt1 = $pdo->prepare("
         UPDATE products p
         INNER JOIN part_images pi ON pi.part_number = p.oem_number AND pi.uploaded = 1
-        SET p.thumbnail = CONCAT('/uploads/', pi.file_path)
+        SET p.thumbnail = CONCAT(:base, '/uploads/', pi.file_path)
         WHERE p.thumbnail IS NULL OR p.thumbnail = ''
     ");
-    $stats['direct'] = (int)$direct;
+    $stmt1->execute([':base' => $apiBase]);
+    $stats['direct'] = $stmt1->rowCount();
 
     // Aşama 2: cross_ref üzerinden eşleşme
-    // cross_ref tablosunda supplier_part_number → oem_number eşleşmeleri var
     try {
-        $crossRef = $pdo->exec("
+        $stmt2 = $pdo->prepare("
             UPDATE products p
             INNER JOIN catalog_cross_ref cr ON cr.oem_number = p.oem_number
             INNER JOIN part_images pi ON pi.part_number = cr.supplier_part_number AND pi.uploaded = 1
-            SET p.thumbnail = CONCAT('/uploads/', pi.file_path)
+            SET p.thumbnail = CONCAT(:base, '/uploads/', pi.file_path)
             WHERE p.thumbnail IS NULL OR p.thumbnail = ''
         ");
-        $stats['cross_ref'] = (int)$crossRef;
+        $stmt2->execute([':base' => $apiBase]);
+        $stats['cross_ref'] = $stmt2->rowCount();
     } catch (PDOException $e) {
         // catalog_cross_ref tablosu yoksa atla
         $stats['cross_ref_error'] = $e->getMessage();
