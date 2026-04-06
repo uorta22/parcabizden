@@ -309,10 +309,10 @@ export default function HeroSection() {
               Yedek &amp; Çıkma Parça Platformu
             </span>
             <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 leading-tight">
-              Doğru Parçayı <span className="text-primary-500">Hızla Bulun</span>
+              Yedek Parça & <span className="text-primary-500">Çıkma Parça</span> Ara
             </h1>
             <p className="text-sm md:text-base text-gray-500 max-w-lg mx-auto">
-              Şase numarası veya OEM parça numarası ile aracınıza uyumlu parçaları anında listeleyin.
+              Şase numarası veya OEM parça numarası ile aracınıza uygun yedek ve çıkma parçaları anında listeleyin.
             </p>
           </div>
 

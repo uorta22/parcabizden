@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Shield, Truck, Clock, Search, Phone, MessageCircle } from 'lucide-react'
 import HeroSection from '@/components/HeroSection'
 import PopularBrands from '@/components/PopularBrands'
-
+import SchemaOrg from '@/components/SchemaOrg'
 import { siteConfig, getWhatsAppUrl, getPhoneUrl } from '@/lib/config'
 
 const features = [
@@ -31,6 +31,7 @@ const features = [
 export default function Home() {
   return (
     <div className="min-h-screen">
+      <SchemaOrg showFaq />
       {/* Hero - VIN/OEM Search + CTAs */}
       <HeroSection />
 

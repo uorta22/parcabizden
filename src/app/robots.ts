@@ -6,7 +6,17 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/', '/hesabim/', '/giris', '/kayit'],
+        disallow: [
+          '/api/',
+          '/hesabim/',
+          '/giris',
+          '/kayit',
+          '/admin/',
+          '/sepet',
+          '/dogrula',
+          '/sifremi-unuttum',
+          '/sifre-sifirla',
+        ],
       },
     ],
     sitemap: 'https://parcabizden.com.tr/sitemap.xml',

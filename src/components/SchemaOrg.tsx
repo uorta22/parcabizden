@@ -3,9 +3,10 @@ import { siteConfig } from '@/lib/config'
 interface SchemaOrgProps {
   type?: 'website' | 'organization' | 'localBusiness'
   breadcrumbs?: { name: string; url: string }[]
+  showFaq?: boolean
 }
 
-export default function SchemaOrg({ type = 'localBusiness', breadcrumbs }: SchemaOrgProps) {
+export default function SchemaOrg({ type = 'localBusiness', breadcrumbs, showFaq = false }: SchemaOrgProps) {
   const schemas = []
 
   // Organization Schema
@@ -94,7 +95,8 @@ export default function SchemaOrg({ type = 'localBusiness', breadcrumbs }: Schem
     schemas.push(breadcrumbSchema)
   }
 
-  // FAQPage Schema
+  // FAQPage Schema — sadece ana sayfada göster
+  if (showFaq) {
   const faqSchema = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -134,6 +136,7 @@ export default function SchemaOrg({ type = 'localBusiness', breadcrumbs }: Schem
     ],
   }
   schemas.push(faqSchema)
+  } // end showFaq
 
   return (
     <>
