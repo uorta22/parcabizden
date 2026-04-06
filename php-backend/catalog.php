@@ -281,10 +281,18 @@ function vin_decode($pdo) {
     $brand_slug = null;
     if ($make) {
         $make_lower = strtolower(trim($make));
-        $slug_aliases = ['volkswagen'=>'volkswagen','skoda'=>'skoda','mercedes-benz'=>'mercedes-benz','mercedes benz'=>'mercedes-benz','bmw'=>'bmw','audi'=>'audi','toyota'=>'toyota','nissan'=>'nissan','honda'=>'honda','hyundai'=>'hyundai','kia'=>'kia','ford'=>'ford','renault'=>'renault','peugeot'=>'peugeot','citroen'=>'citroen','fiat'=>'fiat','opel'=>'opel','volvo'=>'volvo','mazda'=>'mazda','subaru'=>'subaru','suzuki'=>'suzuki','mitsubishi'=>'mitsubishi','chevrolet'=>'chevrolet','dacia'=>'dacia','seat'=>'seat','porsche'=>'porsche','jaguar'=>'jaguar','land rover'=>'land-rover','mini'=>'mini','alfa romeo'=>'alfa-romeo','infiniti'=>'infiniti','lexus'=>'lexus','acura'=>'acura'];
+        $slug_aliases = ['volkswagen'=>'volkswagen','skoda'=>'skoda','mercedes-benz'=>'mercedes-benz','mercedes benz'=>'mercedes-benz','bmw'=>'bmw','audi'=>'audi','toyota'=>'toyota','nissan'=>'nissan','honda'=>'honda','hyundai'=>'hyundai','kia'=>'kia','ford'=>'ford','renault'=>'renault','peugeot'=>'peugeot','citroen'=>'citroen','fiat'=>'fiat','opel'=>'opel','vauxhall'=>'opel','general motors'=>'opel','gm'=>'opel','volvo'=>'volvo','mazda'=>'mazda','subaru'=>'subaru','suzuki'=>'suzuki','mitsubishi'=>'mitsubishi','chevrolet'=>'chevrolet','dacia'=>'dacia','seat'=>'seat','porsche'=>'porsche','jaguar'=>'jaguar','land rover'=>'land-rover','land-rover'=>'land-rover','mini'=>'mini','alfa romeo'=>'alfa-romeo','alfa-romeo'=>'alfa-romeo','infiniti'=>'infiniti','lexus'=>'lexus','acura'=>'acura','jeep'=>'jeep','dodge'=>'dodge','chrysler'=>'chrysler','ram'=>'ram'];
         $brand_slug = isset($slug_aliases[$make_lower]) ? $slug_aliases[$make_lower] : strtolower(str_replace(' ', '-', $make_lower));
     }
-    if (!$brand_slug && isset($wmi_map[$wmi])) { $brand_slug = $wmi_map[$wmi]; if (!$make) $make = ucfirst($brand_slug); }
+    // WMI tablosu NHTSA'yı override eder — Avrupa araçları için daha güvenilir
+    if (isset($wmi_map[$wmi])) {
+        $wmi_brand = $wmi_map[$wmi];
+        // NHTSA "general motors" döndürdüğünde WMI daha spesifik (opel vs chevy)
+        if (!$brand_slug || $brand_slug !== $wmi_brand) {
+            $brand_slug = $wmi_brand;
+            if (!$make) $make = ucfirst($wmi_brand);
+        }
+    }
     if (!$brand_slug) { echo json_encode(['error' => 'Bu VIN numarasi icin marka belirlenemedi.', 'vin' => $vin, 'wmi' => $wmi]); return; }
 
     $stmt = $pdo->prepare("SELECT DISTINCT generation_slug FROM parts WHERE brand_slug = :brand LIMIT 500");
