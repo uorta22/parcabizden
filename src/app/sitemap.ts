@@ -38,5 +38,26 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(),
   }))
 
-  return [...staticPages, ...productPages]
+  // Kategori landing sayfaları
+  const categoryPages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/parcalar/kaporta/arka-tampon`,            changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/kaporta/on-tampon`,              changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/kaporta/kaput`,                  changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/kaporta/camurluk`,               changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/suspansiyon/on-amortisor`,       changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/suspansiyon/arka-amortisor`,     changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/suspansiyon/rotil`,              changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/sogutma/fan-motoru`,             changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/sogutma/radyator`,               changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/sogutma/su-pompasi`,             changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/direksiyon/direksiyon-pompasi`,  changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/fren/fren-diski`,                changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/fren/fren-balatasi`,             changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/motor/alternator`,               changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/motor/mars-motoru`,              changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/elektrik/far`,                   changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+    { url: `${baseUrl}/parcalar/elektrik/stop-lambasi`,          changeFrequency: 'weekly', priority: 0.7, lastModified: new Date() },
+  ]
+
+  return [...staticPages, ...categoryPages, ...productPages]
 }
