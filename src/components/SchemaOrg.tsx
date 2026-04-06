@@ -56,10 +56,9 @@ export default function SchemaOrg({ type = 'localBusiness', breadcrumbs, showFaq
       ],
       priceRange: '$$',
       image: `${siteConfig.url}/opengraph-image`,
-      sameAs: [
-        siteConfig.social.instagram,
-        siteConfig.social.facebook,
-      ].filter(Boolean),
+      ...(([siteConfig.social.instagram, siteConfig.social.facebook].filter(Boolean).length > 0) && {
+        sameAs: [siteConfig.social.instagram, siteConfig.social.facebook].filter(Boolean),
+      }),
     }
     schemas.push(localSchema)
   }

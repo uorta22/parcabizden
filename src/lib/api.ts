@@ -634,9 +634,8 @@ export async function adminEnrichPart(data: {
 
 // ==================== Reviews ====================
 
-const REVIEWS_API = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/reviews.php`
-  : 'https://api.parcabizden.com.tr/reviews.php'
+// reviews.php her zaman Natro'da — dev'de de production URL kullan
+const REVIEWS_API = process.env.NEXT_PUBLIC_REVIEWS_URL || 'https://api.parcabizden.com.tr/reviews.php'
 
 export interface Review {
   id: number
