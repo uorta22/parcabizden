@@ -538,7 +538,7 @@ export default function HeroSection() {
                   {missingModel && brandModels.length > 0 && (
                     <div ref={modelSelectRef} className="mb-6 p-4 md:p-5 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn">
                       <p className="text-amber-700 text-sm font-medium mb-1">Aracınızın modelini seçin</p>
-                      <p className="text-gray-500 text-xs mb-3">NHTSA veritabanında bu VIN için model bilgisi bulunamadı.</p>
+                      <p className="text-gray-500 text-xs mb-3">Marka tespit edildi, model otomatik belirlenemedi. Aşağıdan aracınızın modelini seçin.</p>
                       <div className="relative mb-4">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input type="text" value={modelSearch} onChange={(e) => setModelSearch(e.target.value)} placeholder="Model ara..."
