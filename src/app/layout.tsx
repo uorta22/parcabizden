@@ -43,6 +43,10 @@ export const metadata: Metadata = {
     title: `${siteConfig.name} - Yedek Parça & Çıkma Parça`,
     description: siteConfig.description,
   },
+  icons: {
+    icon: '/icon',
+    apple: '/apple-icon',
+  },
   verification: {
     // Google Search Console dogrulama kodu — GSC'den alindiktan sonra buraya eklenmeli
     // google: 'YOUR_GOOGLE_VERIFICATION_CODE',
