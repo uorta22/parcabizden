@@ -295,17 +295,78 @@ function vin_decode($pdo) {
     }
     if (!$brand_slug) { echo json_encode(['error' => 'Bu VIN numarasi icin marka belirlenemedi.', 'vin' => $vin, 'wmi' => $wmi]); return; }
 
+    // ── Pozisyon 4 model kodu çözümü (NHTSA başarısız olduğunda) ──
+    // Her WMI için pozisyon 4 karakteri → model adı tablosu
+    $vin_model_codes = [
+        'W0L' => ['P'=>'Astra','T'=>'Astra','C'=>'Corsa','D'=>'Corsa','E'=>'Corsa','Z'=>'Zafira','X'=>'Insignia','M'=>'Meriva','B'=>'Mokka','A'=>'Agila','F'=>'Frontera','V'=>'Vivaro','0'=>'Combo'],
+        'W0V' => ['P'=>'Astra','C'=>'Corsa','Z'=>'Zafira','X'=>'Insignia'],
+        'WBA' => ['F'=>'5 Series','G'=>'5 Series','H'=>'1 Series','K'=>'3 Series','E'=>'3 Series','N'=>'3 Series','W'=>'7 Series','D'=>'3 Series','T'=>'2 Series','S'=>'6 Series','U'=>'X3','Y'=>'X5'],
+        'WBS' => ['F'=>'M5','K'=>'M3','G'=>'M5','W'=>'M7','B'=>'M2','D'=>'M4'],
+        'WBY' => ['1'=>'i3','2'=>'i3','3'=>'i4','4'=>'i4','8'=>'iX'],
+        'WVW' => ['F'=>'Golf','Z'=>'Passat','G'=>'Golf','H'=>'Polo','B'=>'Golf','A'=>'Golf','Y'=>'Passat','E'=>'Bora','K'=>'Touareg','N'=>'Tiguan','C'=>'Caddy'],
+        'WV1' => ['Z'=>'Transporter','V'=>'Caravelle'],
+        'WDB' => ['C'=>'C-Class','E'=>'E-Class','S'=>'S-Class','G'=>'G-Class','V'=>'V-Class','A'=>'A-Class','B'=>'B-Class'],
+        'WDD' => ['C'=>'C-Class','E'=>'E-Class','S'=>'S-Class','G'=>'G-Class','A'=>'A-Class','B'=>'B-Class','N'=>'GLA','X'=>'GLE'],
+        'W1K' => ['C'=>'C-Class','E'=>'E-Class','A'=>'A-Class','B'=>'B-Class'],
+        'WAU' => ['A'=>'A4','B'=>'A3','C'=>'A6','H'=>'A8','F'=>'A5','G'=>'A7','K'=>'Q5','N'=>'Q3','T'=>'TT','V'=>'Q7','Z'=>'Q2'],
+        'WUA' => ['Z'=>'R8','T'=>'TT','B'=>'A3','S'=>'S3'],
+        'TMB' => ['A'=>'Octavia','B'=>'Fabia','C'=>'Superb','H'=>'Kodiaq','E'=>'Rapid','F'=>'Scala','G'=>'Kamiq'],
+        'VSS' => ['Z'=>'Ibiza','B'=>'Leon','C'=>'Toledo','D'=>'Arona','E'=>'Ateca'],
+        'VF1' => ['B'=>'Clio','C'=>'Megane','D'=>'Laguna','E'=>'Espace','K'=>'Kadjar','H'=>'Captur','S'=>'Scenic','T'=>'Talisman'],
+        'VF3' => ['A'=>'206','B'=>'207','C'=>'208','D'=>'307','E'=>'308','F'=>'407','H'=>'3008','K'=>'2008','L'=>'508'],
+        'VF7' => ['A'=>'Xsara','B'=>'C3','C'=>'C4','D'=>'C5','H'=>'C3 Aircross','K'=>'C5 Aircross'],
+        'ZFA' => ['A'=>'Punto','B'=>'Bravo','C'=>'500','E'=>'Tipo','K'=>'Stilo'],
+        'ZFF' => ['A'=>'Ferrari','G'=>'Ferrari'],
+        'JTD' => ['B'=>'Camry','E'=>'Corolla','F'=>'Hilux','G'=>'Land Cruiser','H'=>'Yaris','K'=>'RAV4','N'=>'C-HR'],
+        'JHM' => ['B'=>'Civic','C'=>'Accord','E'=>'CR-V','F'=>'Jazz','G'=>'HR-V'],
+        'KMH' => ['C'=>'i20','D'=>'i30','E'=>'Elantra','F'=>'Sonata','G'=>'Tucson','J'=>'Santa Fe','N'=>'IONIQ'],
+        'KNA' => ['C'=>'Ceed','D'=>'Sportage','F'=>'Sorento','G'=>'Stonic','H'=>'Niro'],
+        'JN1' => ['A'=>'Micra','B'=>'Note','C'=>'Juke','E'=>'Qashqai','F'=>'X-Trail','H'=>'Almera'],
+        'SAL' => ['D'=>'Discovery','H'=>'Range Rover','J'=>'Freelander','L'=>'Defender','N'=>'Range Rover Sport'],
+        'YV1' => ['B'=>'S40','C'=>'V40','D'=>'S60','F'=>'V60','H'=>'V70','J'=>'S80','K'=>'XC60','L'=>'XC90'],
+        'UU1' => ['S'=>'Sandero','L'=>'Logan','H'=>'Duster','K'=>'Duster'],
+        '1FA' => ['F'=>'Mustang','B'=>'Escape'],
+        'WF0' => ['N'=>'Focus','G'=>'Fiesta','F'=>'Focus','T'=>'Transit','R'=>'Mondeo','Y'=>'Ka'],
+    ];
+
+    $pos4 = isset($vin[3]) ? strtoupper($vin[3]) : '';
+    if (!$model && $pos4 && isset($vin_model_codes[$wmi][$pos4])) {
+        $model = $vin_model_codes[$wmi][$pos4];
+    }
+
     $stmt = $pdo->prepare("SELECT DISTINCT generation_slug FROM parts WHERE brand_slug = :brand LIMIT 500");
     $stmt->execute([':brand' => $brand_slug]);
     $db_gens = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
     $matched_gens = [];
-    if ($model && strlen($model) > 0 && count($db_gens) > 0) {
+
+    // Katman 1: Model adı + yıl aralığı eşleştirmesi
+    if ($model && $model_year && count($db_gens) > 0) {
         $model_lower = strtolower($model);
-        $model_slug = str_replace(' ', '-', $model_lower);
+        $model_slug  = str_replace(' ', '-', $model_lower);
         foreach ($db_gens as $gen) {
             $gen_lower = strtolower($gen);
-            if (strpos($gen_lower, $model_slug) !== false || strpos($gen_lower, $model_lower) !== false) $matched_gens[] = $gen;
+            $name_ok = strpos($gen_lower, $model_slug) !== false || strpos($gen_lower, $model_lower) !== false;
+            if (!$name_ok) continue;
+            // Generation slug'dan yıl aralığı çıkar (ör. "astra-j-2009-2015" → 2009-2015)
+            preg_match('/(\d{4})(?:[^\d]+(\d{4}))?/', $gen, $ym);
+            $gen_start = isset($ym[1]) ? (int)$ym[1] : 0;
+            $gen_end   = isset($ym[2]) && $ym[2] ? (int)$ym[2] : ($gen_start ? $gen_start + 10 : 9999);
+            if (!$gen_start || ($model_year >= $gen_start && $model_year <= $gen_end)) {
+                $matched_gens[] = $gen;
+            }
+        }
+    }
+
+    // Katman 2: Sadece model adı eşleştirmesi (yıl yoksa)
+    if (empty($matched_gens) && $model && count($db_gens) > 0) {
+        $model_lower = strtolower($model);
+        $model_slug  = str_replace(' ', '-', $model_lower);
+        foreach ($db_gens as $gen) {
+            $gen_lower = strtolower($gen);
+            if (strpos($gen_lower, $model_slug) !== false || strpos($gen_lower, $model_lower) !== false) {
+                $matched_gens[] = $gen;
+            }
         }
     }
 
