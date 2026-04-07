@@ -5,6 +5,7 @@
  * search_oem, get_brands, get_generations, vin_decode
  *
  * Bağımlılık: Yok (bağımsız modül)
+ * Güncelleme: VIN pos4 model decode tablosu eklendi
  */
 
 function clean_text($text) {
