@@ -201,6 +201,16 @@ export default function HeroSection() {
     } else if (brandSlug && gens.length > 1) {
       setGenerations(gens)
       setPartsView('generations')
+    } else if (brandSlug && gens.length === 0) {
+      // Model tespit edildi ama DB'de bu model için parça yok — kullanıcıya mevcut modelleri göster
+      setMissingModel(true)
+      try {
+        const treeRes = await fetch('/data/vehicle-tree.json')
+        const tree = await treeRes.json()
+        const models = findBrandModels(tree, data.make)
+        setBrandModels(models)
+      } catch { /* ignore */ }
+      setTimeout(() => modelSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
     } else if (!brandSlug && data.model) {
       setGenerations([])
     }
