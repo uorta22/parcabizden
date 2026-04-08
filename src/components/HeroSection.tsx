@@ -202,25 +202,43 @@ export default function HeroSection() {
       setGenerations(gens)
       setPartsView('generations')
     } else if (brandSlug && gens.length === 0) {
-      // Model tespit edildi ama DB'de bu model için parça yok — vehicle-tree'den auto-match dene
+      // DB'de bu model için generation yok — vehicle-tree'den eşleşen modeli bul
       try {
         const treeRes = await fetch('/data/vehicle-tree.json')
         const tree = await treeRes.json()
         const models = findBrandModels(tree, data.make)
-        // VIN'den gelen model ismiyle tree'de eşleşen var mı?
-        const detectedModel = data.model ?? ''
-        const autoMatch = detectedModel
-          ? models.find(m => m.name.toLowerCase().includes(detectedModel.toLowerCase()) || detectedModel.toLowerCase().includes(cleanModelName(m.name).toLowerCase()))
+        const detectedModel = (data.model ?? '').toLowerCase()
+        // Tree'deki model adının baş kelimesi VIN modeliyle eşleşiyor mu? (ör. "Astra H..." → "astra")
+        const vinYear = parseInt(data.year as string) || 0
+        const matchingModels = detectedModel
+          ? models.filter(m => {
+              const treeName = m.name.toLowerCase()
+              const treeBase = treeName.split(/[\s(]/)[0] // "astra h (2006->)" → "astra"
+              return treeBase === detectedModel || treeName.startsWith(detectedModel + ' ') || treeName.startsWith(detectedModel + '(')
+            })
+          : []
+        // Yıl bilgisi varsa VIN yılına en yakın modeli seç, yoksa ilkini al
+        const autoMatch = matchingModels.length > 0
+          ? (vinYear > 0
+              ? matchingModels.reduce((best, m) => {
+                  const yr = parseModelYear(m.name)
+                  const bestYr = parseModelYear(best.name)
+                  return Math.abs(yr - vinYear) < Math.abs(bestYr - vinYear) ? m : best
+                })
+              : matchingModels[0])
           : null
         if (autoMatch) {
-          // Tree'de tam eşleşme var — otomatik seç, kullanıcıya model seçtirme
+          // Eşleşme bulundu — handleModelSelect ile seç (state güncellemelerini tek yerden yap)
           const updated = { ...data, model: autoMatch.name }
           setVehicleInfo(updated)
+          setMissingModel(false)
+          setModelSearch('')
           if (autoMatch.image) setSelectedModelImage(autoMatch.image)
-          setGenerations([])
+          setSelectedGen(null)
+          setApiCategories([])
           setPartsView('categories')
         } else {
-          // Eşleşme yok — model seçim panelini aç, search box'a VIN modelini yaz
+          // Eşleşme yok — paneli aç ve arama kutusuna VIN modelini yaz (kullanıcı filtreli görür)
           setBrandModels(models)
           setMissingModel(true)
           if (detectedModel) setModelSearch(detectedModel)
