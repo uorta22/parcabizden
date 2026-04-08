@@ -31,7 +31,7 @@ function findBrandModels(tree: Record<string, { body_types: Record<string, { nam
           models.push({ name: m.name, bodyType, image: m.image })
         }
       }
-      models.sort((a, b) => parseModelYear(a.name) - parseModelYear(b.name))
+      models.sort((a, b) => a.name.localeCompare(b.name, 'tr'))
       return models
     }
   }
@@ -202,15 +202,34 @@ export default function HeroSection() {
       setGenerations(gens)
       setPartsView('generations')
     } else if (brandSlug && gens.length === 0) {
-      // Model tespit edildi ama DB'de bu model için parça yok — kullanıcıya mevcut modelleri göster
-      setMissingModel(true)
+      // Model tespit edildi ama DB'de bu model için parça yok — vehicle-tree'den auto-match dene
       try {
         const treeRes = await fetch('/data/vehicle-tree.json')
         const tree = await treeRes.json()
         const models = findBrandModels(tree, data.make)
-        setBrandModels(models)
-      } catch { /* ignore */ }
-      setTimeout(() => modelSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+        // VIN'den gelen model ismiyle tree'de eşleşen var mı?
+        const detectedModel = data.model ?? ''
+        const autoMatch = detectedModel
+          ? models.find(m => m.name.toLowerCase().includes(detectedModel.toLowerCase()) || detectedModel.toLowerCase().includes(cleanModelName(m.name).toLowerCase()))
+          : null
+        if (autoMatch) {
+          // Tree'de tam eşleşme var — otomatik seç, kullanıcıya model seçtirme
+          const updated = { ...data, model: autoMatch.name }
+          setVehicleInfo(updated)
+          if (autoMatch.image) setSelectedModelImage(autoMatch.image)
+          setGenerations([])
+          setPartsView('categories')
+        } else {
+          // Eşleşme yok — model seçim panelini aç, search box'a VIN modelini yaz
+          setBrandModels(models)
+          setMissingModel(true)
+          if (detectedModel) setModelSearch(detectedModel)
+          setTimeout(() => modelSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+        }
+      } catch {
+        setMissingModel(true)
+        setTimeout(() => modelSelectRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100)
+      }
     } else if (!brandSlug && data.model) {
       setGenerations([])
     }
