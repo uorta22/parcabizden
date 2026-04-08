@@ -58,6 +58,42 @@ export function validateVIN(vin: string): boolean {
   return vin.length === 17 && !/[IOQ]/i.test(vin) && /^[A-HJ-NPR-Z0-9]+$/i.test(vin)
 }
 
+// WMI → pozisyon 4 karakter → model adı (PHP deploy olmasa bile frontend'de çalışır)
+const WMI_MODEL_CODES: Record<string, Record<string, string>> = {
+  'W0L': { P:'Astra', T:'Astra', C:'Corsa', D:'Corsa', E:'Corsa', Z:'Zafira', X:'Insignia', M:'Meriva', B:'Mokka', A:'Agila', F:'Frontera', V:'Vivaro', '0':'Combo' },
+  'W0V': { P:'Astra', C:'Corsa', Z:'Zafira', X:'Insignia' },
+  'WBA': { F:'5 Series', G:'5 Series', H:'1 Series', K:'3 Series', E:'3 Series', N:'3 Series', W:'7 Series', D:'3 Series', T:'2 Series', S:'6 Series', U:'X3', Y:'X5' },
+  'WBS': { F:'M5', K:'M3', G:'M5', B:'M2', D:'M4' },
+  'WBY': { '1':'i3', '2':'i3', '3':'i4', '4':'i4', '8':'iX' },
+  'WVW': { F:'Golf', Z:'Passat', G:'Golf', H:'Polo', B:'Golf', A:'Golf', Y:'Passat', E:'Bora', K:'Touareg', N:'Tiguan', C:'Caddy' },
+  'WDB': { C:'C-Class', E:'E-Class', S:'S-Class', G:'G-Class', V:'V-Class', A:'A-Class', B:'B-Class' },
+  'WDD': { C:'C-Class', E:'E-Class', S:'S-Class', G:'G-Class', A:'A-Class', B:'B-Class', N:'GLA', X:'GLE' },
+  'W1K': { C:'C-Class', E:'E-Class', A:'A-Class', B:'B-Class' },
+  'WAU': { A:'A4', B:'A3', C:'A6', H:'A8', F:'A5', G:'A7', K:'Q5', N:'Q3', T:'TT', V:'Q7', Z:'Q2' },
+  'WUA': { Z:'R8', T:'TT', B:'A3', S:'S3' },
+  'TMB': { A:'Octavia', B:'Fabia', C:'Superb', H:'Kodiaq', E:'Rapid', F:'Scala', G:'Kamiq' },
+  'VSS': { Z:'Ibiza', B:'Leon', C:'Toledo', D:'Arona', E:'Ateca' },
+  'VF1': { B:'Clio', C:'Megane', D:'Laguna', E:'Espace', K:'Kadjar', H:'Captur', S:'Scenic', T:'Talisman' },
+  'VF3': { A:'206', B:'207', C:'208', D:'307', E:'308', F:'407', H:'3008', K:'2008', L:'508' },
+  'VF7': { A:'Xsara', B:'C3', C:'C4', D:'C5', H:'C3 Aircross', K:'C5 Aircross' },
+  'ZFA': { A:'Punto', B:'Bravo', C:'500', E:'Tipo', K:'Stilo' },
+  'JTD': { B:'Camry', E:'Corolla', F:'Hilux', G:'Land Cruiser', H:'Yaris', K:'RAV4', N:'C-HR' },
+  'JHM': { B:'Civic', C:'Accord', E:'CR-V', F:'Jazz', G:'HR-V' },
+  'KMH': { C:'i20', D:'i30', E:'Elantra', F:'Sonata', G:'Tucson', J:'Santa Fe', N:'IONIQ' },
+  'KNA': { C:'Ceed', D:'Sportage', F:'Sorento', G:'Stonic', H:'Niro' },
+  'JN1': { A:'Micra', B:'Note', C:'Juke', E:'Qashqai', F:'X-Trail', H:'Almera' },
+  'SAL': { D:'Discovery', H:'Range Rover', J:'Freelander', L:'Defender', N:'Range Rover Sport' },
+  'YV1': { B:'S40', C:'V40', D:'S60', F:'V60', H:'V70', J:'S80', K:'XC60', L:'XC90' },
+  'UU1': { S:'Sandero', L:'Logan', H:'Duster', K:'Duster' },
+  'WF0': { N:'Focus', G:'Fiesta', F:'Focus', T:'Transit', R:'Mondeo', Y:'Ka' },
+}
+
+export function guessModelFromVIN(vin: string): string {
+  const wmi = vin.slice(0, 3).toUpperCase()
+  const pos4 = vin[3]?.toUpperCase() ?? ''
+  return WMI_MODEL_CODES[wmi]?.[pos4] ?? ''
+}
+
 export async function decodeVIN(vin: string): Promise<{ data?: VehicleInfo; error?: string }> {
   try {
     // 1. Önce kendi PHP API'mizi çağır (NHTSA + WMI + VIN Pattern Matching)
@@ -80,6 +116,10 @@ export async function decodeVIN(vin: string): Promise<{ data?: VehicleInfo; erro
       let resolvedModel = model
       if (!resolvedModel && apiData.generations && apiData.generations.length > 0) {
         resolvedModel = apiData.generations[0].generation_name || ''
+      }
+      // Hala boşsa VIN'den pos4 tablosuyla türet (PHP deploy bağımsız fallback)
+      if (!resolvedModel) {
+        resolvedModel = guessModelFromVIN(vin)
       }
 
       const vehicleInfo: VehicleInfo = {
