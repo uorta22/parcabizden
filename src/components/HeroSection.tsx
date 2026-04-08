@@ -31,7 +31,9 @@ function findBrandModels(tree: Record<string, { body_types: Record<string, { nam
           models.push({ name: m.name, bodyType, image: m.image })
         }
       }
-      models.sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+      // Parantez ve yıl bilgisini sıralamadan çıkar: "Astra H HB (2004->)" → "Astra H HB"
+      const sortKey = (name: string) => name.replace(/\s*\(.*$/, '').trim().toLowerCase()
+      models.sort((a, b) => sortKey(a.name).localeCompare(sortKey(b.name), 'tr'))
       return models
     }
   }

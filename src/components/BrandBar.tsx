@@ -122,12 +122,19 @@ export default function BrandBar() {
     closeDropdown()
   }
 
-  // Debounce: marka hover
+  // Debounce: marka hover — mouseLeave'de iptal et
   const brandDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncedSelectBrand = useCallback((slug: string, name: string) => {
     if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current)
-    brandDebounceRef.current = setTimeout(() => selectBrand(slug, name), 200)
+    brandDebounceRef.current = setTimeout(() => selectBrand(slug, name), 250)
   }, [selectBrand])
+
+  const cancelDebounce = useCallback(() => {
+    if (brandDebounceRef.current) {
+      clearTimeout(brandDebounceRef.current)
+      brandDebounceRef.current = null
+    }
+  }, [])
 
   const popularBrands = useMemo(() =>
     brands.filter(b => POPULAR_SLUGS.includes(b.slug))
@@ -142,7 +149,7 @@ export default function BrandBar() {
   if (!fetched) return <div className="h-9" />
 
   return (
-    <div ref={containerRef} className="relative" onMouseLeave={closeDropdown}>
+    <div ref={containerRef} className="relative" onMouseLeave={() => { cancelDebounce(); closeDropdown() }}>
       {/* ── Yatay Marka Tabları ── */}
       <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {popularBrands.map(b => {
@@ -152,6 +159,7 @@ export default function BrandBar() {
             <button
               key={b.slug}
               onMouseEnter={() => debouncedSelectBrand(b.slug, name)}
+              onMouseLeave={cancelDebounce}
               onClick={() => handleBrandOnlyClick(b.slug, name)}
               className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold tracking-wide rounded-md transition-all whitespace-nowrap ${
                 isActive
