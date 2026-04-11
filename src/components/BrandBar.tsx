@@ -124,9 +124,19 @@ export default function BrandBar() {
 
   // Debounce: marka hover — mouseLeave'de iptal et
   const brandDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Son mousemove pozisyonu ve zamanı — hız tespiti için
+  const lastMouseMoveRef = useRef<{ x: number; y: number; t: number } | null>(null)
+
   const debouncedSelectBrand = useCallback((slug: string, name: string) => {
     if (brandDebounceRef.current) clearTimeout(brandDebounceRef.current)
-    brandDebounceRef.current = setTimeout(() => selectBrand(slug, name), 250)
+
+    // Hızlı geçiş tespiti: son 80ms içinde fare hareket etmişse kullanıcı geçiyor demektir
+    // (ör. başka butona tıklayıp aşağı kayarken marka barından geçmek)
+    // Bu durumda dropdown açma — kullanıcı kasıtlı hover etmiyordur
+    const last = lastMouseMoveRef.current
+    if (last && Date.now() - last.t < 80) return
+
+    brandDebounceRef.current = setTimeout(() => selectBrand(slug, name), 400)
   }, [selectBrand])
 
   const cancelDebounce = useCallback(() => {
@@ -149,7 +159,12 @@ export default function BrandBar() {
   if (!fetched) return <div className="h-9" />
 
   return (
-    <div ref={containerRef} className="relative" onMouseLeave={() => { cancelDebounce(); closeDropdown() }}>
+    <div
+      ref={containerRef}
+      className="relative"
+      onMouseMove={(e) => { lastMouseMoveRef.current = { x: e.clientX, y: e.clientY, t: Date.now() } }}
+      onMouseLeave={() => { cancelDebounce(); closeDropdown() }}
+    >
       {/* ── Yatay Marka Tabları ── */}
       <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hide -mx-1 px-1">
         {popularBrands.map(b => {
