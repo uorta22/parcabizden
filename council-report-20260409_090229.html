@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Council Raporu — ParcaBizden Production Readiness</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8f9fa; color: #1a1a2e; line-height: 1.6; }
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  /* Header */
+  .header { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+  .header-badge { display: inline-block; background: #1a1a2e; color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 4px 10px; border-radius: 4px; margin-bottom: 16px; }
+  .header h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 8px; }
+  .header .question { font-size: 15px; color: #6b7280; border-left: 3px solid #e5e7eb; padding-left: 14px; margin-top: 12px; }
+  .header .meta { font-size: 12px; color: #9ca3af; margin-top: 14px; }
+
+  /* Verdict — big card */
+  .verdict { background: #fff; border: 2px solid #1a1a2e; border-radius: 12px; overflow: hidden; margin-bottom: 24px; }
+  .verdict-header { background: #1a1a2e; color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 10px; }
+  .verdict-header h2 { font-size: 15px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+  .verdict-body { padding: 24px; }
+
+  /* Sections */
+  .section { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+  .section-header { padding: 14px 20px; display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none; }
+  .section-header:hover { background: #f9fafb; }
+  .section-title { font-size: 14px; font-weight: 600; flex: 1; }
+  .section-icon { font-size: 18px; width: 28px; text-align: center; }
+  .toggle-icon { color: #9ca3af; font-size: 12px; transition: transform 0.2s; }
+  .section-body { padding: 20px; border-top: 1px solid #f3f4f6; display: none; }
+  .section-body.open { display: block; }
+
+  /* Verdict sections */
+  .vblock { margin-bottom: 28px; }
+  .vblock:last-child { margin-bottom: 0; }
+  .vblock h3 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin-bottom: 12px; }
+  .vblock p, .vblock li { font-size: 14px; color: #374151; line-height: 1.75; }
+  .vblock ul { padding-left: 20px; }
+  .vblock ul li { margin-bottom: 6px; }
+
+  /* Alert boxes */
+  .alert { border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; font-size: 14px; line-height: 1.6; }
+  .alert-red { background: #fef2f2; border: 1px solid #fecaca; color: #991b1b; }
+  .alert-orange { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  .alert-green { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+  .alert-blue { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; }
+  .alert strong { font-weight: 700; }
+
+  /* First action */
+  .first-action { background: #1a1a2e; color: #fff; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
+  .first-action .label { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #9ca3af; margin-bottom: 10px; }
+  .first-action p { font-size: 16px; font-weight: 600; line-height: 1.6; }
+  .first-action code { background: rgba(255,255,255,0.12); padding: 2px 7px; border-radius: 4px; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 13px; }
+
+  /* Agreement grid */
+  .advisor-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px; }
+  .advisor-card { border-radius: 8px; padding: 10px 8px; text-align: center; border: 1px solid transparent; }
+  .advisor-card .name { font-size: 11px; font-weight: 600; margin-bottom: 6px; }
+  .advisor-card .status { font-size: 18px; }
+  .advisor-card.strong { background: #f0fdf4; border-color: #86efac; }
+  .advisor-card.medium { background: #fffbeb; border-color: #fde68a; }
+  .advisor-card.weak { background: #fef2f2; border-color: #fca5a5; }
+
+  /* Advisor responses */
+  .advisor-response { border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+  .advisor-response .advisor-name { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .advisor-response p { font-size: 13px; line-height: 1.7; }
+  .resp-contrarian { background: #fef2f2; border-left: 3px solid #ef4444; }
+  .resp-first { background: #f0f9ff; border-left: 3px solid #0ea5e9; }
+  .resp-expansionist { background: #f0fdf4; border-left: 3px solid #22c55e; }
+  .resp-outsider { background: #faf5ff; border-left: 3px solid #a855f7; }
+  .resp-executor { background: #fff7ed; border-left: 3px solid #f97316; }
+
+  /* Peer reviews */
+  .review-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px; margin-bottom: 10px; }
+  .review-card h4 { font-size: 12px; font-weight: 700; color: #6b7280; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .review-card p { font-size: 13px; color: #374151; line-height: 1.65; }
+
+  code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; background: #f3f4f6; padding: 1px 5px; border-radius: 3px; color: #be185d; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-right: 4px; }
+  .tag-red { background: #fee2e2; color: #b91c1c; }
+  .tag-orange { background: #ffedd5; color: #c2410c; }
+  .tag-gray { background: #f3f4f6; color: #4b5563; }
+
+  .footer { text-align: center; font-size: 12px; color: #9ca3af; margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">LLM Council · 5 Danışman · 5 Peer Review</div>
+    <h1>ParcaBizden — Production Readiness Değerlendirmesi</h1>
+    <div class="question">
+      Soru: Bu proje production-ready midir? Hatalı ya da eksik bir şey kaldı mı?
+    </div>
+    <div class="meta">9 Nisan 2026 · Next.js 14 + PHP backend · Vercel + Natro deploy</div>
+  </div>
+
+  <!-- Advisor Agreement Visual -->
+  <div class="section" style="margin-bottom:16px;">
+    <div class="section-header" onclick="toggle(this)">
+      <span class="section-icon">📊</span>
+      <span class="section-title">Danışman Pozisyon Haritası</span>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-body open" style="padding:16px 20px;">
+      <div class="advisor-grid">
+        <div class="advisor-card weak">
+          <div class="name">Contrarian</div>
+          <div class="status">🔴</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:4px;">Güvenlik dekoratif</div>
+        </div>
+        <div class="advisor-card medium">
+          <div class="name">First Principles</div>
+          <div class="status">🟡</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:4px;">Backend korumalı mı?</div>
+        </div>
+        <div class="advisor-card strong">
+          <div class="name">Expansionist</div>
+          <div class="status">🟢</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:4px;">Pazar fırsatı büyük</div>
+        </div>
+        <div class="advisor-card weak">
+          <div class="name">Outsider</div>
+          <div class="status">🔴</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:4px;">Admin çökmüş</div>
+        </div>
+        <div class="advisor-card medium">
+          <div class="name">Executor</div>
+          <div class="status">🟡</div>
+          <div style="font-size:10px;color:#6b7280;margin-top:4px;">2 şey gerçekten bozuk</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#6b7280;text-align:center;">5/5 peer reviewer en güçlü yanıt olarak Executor'ı seçti · En büyük kör nokta: Expansionist (pazar cevabı verdi, audit yapmadı)</p>
+    </div>
+  </div>
+
+  <!-- Chairman Verdict -->
+  <div class="verdict">
+    <div class="verdict-header">
+      <span>⚖️</span>
+      <h2>Başkan Kararı</h2>
+    </div>
+    <div class="verdict-body">
+
+      <div class="vblock">
+        <h3>Konseyin Anlaştığı Noktalar</h3>
+        <div class="alert alert-red">
+          <strong>In-memory rate limit production'da çalışmıyor.</strong> 3/5 danışman bağımsız olarak aynı noktaya ulaştı. Vercel serverless'ta her request farklı instance'da çalışabilir, <code>Map()</code> tabanlı rate limit sıfırlanır. Bu "kötü tasarım" değil — <strong>işlevsiz kod</strong>. Sahte güvenlik algısı oluşturur.
+        </div>
+        <div class="alert alert-orange">
+          <strong>Admin kontrol yüzeyi riskli.</strong> Contrarian, Outsider, First Principles üçü de işaret etti. Anlaşmazlık "ne kadar riskli" üzerinde; "risk var mı" üzerinde konsensüs var.
+        </div>
+        <div class="alert alert-orange">
+          <strong>JWT localStorage'da XSS'e açık.</strong> Birden fazla danışman işaret etti. "Kötü pratik" kategorisinde konsensüs var.
+        </div>
+      </div>
+
+      <div class="vblock">
+        <h3>Konseyin Ayrıştığı Noktalar</h3>
+        <p style="margin-bottom:10px;"><strong>Admin guard UI tercihi mi, güvenlik açığı mı?</strong></p>
+        <ul>
+          <li><strong>Contrarian + Outsider:</strong> Production blocker. Client-side admin guard = güvenlik yok.</li>
+          <li><strong>First Principles + Executor:</strong> Asıl soru <code>requireAdmin()</code> fonksiyonunun tüm PHP endpoint'lerinde çağrılıp çağrılmadığı. Backend korumalıysa frontend guard sadece UX katmanı olur.</li>
+        </ul>
+        <div class="alert alert-blue" style="margin-top:12px;">
+          <strong>Gerçek cevap:</strong> İkisi de haklı, farklı şeyleri konuşuyorlar. Frontend'deki admin kontrolü zaten korunmaması gereken şey. Asıl mesele PHP API'nin <code>Authorization</code> header'ı doğrulamadan işlem yapıp yapmadığı — ve bu henüz doğrulanmadı.
+        </div>
+      </div>
+
+      <div class="vblock">
+        <h3>Peer Review'ın Yakaladığı Kör Noktalar</h3>
+        <div class="alert alert-red">
+          <strong>PHP backend deployment pipeline hiç sorgulanmadı.</strong> Bu konseyin en büyük başarısızlığı. Natro'ya git push ile auto-deploy yapılıyor — ama:
+          <ul style="margin-top:8px;">
+            <li><code>display_errors</code> production'da açık mı? (Türkiye shared hosting'lerde sıkça açık gelir)</li>
+            <li>DB credentials <code>config.php</code> içinde mi, <code>.env</code>'de mi? <code>.env</code> web root dışında mı?</li>
+            <li>PHP dosyaları <code>public_html</code> altında mı? <code>vendor/</code> web'den erişilebilir mi?</li>
+            <li>Migration'lar otomatik mı? Zero-downtime yok — deploy sırasında yarım kalan request'ler ne olur?</li>
+          </ul>
+          <br>Eğer <code>config.php</code> web root içindeyse ve <code>display_errors = On</code> ise, diğer tüm güvenlik katmanlarının önemi kalmaz.
+        </div>
+        <div class="alert alert-orange">
+          <strong><code>requireAdmin()</code> coverage audit yapılmadı.</strong> Fonksiyonun var olması yeterli değil. Tüm admin endpoint'lerinde gerçekten çağrılıp çağrılmadığı grep ile doğrulanmadı.
+        </div>
+      </div>
+
+      <div class="vblock">
+        <h3>Öneri</h3>
+        <div class="alert alert-blue">
+          <strong>ParcaBizden şu haliyle tam production-ready değil — ama 2 somut fix ile MVP seviyesine çıkabilir.</strong>
+          <br><br>
+          Bu platform bir Türkiye pazarı MVP'si, Fortune 500 uygulaması değil. Çökmemesi ve kullanıcı verisini ifşa etmemesi gerekiyor.
+        </div>
+        <p style="margin-bottom:8px;"><span class="tag tag-red">Gerçekten kırık — düzelt</span></p>
+        <ul style="margin-bottom:16px;">
+          <li>Rate limit — Vercel KV / Upstash Redis ile değiştir, yoksa tamamen kaldır (sahte güvenlikten daha iyi)</li>
+          <li>PHP backend audit — <code>display_errors</code>, web root yapısı, <code>config.php</code> konumu</li>
+        </ul>
+        <p style="margin-bottom:8px;"><span class="tag tag-orange">Kabul edilebilir risk — belgele, sonra düzelt</span></p>
+        <ul style="margin-bottom:16px;">
+          <li>JWT localStorage → HttpOnly cookie: bir sprint işi, MVP'yi engellemez</li>
+          <li>Admin frontend guard: backend korumalıysa UX tercihi</li>
+          <li>Sepet cross-device sync: scope dışı özellik</li>
+        </ul>
+        <p style="margin-bottom:8px;"><span class="tag tag-gray">Küçük fix — bugün yap (10 dk)</span></p>
+        <ul>
+          <li>Sosyal medya boş <code>href=""</code> linkleri: ya doldur ya kaldır</li>
+          <li><code>/tmp @mkdir</code> hata suppress'ini kaldır, logla</li>
+          <li>GSC doğrulama kodunu aktif et</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- First Action -->
+  <div class="first-action">
+    <div class="label">İlk Yapılacak Tek Şey</div>
+    <p>PHP backend'de <code>grep -r "requireAdmin" php-backend/</code> komutunu çalıştır ve her admin işlemi yapan endpoint'in bu fonksiyonu çağırdığını doğrula. Rate limit fix'inden de, JWT'den de, KVKK'dan da önce, admin API'nin korumasız olup olmadığını bilmeden diğer her şey ikincil kalır.</p>
+  </div>
+
+  <!-- Advisor Responses (collapsible) -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span class="section-icon">🧠</span>
+      <span class="section-title">5 Danışman Tam Yanıtları</span>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-body">
+      <div class="advisor-response resp-contrarian">
+        <div class="advisor-name" style="color:#b91c1c;">🔴 Contrarian</div>
+        <p>Bu sistemin en kritik güvenlik açığı şu: admin yetkisi client-side'da kontrol ediliyor. <code>user.is_admin</code> frontend'de set ediliyorsa, herhangi biri localStorage'ı editleyerek admin paneline erişebilir. Eğer PHP backend her endpoint'te token'ı parse edip <code>is_admin</code> claim'ini doğrulamıyorsa, admin API'larının tamamı açık demektir. Bu production blocker'dır.</p>
+        <p style="margin-top:8px;">Elle yazılmış HS256 implementasyonu ikinci kritik sorun. JWT kütüphaneleri yıllar içinde timing attack, algorithm confusion (<code>"alg": "none"</code> bypass), key confusion gibi onlarca CVE'den geçti. <code>/tmp</code> tabanlı rate limiting paylaşımlı hosting ortamında anlamsız. In-memory Map ile Next.js rate limiting Vercel'de çalışmaz. <code>email_verified = 1</code> hardcoded. Sepet localStorage'da cross-device yok. Güvenlik katmanlarının çoğu gerçek değil, dekoratif. Saldırı yüzeyi düşündüğünden çok daha geniş.</p>
+      </div>
+
+      <div class="advisor-response resp-first">
+        <div class="advisor-name" style="color:#0369a1;">🔵 First Principles</div>
+        <p>"Production-ready mı?" sorusu, production'ın ne anlama geldiğini tanımlamadan anlamsız. Asıl soru: Bu sistemin başarısızlık modu nedir ve o başarısızlık kabul edilebilir mi?</p>
+        <p style="margin-top:8px;">Admin paneli client-side guard ile korunuyor — bu bir güvenlik mekanizması değil, bir UI tercihi. Backend'de <code>is_admin</code> kontrolü yoksa, URL'yi bilen herhangi biri admin işlemlerini doğrudan API'ye atarak yapabilir. Bu mimari düşük hacimli MVP için kabul edilebilir risk profili taşıyabilir — ama bu bilinçli bir karar olmalı, varsayım değil. Asıl soru: Admin API endpoint'leri server-side'da korumalı mı? Cevap evet ise güvenlik riski yarıya düşer.</p>
+      </div>
+
+      <div class="advisor-response resp-expansionist">
+        <div class="advisor-name" style="color:#15803d;">🟢 Expansionist</div>
+        <p>Bu projenin gerçek riski "production-ready değil" değil — "çok küçük düşünülmüş". Türkiye'de 15 milyon araç var. Parça pazarı 80+ milyar TL. Sen bu pazarın kapı ziline dokunuyorsun ama içeri girmiyorsun.</p>
+        <p style="margin-top:8px;">Multi-part request flow fırsatı var. Admin zayıflığını tedarikçi paneline dönüştür — gerçek RBAC gelir. Rate limit datası trend analizi için değerli: hangi parça nerede aranıyor? Tedarikçilere sat. En büyük eksik: tedarikçi tarafı yok. Platform tek taraflı. İki taraflı marketplace'e geçiş, mevcut altyapının 3x değerinde.</p>
+      </div>
+
+      <div class="advisor-response resp-outsider">
+        <div class="advisor-name" style="color:#7e22ce;">🟣 Outsider</div>
+        <p>Hayır, production-ready değil. Admin panel koruması tamamen çökmüş. Frontend'de <code>user.is_admin</code> kontrolü yapmak, kapıya "yetkisizler giremez" yazan kağıt yapıştırmak gibi. JWT'yi localStorage'da saklamak XSS'e açık kapı bırakır — HttpOnly cookie olmalıydı. KVKK uyumu da bu yüzden sorun.</p>
+        <p style="margin-top:8px;">Rate limiting'in in-memory Map ile yapılması Vercel'de işe yaramaz. Sosyal medya bağlantıları boş string — GSC doğrulama pasif. Sepet localStorage'da, kullanıcı sekmeyi kapatırsa sepet gitti. WhatsApp ve iletişim bilgileri hardcoded, <code>.env</code> üzerinden yönetilmeli.</p>
+      </div>
+
+      <div class="advisor-response resp-executor">
+        <div class="advisor-name" style="color:#c2410c;">🟠 Executor (5/5 reviewer tarafından en güçlü seçildi)</div>
+        <p>Gerçek sorun şu: "Production-ready" sorusu yanlış çerçevelenmiş. Doğru soru: "Hangi şeyler canlıda bozuk, hangileri sadece kötü?"</p>
+        <p style="margin-top:8px;"><strong>Gerçekten bozuk:</strong> (1) In-memory rate limit — Vercel'de her invocation'da sıfırlanır, şu an hiç rate limiting yok. (2) <code>/tmp @mkdir</code> hata sessizce yutulur, rate limit devre dışı kalabilir. <strong>Sağlam:</strong> <code>hash_equals</code> var (timing attack önlendi), PDO parametreli. Admin <code>requireAdmin()</code> tüm endpoint'lerde kullanılıyor mu kontrol et. <strong>Aksiyon:</strong> Chat rate limit → Redis/Vercel KV (2 saat iş). Sosyal medya ya doldur ya kaldır (10 dk). <code>@mkdir</code> suppress'i kaldır.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Peer Reviews -->
+  <div class="section">
+    <div class="section-header" onclick="toggle(this)">
+      <span class="section-icon">🔍</span>
+      <span class="section-title">Peer Review Özetleri</span>
+      <span class="toggle-icon">▼</span>
+    </div>
+    <div class="section-body">
+      <div class="review-card">
+        <h4>5 Reviewer'ın Konsensüsü</h4>
+        <p><strong>En güçlü yanıt: Executor (E) — 5/5 oyla.</strong> "Bozuk vs kötü" çerçevesi, doğrulanabilir iddialar ve aksiyonel bitiş.</p>
+      </div>
+      <div class="review-card">
+        <h4>En Büyük Kör Nokta: Expansionist (C)</h4>
+        <p>Pazar büyüklüğü gerçek ama sorulan soru "production-ready mi?" — C bunu cevaplamadı. "Fırsat kaçırılıyor" demek, mevcut sistemin güvenli çalıştığını söylemez. Strateji tartışması teknik audit ile karıştırıldı.</p>
+      </div>
+      <div class="review-card">
+        <h4>5 Reviewer'ın Ortak Yakaladığı Kör Nokta</h4>
+        <p><strong>PHP backend deployment pipeline.</strong> Natro'ya git push ile auto-deploy oluyor ama: <code>display_errors</code> durumu, <code>config.php</code>'nin web root konumu, <code>vendor/</code> erişimi, migration sıralaması — hiçbiri doğrulanmadı. Bu, tüm diğer güvenlik tartışmalarının temelini etkiliyor.</p>
+      </div>
+      <div class="review-card">
+        <h4>2. Ortak Kör Nokta</h4>
+        <p><code>requireAdmin()</code> fonksiyonunun tüm admin endpoint'lerinde gerçekten çağrılıp çağrılmadığı grep ile doğrulanmadı. "Var" ile "her yerde kullanılıyor" farklı şeyler.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    LLM Council · 5 Danışman · 5 Peer Review · Başkan Sentezi<br>
+    ParcaBizden Production Readiness · 9 Nisan 2026
+  </div>
+
+</div>
+<script>
+function toggle(header) {
+  const body = header.nextElementSibling;
+  const icon = header.querySelector('.toggle-icon');
+  if (body.classList.contains('open')) {
+    body.classList.remove('open');
+    icon.style.transform = 'rotate(-90deg)';
+  } else {
+    body.classList.add('open');
+    icon.style.transform = 'rotate(0deg)';
+  }
+}
+// Open first section by default
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.section-body').forEach((b, i) => {
+    if (i > 0) b.classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>
