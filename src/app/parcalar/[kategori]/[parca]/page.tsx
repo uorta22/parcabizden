@@ -28,6 +28,30 @@ function slugToLabel(slug: string): string {
     .replace(/\b\w/g, (c) => c.toLocaleUpperCase('tr-TR'))
 }
 
+export function generateStaticParams() {
+  return [
+    { kategori: 'kaporta',     parca: 'arka-tampon' },
+    { kategori: 'kaporta',     parca: 'on-tampon' },
+    { kategori: 'kaporta',     parca: 'kaput' },
+    { kategori: 'kaporta',     parca: 'camurluk' },
+    { kategori: 'suspansiyon', parca: 'on-amortisor' },
+    { kategori: 'suspansiyon', parca: 'arka-amortisor' },
+    { kategori: 'suspansiyon', parca: 'rotil' },
+    { kategori: 'sogutma',     parca: 'fan-motoru' },
+    { kategori: 'sogutma',     parca: 'radyator' },
+    { kategori: 'sogutma',     parca: 'su-pompasi' },
+    { kategori: 'direksiyon',  parca: 'direksiyon-pompasi' },
+    { kategori: 'fren',        parca: 'fren-diski' },
+    { kategori: 'fren',        parca: 'fren-balatasi' },
+    { kategori: 'motor',       parca: 'alternator' },
+    { kategori: 'motor',       parca: 'mars-motoru' },
+    { kategori: 'elektrik',    parca: 'far' },
+    { kategori: 'elektrik',    parca: 'stop-lambasi' },
+  ]
+}
+
+export const dynamicParams = true
+
 interface Props {
   params: { kategori: string; parca: string }
 }
@@ -70,7 +94,7 @@ async function fetchParts(kategoriId: string, searchTerm: string) {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body.toString(),
-      cache: 'no-store',
+      next: { revalidate: 3600 },
     })
     if (!res.ok) return []
     const data = await res.json()
