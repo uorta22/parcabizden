@@ -24,39 +24,46 @@ jobs:
         run: |
           mkdir -p deploy/endpoints/auth
           mkdir -p deploy/endpoints/garage
+          mkdir -p deploy/tmp/rate_limits
 
-          # natro-index.php → index.php olarak kopyala
+          # 1) natro-index.php → index.php (ana router)
           cp natro-index.php deploy/index.php
 
-          # api/ klasöründeki ana PHP dosyalarını kopyala
+          # 2) api/ — temel sistem dosyaları (config, db, rate_limit, vehicle_db)
+          #    NOT: api/auth.php ATLANIR — php-backend/auth.php daha kapsamlı
           for f in api/*.php; do
             fname="$(basename "$f")"
             case "$fname" in
               index.php) echo "SKIP api/index.php (natro-index.php kullaniliyor)" ;;
-              *) cp "$f" deploy/ ;;
+              auth.php)  echo "SKIP api/auth.php  (php-backend/auth.php kullaniliyor)" ;;
+              *) cp "$f" deploy/ && echo "COPY api/$fname" ;;
             esac
           done
 
-          # api/endpoints/ altındaki dosyaları kopyala
+          # 3) api/endpoints/ — katalog endpoint'leri
           for f in api/endpoints/*.php; do
-            [ -f "$f" ] && cp "$f" deploy/endpoints/
+            [ -f "$f" ] && cp "$f" deploy/endpoints/ && echo "COPY endpoints/$(basename "$f")"
           done
           for f in api/endpoints/auth/*.php; do
-            [ -f "$f" ] && cp "$f" deploy/endpoints/auth/
+            [ -f "$f" ] && cp "$f" deploy/endpoints/auth/ && echo "COPY endpoints/auth/$(basename "$f")"
           done
           for f in api/endpoints/garage/*.php; do
-            [ -f "$f" ] && cp "$f" deploy/endpoints/garage/
+            [ -f "$f" ] && cp "$f" deploy/endpoints/garage/ && echo "COPY endpoints/garage/$(basename "$f")"
           done
 
-          # php-backend altındaki modülleri kopyala (migration scriptleri hariç)
+          # 4) php-backend/ — uygulama modülleri (auth dahil, migration scriptleri hariç)
           for f in php-backend/*.php; do
             case "$(basename "$f")" in
-              migrate-*.php|bigdump.php|image-import.php) echo "SKIP: $f" ;;
-              *) cp "$f" deploy/ ;;
+              migrate-*.php|bigdump.php|image-import.php|migrate-7zap.php) echo "SKIP: $f" ;;
+              *) cp "$f" deploy/ && echo "COPY php-backend/$(basename "$f")" ;;
             esac
           done
 
-          echo "--- Deploy klasörü içeriği ---"
+          # 5) rate_limits klasörü için .htaccess koru
+          echo "Deny from all" > deploy/tmp/rate_limits/.htaccess
+
+          echo ""
+          echo "=== Deploy edilecek dosyalar ==="
           find deploy -name "*.php" | sort
 
       - name: FTPS Deploy to Natro
@@ -75,5 +82,6 @@ jobs:
             **/*.txt
             **/*.log
             **/*.db
-            **/tmp/**
-            **/.htaccess
+            **/tmp/rate_limits/**
+            **/migration*.sql
+            **/catalog_schema.sql
