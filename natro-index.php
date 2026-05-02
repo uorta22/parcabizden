@@ -11,7 +11,19 @@ set_exception_handler(function($e) {
     exit;
 });
 
-header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
+$_allowed_origins = [
+    'https://parcabizden.com.tr',
+    'https://www.parcabizden.com.tr',
+];
+$_req_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($_req_origin, $_allowed_origins, true)
+    || (strlen($_req_origin) < 200 && preg_match('/^https:\/\/[a-z0-9-]+\.vercel\.app$/i', $_req_origin))
+) {
+    header('Access-Control-Allow-Origin: ' . $_req_origin);
+    header('Vary: Origin');
+} else {
+    header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
+}
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 header('X-Content-Type-Options: nosniff');

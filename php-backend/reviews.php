@@ -10,7 +10,16 @@
  */
 
 header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
+$_rev_allowed = ['https://parcabizden.com.tr', 'https://www.parcabizden.com.tr'];
+$_rev_origin  = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($_rev_origin, $_rev_allowed, true)
+    || (strlen($_rev_origin) < 200 && preg_match('/^https:\/\/[a-z0-9-]+\.vercel\.app$/i', $_rev_origin))
+) {
+    header('Access-Control-Allow-Origin: ' . $_rev_origin);
+    header('Vary: Origin');
+} else {
+    header('Access-Control-Allow-Origin: https://parcabizden.com.tr');
+}
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 

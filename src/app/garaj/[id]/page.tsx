@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import {
-  ChevronRight, Car, Search, MessageCircle, Wrench, Plus, ShoppingBag,
+  ChevronRight, Car, Search, MessageCircle, Wrench, Plus,
   Gauge, StickyNote, Pencil, Trash2, Save, Cog, Zap, Fuel,
   Settings2, Ruler, Hash, CreditCard, X,
 } from 'lucide-react'
@@ -256,7 +256,7 @@ export default function GarageDetailPage() {
 
   if (loading || authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
       </div>
     )
@@ -268,18 +268,15 @@ export default function GarageDetailPage() {
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracım için yardım istiyorum.`
 
   return (
-    <div className="min-h-screen py-6 md:py-10">
-      <div className="container mx-auto px-4 max-w-5xl">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 flex-wrap">
-          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href="/hesabim/garaj" className="hover:text-gray-900 transition-colors">Garajım</Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-900">{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.brand_name} {vehicle.generation_name}</span>
-        </nav>
+    <div>
+      {/* Breadcrumb */}
+      <nav className="flex items-center gap-2 text-sm text-gray-500 mb-6 flex-wrap">
+        <Link href="/hesabim/garaj" className="hover:text-gray-900 transition-colors">Garajım</Link>
+        <ChevronRight className="w-4 h-4" />
+        <span className="text-gray-900">{vehicle.year ? `${vehicle.year} ` : ''}{vehicle.brand_name} {vehicle.generation_name}</span>
+      </nav>
 
-        {saveError && (
+      {saveError && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm flex items-center justify-between">
             <span>{saveError}</span>
             <button onClick={() => setSaveError('')} className="text-red-400 hover:text-red-600 ml-3">
@@ -346,9 +343,6 @@ export default function GarageDetailPage() {
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2 mt-4">
-                <Link href={`/urunler?vehicle=${vehicle.id}`} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-500 text-orange-600 hover:text-white rounded-lg transition-all text-sm font-medium">
-                  <ShoppingBag className="w-4 h-4" /> Uyumlu Ürünler
-                </Link>
                 <Link href={partsHref} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 hover:bg-primary-500 text-primary-600 hover:text-white rounded-lg transition-all text-sm font-medium">
                   <Search className="w-4 h-4" /> Parça Ara
                 </Link>
@@ -657,7 +651,6 @@ export default function GarageDetailPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Maintenance Form Modal */}
       {showForm && (

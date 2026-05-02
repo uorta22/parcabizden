@@ -9,13 +9,8 @@ RewriteEngine On
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
 </IfModule>
 
-# CORS Headers - domain bazlı (env'den alınır, fallback olarak site domaini)
-<IfModule mod_headers.c>
-  Header always set Access-Control-Allow-Origin "https://parcabizden.com.tr"
-  Header always set Access-Control-Allow-Methods "GET, POST, DELETE, OPTIONS"
-  Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
-  Header always set Access-Control-Max-Age "86400"
-</IfModule>
+# CORS Headers — PHP (config.php) dinamik olarak yönetir.
+# Apache'den sabit CORS header gönderilmez; çift header çakışması önlenir.
 
 # Hassas dosya ve dizinlere erişimi engelle
 RewriteRule ^tmp/ - [F,L]

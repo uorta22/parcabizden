@@ -100,12 +100,14 @@ function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
             <Search className="w-4 h-4" />
             Parca Ara
           </Link>
-          <span
-            className="flex flex-col items-center gap-1 px-2 py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium"
+          <Link
+            href={detailHref}
+            onClick={(e) => e.stopPropagation()}
+            className="flex flex-col items-center gap-1 px-2 py-2 bg-blue-50 hover:bg-blue-500 text-blue-600 hover:text-white rounded-lg transition-all text-xs font-medium"
           >
             <Wrench className="w-4 h-4" />
             Bakim
-          </span>
+          </Link>
           <a
             href={getWhatsAppUrl(whatsappMsg)}
             target="_blank"
