@@ -4,33 +4,62 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - claude/auto-parts-request-site-OpsbX
     paths:
       - 'natro-index.php'
       - 'php-backend/**'
+      - 'api/**'
       - '.github/workflows/deploy-php.yml'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: PHP dosyalarini hazirla
         run: |
-          mkdir -p deploy
+          mkdir -p deploy/endpoints/auth
+          mkdir -p deploy/endpoints/garage
+
           # natro-index.php → index.php olarak kopyala
           cp natro-index.php deploy/index.php
-          # php-backend altindaki modulleri kopyala (migration scriptleri hariç)
-          for f in php-backend/*.php; do
-            case "$(basename "$f")" in
-              migrate-*.php|bigdump.php) echo "SKIP: $f" ;;
+
+          # api/ klasöründeki ana PHP dosyalarını kopyala
+          for f in api/*.php; do
+            fname="$(basename "$f")"
+            case "$fname" in
+              index.php) echo "SKIP api/index.php (natro-index.php kullaniliyor)" ;;
               *) cp "$f" deploy/ ;;
             esac
           done
 
-      - name: FTPS Deploy
+          # api/endpoints/ altındaki dosyaları kopyala
+          for f in api/endpoints/*.php; do
+            [ -f "$f" ] && cp "$f" deploy/endpoints/
+          done
+          for f in api/endpoints/auth/*.php; do
+            [ -f "$f" ] && cp "$f" deploy/endpoints/auth/
+          done
+          for f in api/endpoints/garage/*.php; do
+            [ -f "$f" ] && cp "$f" deploy/endpoints/garage/
+          done
+
+          # php-backend altındaki modülleri kopyala (migration scriptleri hariç)
+          for f in php-backend/*.php; do
+            case "$(basename "$f")" in
+              migrate-*.php|bigdump.php|image-import.php) echo "SKIP: $f" ;;
+              *) cp "$f" deploy/ ;;
+            esac
+          done
+
+          echo "--- Deploy klasörü içeriği ---"
+          find deploy -name "*.php" | sort
+
+      - name: FTPS Deploy to Natro
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -38,7 +67,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           protocol: ftps
           local-dir: ./deploy/
-          server-dir: ./
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
           dangerous-clean-slate: false
           exclude: |
             **/.env
@@ -47,3 +76,4 @@ jobs:
             **/*.log
             **/*.db
             **/tmp/**
+            **/.htaccess
