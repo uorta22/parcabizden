@@ -129,17 +129,38 @@ function get_parts($pdo) {
         while ($pr = $pr_stmt->fetch(PDO::FETCH_ASSOC)) {
             $products_map[$pr['oem_number']] = $pr;
         }
+
+        // part_images fallback — products.thumbnail boşsa veya products'ta yoksa
+        $images_map = [];
+        try {
+            $apiBase = rtrim(getenv('API_BASE_URL') ?: 'https://api.parcabizden.com.tr', '/');
+            $img_stmt = $pdo->prepare("SELECT part_number, file_path FROM part_images WHERE part_number IN ($ph) AND uploaded = 1 AND file_path IS NOT NULL GROUP BY part_number");
+            $img_stmt->execute(array_values($oem_list));
+            while ($img = $img_stmt->fetch(PDO::FETCH_ASSOC)) {
+                $images_map[$img['part_number']] = $apiBase . '/uploads/' . $img['file_path'];
+            }
+        } catch (PDOException $e) {
+            // part_images tablosu henüz yoksa atla
+        }
+
         foreach ($parts as &$part) {
-            if (isset($products_map[$part['oem_number']])) {
-                $pr = $products_map[$part['oem_number']];
+            $oem = $part['oem_number'];
+            if (isset($products_map[$oem])) {
+                $pr = $products_map[$oem];
+                $thumb = $pr['thumbnail'];
+                if (empty($thumb) && isset($images_map[$oem])) {
+                    $thumb = $images_map[$oem];
+                }
                 $part['product'] = [
                     'id' => (int)$pr['id'],
                     'slug' => $pr['slug'],
                     'price' => $pr['price'] !== null ? (float)$pr['price'] : null,
                     'discount_price' => $pr['discount_price'] !== null ? (float)$pr['discount_price'] : null,
-                    'thumbnail' => $pr['thumbnail'],
+                    'thumbnail' => $thumb,
                     'in_stock' => (bool)$pr['in_stock'],
                 ];
+            } elseif (isset($images_map[$oem])) {
+                $part['part_image'] = $images_map[$oem];
             }
         }
         unset($part);
@@ -179,11 +200,12 @@ function search_oem($pdo) {
     $images_map = [];
     if (!empty($oem_list)) {
         try {
+            $apiBase = rtrim(getenv('API_BASE_URL') ?: 'https://api.parcabizden.com.tr', '/');
             $ph = implode(',', array_fill(0, count($oem_list), '?'));
             $img_stmt = $pdo->prepare("SELECT part_number, file_path FROM part_images WHERE part_number IN ($ph) AND uploaded = 1 AND file_path IS NOT NULL GROUP BY part_number");
             $img_stmt->execute(array_values($oem_list));
             while ($img = $img_stmt->fetch(PDO::FETCH_ASSOC)) {
-                $images_map[$img['part_number']] = '/uploads/' . $img['file_path'];
+                $images_map[$img['part_number']] = $apiBase . '/uploads/' . $img['file_path'];
             }
         } catch (PDOException $e) {
             // part_images tablosu henüz yoksa atla
