@@ -541,16 +541,33 @@ function handle_autodata_resolve_slug($pdo) {
 
     $auto_selected = !empty($output) ? $output[0]['generation_slug'] : null;
 
-    // If no matches but brand has generations, return all as unmatched fallback
-    if (empty($output) && !empty($db_gens)) {
+    // Fallback sadece: hem score=0 hem de model adı DB'de hiç geçmiyorsa fallback verme.
+    // Model slug DB'de geçiyorsa ama generation eşleşmiyorsa marka'nın tüm nesilleri göster.
+    if (empty($output) && !empty($db_gens) && $model_slug) {
+        // Model adının DB'de var olup olmadığını kontrol et
+        $model_exists_in_db = false;
         foreach ($db_gens as $g) {
-            $output[] = [
-                'generation_slug' => $g['generation_slug'],
-                'generation_name' => format_gen_slug($g['generation_slug']),
-                'part_count' => (int)$g['part_count'],
-            ];
+            if (strpos(strtolower($g['generation_slug']), $model_base_slug) !== false ||
+                strpos(strtolower($g['generation_slug']), $model_slug) !== false) {
+                $model_exists_in_db = true;
+                break;
+            }
         }
-        usort($output, function($a, $b) { return $b['part_count'] - $a['part_count']; });
+        // Model DB'deyse ama generation eşleşmiyorsa → o modelin tüm nesilleri (yardımcı olabilir)
+        if ($model_exists_in_db) {
+            foreach ($db_gens as $g) {
+                if (strpos(strtolower($g['generation_slug']), $model_base_slug) !== false ||
+                    strpos(strtolower($g['generation_slug']), $model_slug) !== false) {
+                    $output[] = [
+                        'generation_slug' => $g['generation_slug'],
+                        'generation_name' => format_gen_slug($g['generation_slug']),
+                        'part_count' => (int)$g['part_count'],
+                    ];
+                }
+            }
+            usort($output, function($a, $b) { return $b['part_count'] - $a['part_count']; });
+        }
+        // Model DB'de yoksa → empty output → frontend no_parts gösterir (doğru davranış)
     }
 
     echo json_encode(['matches' => $output, 'auto_selected' => $auto_selected]);
