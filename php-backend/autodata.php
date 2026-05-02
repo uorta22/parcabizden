@@ -162,7 +162,34 @@ function handle_vehicle_specs($pdo) {
 
 // ==================== Autodata Handlers ====================
 
+/**
+ * Türkiye pazarında yeterli verisi olan onaylı markalar.
+ * Bu listede olmayan markalar API'den filtrelenir.
+ * Not: Mercedes-Benz, GMC, Cadillac, Buick, Dodge, Pontiac,
+ *      Oldsmobile, Chrysler, Lancia, Saab, SSangyong vb. veri
+ *      eksikliği veya Türkiye dışı marka nedeniyle gizlendi.
+ *      Scraping ile veri tamamlandıktan sonra eklenir.
+ */
+const ALLOWED_BRAND_SLUGS = [
+    'volkswagen', 'audi', 'toyota', 'bmw', 'ford', 'skoda', 'porsche',
+    'hyundai', 'seat', 'nissan', 'fiat', 'kia', 'lexus', 'renault',
+    'honda', 'alfa-romeo', 'subaru', 'mini', 'mazda', 'cupra',
+    'citroen', 'volvo', 'genesis', 'peugeot', 'dacia', 'mitsubishi',
+    'suzuki', 'jeep', 'land-rover', 'ds', 'tesla',
+];
+
 function handle_autodata_brands($pdo) {
+    global $allowed_brand_slugs;
+
+    // PHP 7 uyumu için sabit dizi
+    $allowed = [
+        'volkswagen', 'audi', 'toyota', 'bmw', 'ford', 'skoda', 'porsche',
+        'hyundai', 'seat', 'nissan', 'fiat', 'kia', 'lexus', 'renault',
+        'honda', 'alfa-romeo', 'subaru', 'mini', 'mazda', 'cupra',
+        'citroen', 'volvo', 'genesis', 'peugeot', 'dacia', 'mitsubishi',
+        'suzuki', 'jeep', 'land-rover', 'ds', 'tesla',
+    ];
+
     try {
         // catalog_manufacturers + catalog_models'dan marka listesi
         $stmt = $pdo->query("
@@ -177,6 +204,7 @@ function handle_autodata_brands($pdo) {
         $brands = [];
         foreach ($rows as $r) {
             $slug = catalog_brand_to_slug($r['brand']);
+            if (!in_array($slug, $allowed)) continue;
             $brands[] = [
                 'name' => $r['brand'],
                 'slug' => $slug,
@@ -194,6 +222,7 @@ function handle_autodata_brands($pdo) {
             foreach ($rows as $r) {
                 $slug = strtolower(trim($r['brand']));
                 $slug = preg_replace('/\s+/', '-', $slug);
+                if (!in_array($slug, $allowed)) continue;
                 $brands[] = ['name' => $r['brand'], 'slug' => $slug, 'model_count' => (int)$r['model_count'], 'total' => (int)$r['total']];
             }
             echo json_encode(['brands' => $brands]);

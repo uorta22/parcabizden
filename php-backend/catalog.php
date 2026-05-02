@@ -16,6 +16,47 @@ function clean_text($text) {
     return trim($text);
 }
 
+/**
+ * 7zap kaynaklı bozuk parça isimlerini temizler.
+ * Sipariş notu / teknik talimat olarak görünen metinleri boş döndürür.
+ * Frontend, boş isim gelince kendi fallback zincirini (node adı + marka) kullanır.
+ */
+function clean_part_name(string $name): string {
+    $name = clean_text($name);
+    if (strlen($name) < 2) return '';
+
+    static $bad_patterns = [
+        'siparişte aşağıdaki',
+        'sipariste asagidaki',
+        'aşağıdakiler ile bağlantılı',
+        'asagidakiler ile baglantili',
+        'sadece aşağıdakiler',
+        'sadece asagidakiler',
+        'onarım için gereklidir',
+        'onarim icin gereklidir',
+        'yapıştırma/perçin',
+        'yapistirma/percin',
+        'bağlantılı parçalar',
+        'baglantili parcalar',
+        'şasi numarası gerekli',
+        'sasi numarasi gerekli',
+        'gereklidir',        // geniş kapsam — çoğu zaman talimat metni
+        '*****',
+        'not applicable',
+        'n/a',
+    ];
+
+    $lower = mb_strtolower($name, 'UTF-8');
+    foreach ($bad_patterns as $pat) {
+        if (mb_strpos($lower, $pat) !== false) return '';
+    }
+
+    // Sadece özel karakter / rakam içeriyorsa (gerçek isim değil)
+    if (!preg_match('/\p{L}/u', $name)) return '';
+
+    return $name;
+}
+
 function format_gen_slug($slug) {
     if (!$slug) return '';
     $parts = explode('-', $slug);
@@ -116,7 +157,7 @@ function get_parts($pdo) {
         $info = clean_text($r['info']);
         $info = preg_replace('/\|\s*\|/', '|', $info);
         $info = trim($info, ' |');
-        $parts[] = ['oem_number' => $r['oem_number'], 'name' => clean_text($r['name']), 'quantity' => clean_text($r['quantity']), 'info' => $info];
+        $parts[] = ['oem_number' => $r['oem_number'], 'name' => clean_part_name($r['name']), 'quantity' => clean_text($r['quantity']), 'info' => $info];
         $oem_list[] = $r['oem_number'];
     }
 
@@ -181,7 +222,7 @@ function search_oem($pdo) {
         $stmt2->execute([':q' => $q . '%']);
         $results = $stmt2->fetchAll(PDO::FETCH_ASSOC);
     }
-    foreach ($results as &$r) { $r['name'] = clean_text($r['name']); }
+    foreach ($results as &$r) { $r['name'] = clean_part_name($r['name']); }
     unset($r);
 
     // Product enrichment — ayrı sorgu ile

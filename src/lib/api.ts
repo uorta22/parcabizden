@@ -383,9 +383,53 @@ export function searchOemParts(query: string) {
 
 // ==================== Autodata Endpoints ====================
 
+/**
+ * Türkiye pazarında yeterli verisi olan, UI'da gösterilen markalar.
+ * PHP backend de bu listeye göre filtreler; bu liste ek güvenlik katmanıdır.
+ * Scraping ile veri tamamlandıkça buraya eklenir.
+ */
+export const ALLOWED_BRAND_SLUGS = new Set([
+  'volkswagen', 'audi', 'toyota', 'bmw', 'ford', 'skoda', 'porsche',
+  'hyundai', 'seat', 'nissan', 'fiat', 'kia', 'lexus', 'renault',
+  'honda', 'alfa-romeo', 'subaru', 'mini', 'mazda', 'cupra',
+  'citroen', 'volvo', 'genesis', 'peugeot', 'dacia', 'mitsubishi',
+  'suzuki', 'jeep', 'land-rover', 'ds', 'tesla',
+])
+
+/**
+ * Gizlenen kusurlu markalar — veri eksikliği veya Türkiye dışı.
+ * Scraping tamamlandıktan sonra ALLOWED_BRAND_SLUGS'a taşınacak.
+ */
+export const HIDDEN_BRANDS_REASON: Record<string, string> = {
+  'mercedes-benz': 'Katalog verisi yok (0 parça) — scraping bekleniyor',
+  'gmc':           'Türkiye dışı Amerikan markası',
+  'cadillac':      'Türkiye dışı Amerikan markası',
+  'chevrolet':     'Türkiye dışı Amerikan markası',
+  'dodge':         'Türkiye dışı Amerikan markası',
+  'buick':         'Türkiye dışı Amerikan markası',
+  'pontiac':       'Türkiye dışı Amerikan markası (üretim durduruldu)',
+  'oldsmobile':    'Türkiye dışı Amerikan markası (üretim durduruldu)',
+  'chrysler':      'Türkiye dışı Amerikan markası',
+  'lancia':        'Türkiye pazarı yok',
+  'rolls-royce':   'Türkiye pazarı çok sınırlı',
+  'ssangyong':     'Yeterli veri yok',
+  'saab':          'Türkiye pazarı yok (üretim durduruldu)',
+  'saturn':        'Türkiye dışı Amerikan markası (üretim durduruldu)',
+  'eagle':         'Türkiye dışı Amerikan markası (üretim durduruldu)',
+  'abarth':        'Türkiye pazarı çok sınırlı + veri yetersiz',
+  'daewoo':        'Türkiye pazarı yok (üretim durduruldu)',
+  'plymouth':      'Türkiye dışı Amerikan markası (üretim durduruldu)',
+  'hummer':        'Türkiye pazarı yok + veri yetersiz',
+  'opel':          'Veri çok seyrek (3 nesil, 19K parça) — scraping bekleniyor',
+}
+
 export async function fetchAutodataBrands() {
   if (brandsCache.data && Date.now() - brandsCache.timestamp < CACHE_TTL) return brandsCache.data
   const data = await actionFetch<{ brands: AutodataBrand[] }>({ action: 'autodata_brands' })
+  // İkinci güvenlik katmanı: PHP'nin filtrelemediği durumlar için
+  if (data?.brands) {
+    data.brands = data.brands.filter(b => ALLOWED_BRAND_SLUGS.has(b.slug))
+  }
   brandsCache.data = data
   brandsCache.timestamp = Date.now()
   return data
