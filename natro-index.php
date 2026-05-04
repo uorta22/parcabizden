@@ -94,8 +94,9 @@ $_pb_modules = [
     'security.php',       // get_client_ip, check_rate_limit, check_ip_blacklist, ban_ip, record_failed_login, admin_audit_log
     'auth.php',           // jwt_encode, jwt_decode, get_auth_user_id, requireAdmin, handle_register, handle_login, ...
     'email.php',          // smtp_send, send_verification_email, send_reset_email
-    'catalog.php',        // clean_text, format_gen_slug, get_categories, get_parts, search_oem, get_brands, get_generations, vin_decode
-    'autodata.php',       // handle_vehicle_specs, handle_autodata_*, normalize_cyrillic, catalog_brand_to_slug, catalog_resolve_brand
+    'catalog.php',        // [LEGACY — slug bazlı, deprecated] clean_text, format_gen_slug, get_categories, get_parts, search_oem, get_brands, get_generations, vin_decode
+    'autodata.php',       // [LEGACY — slug bazlı, deprecated] handle_vehicle_specs, handle_autodata_*, normalize_cyrillic
+    'tecdoc.php',         // [V2 — TecDoc ID zinciri] tecdoc_brands/models/vehicles/vehicle_attributes/vehicle_categories/vehicle_parts/search/part_detail
     'garage.php',         // ensure_garage_columns, handle_garage_*, handle_maintenance_*
     'chat.php',           // handle_chat, send_whatsapp, handle_chat_messages, handle_chat_webhook
     'products.php',       // handleProductList, handleProductDetail, handleProductSearch
@@ -153,6 +154,15 @@ switch ($action) {
     case 'autodata_models':     handle_autodata_models($pdo); break;
     case 'autodata_generations': handle_autodata_generations($pdo); break;
     case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
+    // ── TecDoc V2 — ID tabanlı temiz zincir ──
+    case 'tecdoc_brands':              tecdoc_brands($pdo); break;
+    case 'tecdoc_models':              tecdoc_models($pdo); break;
+    case 'tecdoc_vehicles':            tecdoc_vehicles($pdo); break;
+    case 'tecdoc_vehicle_attributes':  tecdoc_vehicle_attributes($pdo); break;
+    case 'tecdoc_vehicle_categories':  tecdoc_vehicle_categories($pdo); break;
+    case 'tecdoc_vehicle_parts':       tecdoc_vehicle_parts($pdo); break;
+    case 'tecdoc_search':              tecdoc_search($pdo); break;
+    case 'tecdoc_part_detail':         tecdoc_part_detail($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
