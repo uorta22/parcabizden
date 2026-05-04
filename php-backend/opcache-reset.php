@@ -1,6 +1,7 @@
 <?php
 /**
  * OPcache Reset Utility — token korumalı tek seferlik araç
+ * Version: 2 (cache-bust 2026-05-04)
  *
  * Kullanım:
  *   https://api.parcabizden.com.tr/opcache-reset.php?token=<JWT_SECRET değerinin ilk 16 karakteri>
