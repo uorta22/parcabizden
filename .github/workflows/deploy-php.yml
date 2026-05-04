@@ -56,11 +56,9 @@ jobs:
           done
 
           # 4) php-backend/ — uygulama modülleri (auth dahil, migration scriptleri hariç)
-          # opcache-reset.php tek seferlik araç — manuel deploy ile yüklenir, otomatik upload kapsamı dışında
           for f in php-backend/*.php; do
             case "$(basename "$f")" in
               migrate-*.php|bigdump.php|image-import.php|migrate-7zap.php) echo "SKIP: $f" ;;
-              opcache-reset.php) echo "SKIP php-backend/opcache-reset.php (manuel araç — sadece ilk deploy'da yüklendi)" ;;
               *) cp "$f" deploy/ && echo "COPY php-backend/$(basename "$f")" ;;
             esac
           done
