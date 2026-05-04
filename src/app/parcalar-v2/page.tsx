@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   getTecBrands, getTecModels, getTecVehicles,
@@ -12,6 +12,15 @@ import {
 type Step = 'brand' | 'model' | 'vehicle' | 'parts'
 
 export default function ParcalarV2Page() {
+  // useSearchParams Next.js 14 App Router'da Suspense sınırı içinde olmalı
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-8 text-gray-500 text-sm">Yükleniyor…</div>}>
+      <ParcalarV2Inner />
+    </Suspense>
+  )
+}
+
+function ParcalarV2Inner() {
   const router = useRouter()
   const sp = useSearchParams()
 
