@@ -1,65 +1,61 @@
 -- ============================================
--- TecDoc Catalog Performans İndeksleri (idempotent + online)
+-- TecDoc Catalog Performans İndeksleri
 -- ============================================
--- catalog_part_vehicles 78M satır.
--- ALGORITHM=INPLACE, LOCK=NONE ile online ekleme yapılır
--- (tablo kilitlenmez, ama hâlâ uzun sürebilir; phpMyAdmin'de
--- PHP timeout aşarsa "Migrations" bölümünden veya CLI'dan çalıştır).
+-- catalog_part_vehicles 78M satır — vehicle_id bazlı sorgular için
+-- composite index ŞART (yoksa table scan).
 --
--- Idempotent: stored procedure ile mevcut index varsa atlar.
+-- Shared hosting uyumlu: stored procedure YOK, sadece dynamic SQL.
+-- Idempotent: index zaten varsa atlar, yoksa ekler.
+-- Online: ALGORITHM=INPLACE, LOCK=NONE — tablo kilitlenmez.
+--
+-- phpMyAdmin → SQL sekmesi → tüm dosyayı yapıştır → Go.
 -- ============================================
 
 SET NAMES utf8mb4;
 
-DELIMITER $$
-
-DROP PROCEDURE IF EXISTS pb_add_index_if_missing $$
-CREATE PROCEDURE pb_add_index_if_missing(
-    IN p_table   VARCHAR(64),
-    IN p_index   VARCHAR(64),
-    IN p_columns VARCHAR(255)
-)
-BEGIN
-    DECLARE v_count INT DEFAULT 0;
-    SELECT COUNT(*) INTO v_count
-    FROM information_schema.STATISTICS
+-- ────────────────────────────────────────────
+-- 1) idx_vehicle_category (vehicle_id, category_id)
+--    Kategori sorguları için kritik.
+-- ────────────────────────────────────────────
+SET @idx_exists := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
     WHERE TABLE_SCHEMA = DATABASE()
-      AND TABLE_NAME   = p_table
-      AND INDEX_NAME   = p_index;
-
-    IF v_count = 0 THEN
-        SET @sql = CONCAT(
-            'ALTER TABLE `', p_table, '`',
-            ' ADD INDEX `', p_index, '` (', p_columns, ')',
-            ', ALGORITHM=INPLACE, LOCK=NONE'
-        );
-        PREPARE stmt FROM @sql;
-        EXECUTE stmt;
-        DEALLOCATE PREPARE stmt;
-        SELECT CONCAT('OK: ', p_table, '.', p_index, ' eklendi') AS result;
-    ELSE
-        SELECT CONCAT('SKIP: ', p_table, '.', p_index, ' zaten var') AS result;
-    END IF;
-END $$
-
-DELIMITER ;
-
--- 78M satırlık tabloda kategori sorguları için kritik
-CALL pb_add_index_if_missing(
-    'catalog_part_vehicles',
-    'idx_vehicle_category',
-    '`vehicle_id`, `category_id`'
+      AND TABLE_NAME   = 'catalog_part_vehicles'
+      AND INDEX_NAME   = 'idx_vehicle_category'
 );
 
--- Reverse lookup: parça → araçlar (part detail için)
-CALL pb_add_index_if_missing(
-    'catalog_part_vehicles',
-    'idx_vehicle_lookup',
-    '`vehicle_id`'
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE catalog_part_vehicles
+        ADD INDEX idx_vehicle_category (vehicle_id, category_id),
+        ALGORITHM=INPLACE, LOCK=NONE',
+    'SELECT "SKIP: idx_vehicle_category zaten var" AS info'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- ────────────────────────────────────────────
+-- 2) idx_vehicle_lookup (vehicle_id)
+--    Reverse lookup: parça → araçlar (part detail için).
+-- ────────────────────────────────────────────
+SET @idx_exists := (
+    SELECT COUNT(*) FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME   = 'catalog_part_vehicles'
+      AND INDEX_NAME   = 'idx_vehicle_lookup'
 );
 
--- Temizlik
-DROP PROCEDURE IF EXISTS pb_add_index_if_missing;
+SET @sql := IF(@idx_exists = 0,
+    'ALTER TABLE catalog_part_vehicles
+        ADD INDEX idx_vehicle_lookup (vehicle_id),
+        ALGORITHM=INPLACE, LOCK=NONE',
+    'SELECT "SKIP: idx_vehicle_lookup zaten var" AS info'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Doğrulama (manuel):
+-- ────────────────────────────────────────────
+-- Doğrulama (manuel — bu satırı ayrıca çalıştır):
 -- SHOW INDEX FROM catalog_part_vehicles;
+-- ────────────────────────────────────────────
