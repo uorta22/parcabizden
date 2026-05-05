@@ -319,6 +319,64 @@ function tecdoc_vehicle_parts($pdo) {
 }
 
 // ============================================================
+// 6.5) Görsel istatistikleri (debug — hangi araç/kategoride görsel var?)
+// ============================================================
+function tecdoc_image_stats($pdo) {
+    $stats = [];
+
+    try {
+        $stats['part_images_total'] = (int)$pdo->query("SELECT COUNT(*) FROM part_images WHERE uploaded = 1 AND file_path IS NOT NULL AND file_path <> ''")->fetchColumn();
+    } catch (PDOException $e) { $stats['part_images_total'] = 'tablo yok'; }
+
+    try {
+        $stats['catalog_part_images_total'] = (int)$pdo->query("SELECT COUNT(*) FROM catalog_part_images")->fetchColumn();
+    } catch (PDOException $e) { $stats['catalog_part_images_total'] = 'tablo yok'; }
+
+    // İlk 5 örnek (görseli olan parça → araç → kategori → marka/model)
+    $samples = [];
+    try {
+        $stmt = $pdo->query("
+            SELECT pi.supplier_id, pi.part_number, pi.file_path,
+                   p.id AS part_id,
+                   pv.vehicle_id, pv.category_id,
+                   v.description AS vehicle_desc, v.year_from, v.year_to,
+                   mo.id AS model_id, mo.name AS model_name,
+                   m.id AS manufacturer_id, m.name AS manufacturer_name,
+                   c.description_tr AS category_name
+            FROM part_images pi
+            JOIN catalog_parts p ON p.supplier_id = pi.supplier_id AND p.part_number = pi.part_number
+            JOIN catalog_part_vehicles pv ON pv.part_id = p.id
+            JOIN catalog_vehicles v ON v.id = pv.vehicle_id
+            JOIN catalog_models mo ON mo.id = v.model_id
+            JOIN catalog_manufacturers m ON m.id = mo.manufacturer_id
+            LEFT JOIN catalog_categories c ON c.id = pv.category_id
+            WHERE pi.uploaded = 1 AND pi.file_path IS NOT NULL AND pi.file_path <> ''
+            LIMIT 5
+        ");
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $samples[] = [
+                'manufacturer'  => $row['manufacturer_name'],
+                'model'         => $row['model_name'],
+                'vehicle'       => $row['vehicle_desc'],
+                'year'          => $row['year_from'] . ($row['year_to'] ? '-' . $row['year_to'] : '+'),
+                'category'      => $row['category_name'],
+                'part_number'   => $row['part_number'],
+                'image_url'     => '/uploads/' . ltrim($row['file_path'], '/'),
+                'browse_url'    => '/parcalar-v2?brand=' . (int)$row['manufacturer_id']
+                                  . '&model=' . (int)$row['model_id']
+                                  . '&vehicle=' . (int)$row['vehicle_id']
+                                  . '&cat=' . (int)$row['category_id'],
+            ];
+        }
+    } catch (PDOException $e) {
+        $stats['sample_error'] = $e->getMessage();
+    }
+    $stats['samples'] = $samples;
+
+    echo json_encode($stats, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+}
+
+// ============================================================
 // 7) OEM/parça numarası ile arama (TecDoc)
 // ============================================================
 function tecdoc_search($pdo) {

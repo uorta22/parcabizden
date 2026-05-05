@@ -163,6 +163,7 @@ switch ($action) {
     case 'tecdoc_vehicle_parts':       tecdoc_vehicle_parts($pdo); break;
     case 'tecdoc_search':              tecdoc_search($pdo); break;
     case 'tecdoc_part_detail':         tecdoc_part_detail($pdo); break;
+    case 'tecdoc_image_stats':         tecdoc_image_stats($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;

@@ -19,6 +19,29 @@ function titleCase(s: string): string {
   return s.toLowerCase().replace(/(^|\s|-)\w/g, c => c.toUpperCase())
 }
 
+// Backend marka adı → BrandLogos.tsx'in beklediği key'e normalize et.
+// Diacritic'leri temizle (CITROËN → CITROEN), kısaltmaları aç (VW → Volkswagen).
+const BRAND_LOGO_ALIASES: Record<string, string> = {
+  'Vw':            'Volkswagen',
+  'Bmw':           'BMW',
+  'Amc':           'AMC',
+  'Mercedes-Benz': 'Mercedes-Benz',
+  'Land Rover':    'Land Rover',
+  'Rolls-Royce':   'Rolls-Royce',
+  'Mini':          'Mini',
+  'Seat':          'Seat',
+  'Ssangyong':     'SsangYong',
+  'Gmc':           'GMC',
+}
+function normalizeBrandForLogo(name: string): string {
+  // 1) Diacritic stripping: CITROËN → CITROEN
+  const stripped = name.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  // 2) Title case: CITROEN → Citroen
+  const titled = titleCase(stripped)
+  // 3) Alias map
+  return BRAND_LOGO_ALIASES[titled] ?? titled
+}
+
 export default function ParcalarV2Page() {
   return (
     <Suspense fallback={<PageSkeleton />}>
@@ -247,7 +270,7 @@ function ParcalarV2Inner() {
 
         {/* ─── ADIM 1: MARKA ─── */}
         {!loading && step === 'brand' && (
-          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {visibleBrands.map(b => (
               <li key={b.id}>
                 <button
@@ -255,7 +278,7 @@ function ParcalarV2Inner() {
                   className="group w-full px-4 py-5 rounded-2xl bg-white border border-gray-200 hover:border-primary-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center gap-3"
                 >
                   <div className="w-14 h-14 flex items-center justify-center">
-                    <BrandLogo brand={titleCase(b.name)} size={56} />
+                    <BrandLogo brand={normalizeBrandForLogo(b.name)} size={56} />
                   </div>
                   <span className="text-sm font-semibold text-gray-800 group-hover:text-primary-600 text-center line-clamp-2">
                     {b.name}
@@ -412,7 +435,7 @@ function SelectionPill({
 }
 
 function LoadingGrid({ step }: { step: Step }) {
-  const cols = step === 'brand' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5' :
+  const cols = step === 'brand' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' :
                step === 'model' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
                'grid-cols-1'
   const heightCls = step === 'brand' ? 'h-32' : 'h-20'
