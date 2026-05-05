@@ -335,6 +335,8 @@ function tecdoc_image_stats($pdo) {
     // İlk 5 örnek (görseli olan parça → araç → kategori → marka/model)
     $samples = [];
     try {
+        // part_images.part_number (utf8mb4_unicode_ci) ile catalog_parts.part_number
+        // (utf8mb4_turkish_ci) farklı collation; explicit COLLATE ile zorla.
         $stmt = $pdo->query("
             SELECT pi.supplier_id, pi.part_number, pi.file_path,
                    p.id AS part_id,
@@ -344,7 +346,9 @@ function tecdoc_image_stats($pdo) {
                    m.id AS manufacturer_id, m.name AS manufacturer_name,
                    c.description_tr AS category_name
             FROM part_images pi
-            JOIN catalog_parts p ON p.supplier_id = pi.supplier_id AND p.part_number = pi.part_number
+            JOIN catalog_parts p
+                 ON p.supplier_id = pi.supplier_id
+                AND p.part_number = pi.part_number COLLATE utf8mb4_unicode_ci
             JOIN catalog_part_vehicles pv ON pv.part_id = p.id
             JOIN catalog_vehicles v ON v.id = pv.vehicle_id
             JOIN catalog_models mo ON mo.id = v.model_id
