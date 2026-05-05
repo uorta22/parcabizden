@@ -225,7 +225,8 @@ function tecdoc_vehicle_parts($pdo) {
     $stmt->execute();
     $parts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Görselleri toplu al
+    // Görselleri toplu al — önce gerçekten yüklü olanlar (part_images.file_path),
+    // sonra TecDoc katalogda bilinen ama henüz upload edilmeyenler (catalog_part_images.picture_name)
     if (!empty($parts)) {
         $pairs = [];
         $values = [];
@@ -236,34 +237,74 @@ function tecdoc_vehicle_parts($pdo) {
             $values[":n$i"] = $p['part_number'];
             $i++;
         }
-        $imgSql = "SELECT supplier_id, part_number, picture_name, doc_type
-                   FROM catalog_part_images
-                   WHERE (supplier_id, part_number) IN (" . implode(',', $pairs) . ")
-                   ORDER BY doc_type DESC, picture_name";
-        $imgStmt = $pdo->prepare($imgSql);
-        foreach ($values as $k => $v) {
-            $imgStmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR);
-        }
-        $imgStmt->execute();
-        $imgRows = $imgStmt->fetchAll(PDO::FETCH_ASSOC);
+        $whereIn = "(supplier_id, part_number) IN (" . implode(',', $pairs) . ")";
 
-        // Index'le
+        // 1) Gerçekten yüklenmiş görseller (file_path dolu)
         $imgMap = [];
-        foreach ($imgRows as $img) {
-            $key = $img['supplier_id'] . '|' . $img['part_number'];
-            if (!isset($imgMap[$key])) $imgMap[$key] = [];
-            $imgMap[$key][] = [
-                'name' => $img['picture_name'],
-                'type' => $img['doc_type'],
-            ];
-        }
+        try {
+            $imgSql = "SELECT supplier_id, part_number, file_path, picture_name, doc_type
+                       FROM part_images
+                       WHERE $whereIn AND uploaded = 1 AND file_path IS NOT NULL AND file_path <> ''
+                       ORDER BY doc_type DESC, picture_name";
+            $imgStmt = $pdo->prepare($imgSql);
+            foreach ($values as $k => $v) {
+                $imgStmt->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR);
+            }
+            $imgStmt->execute();
+            foreach ($imgStmt->fetchAll(PDO::FETCH_ASSOC) as $img) {
+                $key = $img['supplier_id'] . '|' . $img['part_number'];
+                if (!isset($imgMap[$key])) $imgMap[$key] = [];
+                $imgMap[$key][] = [
+                    'url'  => '/uploads/' . ltrim($img['file_path'], '/'),
+                    'name' => $img['picture_name'] ?? null,
+                    'type' => $img['doc_type'] ?? 'Picture',
+                ];
+            }
+        } catch (PDOException $e) { /* part_images yoksa atla */ }
+
+        // 2) TecDoc kataloğunda var ama upload edilmemiş — fallback isim listesi
+        try {
+            $imgSql2 = "SELECT supplier_id, part_number, picture_name, doc_type
+                        FROM catalog_part_images
+                        WHERE $whereIn
+                        ORDER BY doc_type DESC, picture_name";
+            $imgStmt2 = $pdo->prepare($imgSql2);
+            foreach ($values as $k => $v) {
+                $imgStmt2->bindValue($k, $v, is_int($v) ? PDO::PARAM_INT : PDO::PARAM_STR);
+            }
+            $imgStmt2->execute();
+            foreach ($imgStmt2->fetchAll(PDO::FETCH_ASSOC) as $img) {
+                $key = $img['supplier_id'] . '|' . $img['part_number'];
+                if (!isset($imgMap[$key])) $imgMap[$key] = [];
+                // Sadece daha önce eklenmemiş bir picture_name ise ekle (uploaded olanı tercih et)
+                $alreadyHas = false;
+                foreach ($imgMap[$key] as $existing) {
+                    if (($existing['name'] ?? null) === $img['picture_name']) { $alreadyHas = true; break; }
+                }
+                if (!$alreadyHas) {
+                    $imgMap[$key][] = [
+                        'url'  => null, // upload edilmediyse görüntülenemez
+                        'name' => $img['picture_name'],
+                        'type' => $img['doc_type'] ?? 'Picture',
+                    ];
+                }
+            }
+        } catch (PDOException $e) { /* catalog_part_images yoksa atla */ }
+
         // Parçalara ekle
         foreach ($parts as &$p) {
             $key = $p['supplier_id'] . '|' . $p['part_number'];
             $p['id']           = (int)$p['id'];
             $p['supplier_id']  = (int)$p['supplier_id'];
-            $p['images']       = $imgMap[$key] ?? [];
+            $imgs              = $imgMap[$key] ?? [];
+            $p['images']       = $imgs;
+            // İlk yüklenmiş görselin URL'i (kart kapağı)
+            $p['cover_url'] = null;
+            foreach ($imgs as $img) {
+                if (!empty($img['url'])) { $p['cover_url'] = $img['url']; break; }
+            }
         }
+        unset($p);
     }
 
     echo json_encode([

@@ -440,13 +440,13 @@ function PartsStep({
   selectedCategory?: TecCategoriesResponse['flat'][0]
   onSelectCategory: (id: number) => void
 }) {
-  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+  // Accordion: tek seferde tek grup açık
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
 
-  // İlk grup default açık
   useEffect(() => {
-    if (categories && openGroups.size === 0) {
+    if (categories && !openGroup) {
       const firstGroup = Object.keys(categories.tree)[0]
-      if (firstGroup) setOpenGroups(new Set([firstGroup]))
+      if (firstGroup) setOpenGroup(firstGroup)
     }
   }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -471,17 +471,12 @@ function PartsStep({
           </div>
         )}
         {categories && Object.entries(categories.tree).map(([group, nodes]) => {
-          const open = openGroups.has(group)
+          const open = openGroup === group
           const totalCount = nodes.reduce((a, n) => a + n.part_count, 0)
           return (
             <div key={group} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
               <button
-                onClick={() => setOpenGroups(prev => {
-                  const next = new Set(prev)
-                  if (next.has(group)) next.delete(group)
-                  else next.add(group)
-                  return next
-                })}
+                onClick={() => setOpenGroup(open ? null : group)}
                 className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
               >
                 <div className="flex flex-col items-start min-w-0">
@@ -548,7 +543,7 @@ function PartsStep({
               </div>
             </div>
 
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
               {partsRes.parts.map(p => (
                 <li key={p.id}>
                   <PartCard part={p} vehicleLabel={vehicleLabel} categoryLabel={selectedCategory?.description_tr || ''} />
@@ -573,43 +568,57 @@ function PartCard({
   part, vehicleLabel, categoryLabel,
 }: { part: TecPartsResponse['parts'][0]; vehicleLabel: string; categoryLabel: string }) {
   const message = `Merhaba, ${vehicleLabel} aracım için ${categoryLabel ? `"${categoryLabel}" kategorisinden ` : ''}${part.supplier_name || ''} marka ${part.part_number} numaralı parçayı arıyorum.`
-  const hasImages = part.images && part.images.length > 0
+  const [imgFailed, setImgFailed] = useState(false)
+  const hasCover = !!part.cover_url && !imgFailed
+  const otherImagesCount = (part.images?.length ?? 0) - (part.cover_url ? 1 : 0)
 
   return (
-    <div className="group flex items-center gap-3 px-4 py-3 rounded-2xl bg-white border border-gray-200 hover:border-primary-300 hover:shadow-md transition-all">
-      {/* Görsel placeholder */}
-      <div className="w-12 h-12 rounded-xl bg-gray-50 border border-gray-100 flex-shrink-0 flex items-center justify-center text-gray-300">
-        {hasImages ? (
-          <ImageIcon className="w-5 h-5 text-primary-500" />
+    <div className="group h-full flex flex-col rounded-2xl bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg transition-all overflow-hidden">
+      {/* Görsel kapak */}
+      <div className="relative aspect-square bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
+        {hasCover ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={part.cover_url!}
+            alt={`${part.supplier_name ?? ''} ${part.part_number}`}
+            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImgFailed(true)}
+            loading="lazy"
+          />
         ) : (
-          <Package className="w-5 h-5" />
+          <div className="flex flex-col items-center gap-1.5 text-gray-300">
+            <Package className="w-10 h-10" />
+            <span className="text-[10px] font-medium">Görsel yok</span>
+          </div>
+        )}
+        {otherImagesCount > 0 && (
+          <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold bg-black/60 text-white rounded-full backdrop-blur-sm">
+            +{otherImagesCount}
+          </span>
         )}
       </div>
 
       {/* İçerik */}
-      <div className="flex-1 min-w-0">
-        <div className="font-bold text-gray-900 truncate text-sm">
-          {part.supplier_name || `Tedarikçi #${part.supplier_id}`}
+      <div className="flex-1 flex flex-col p-3.5 gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-gray-900 text-sm truncate" title={part.supplier_name ?? ''}>
+            {part.supplier_name || `Tedarikçi #${part.supplier_id}`}
+          </div>
+          <div className="font-mono text-xs text-gray-500 truncate mt-0.5" title={part.part_number}>
+            {part.part_number}
+          </div>
         </div>
-        <div className="font-mono text-xs text-gray-500 truncate">
-          OEM: {part.part_number}
-        </div>
-        {hasImages && (
-          <div className="text-[10px] text-primary-600 mt-0.5">{part.images!.length} görsel mevcut</div>
-        )}
-      </div>
 
-      {/* Aksiyon */}
-      <a
-        href={getWhatsAppUrl(message)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-semibold flex-shrink-0 transition-colors"
-        onClick={e => e.stopPropagation()}
-      >
-        <MessageCircle className="w-3.5 h-3.5" />
-        <span className="hidden sm:inline">Sor</span>
-      </a>
+        <a
+          href={getWhatsAppUrl(message)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-bold transition-colors"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          WhatsApp ile Sor
+        </a>
+      </div>
     </div>
   )
 }

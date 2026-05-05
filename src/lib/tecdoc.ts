@@ -68,7 +68,9 @@ export interface TecCategoriesResponse {
 }
 
 export interface TecPartImage {
-  name: string
+  /** Mutlak URL (uploads/ ile başlar). Yüklenmemişse null. */
+  url: string | null
+  name: string | null
   type: string
 }
 
@@ -78,7 +80,10 @@ export interface TecPart {
   part_number: string
   supplier_name: string | null
   supplier_matchcode?: string | null
+  /** Tüm bilinen görseller (yüklü + bilinen ama upload bekleyen) */
   images?: TecPartImage[]
+  /** Kart kapak görseli (ilk yüklenmiş resim) — yoksa null */
+  cover_url?: string | null
 }
 
 export interface TecPartsResponse {
@@ -228,9 +233,20 @@ export async function getTecVehicleParts(
       part_number: p.part_number,
       supplier_name: p.supplier_name ?? null,
       supplier_matchcode: p.supplier_matchcode ?? null,
-      images: Array.isArray(p.images) ? p.images : [],
+      images: Array.isArray(p.images) ? p.images.map((i: any) => ({
+        url: i.url ? absoluteImageUrl(i.url) : null,
+        name: i.name ?? null,
+        type: i.type ?? 'Picture',
+      })) : [],
+      cover_url: p.cover_url ? absoluteImageUrl(p.cover_url) : null,
     })),
   }
+}
+
+/** Backend göreceli (/uploads/...) yol döndürürse, mutlaka API_BASE'i ön eke ekle. */
+function absoluteImageUrl(p: string): string {
+  if (/^https?:\/\//i.test(p)) return p
+  return `${API_BASE}${p.startsWith('/') ? '' : '/'}${p}`
 }
 
 /** OEM/parça numarası ile arama. */
