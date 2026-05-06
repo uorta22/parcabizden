@@ -52,7 +52,7 @@ export default function ParcalarV2Page() {
 
 function PageSkeleton() {
   return (
-    <main className="container mx-auto px-4 py-12 max-w-6xl">
+    <main className="container mx-auto px-4 py-12 max-w-7xl">
       <div className="animate-pulse space-y-4">
         <div className="h-8 bg-gray-200 rounded w-64" />
         <div className="h-4 bg-gray-100 rounded w-96" />
@@ -182,7 +182,7 @@ function ParcalarV2Inner() {
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* ── Üst başlık + breadcrumb ── */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
-        <div className="container mx-auto px-4 py-4 max-w-6xl">
+        <div className="container mx-auto px-4 py-4 max-w-7xl">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             {(brandIdQ || modelIdQ || vehicleIdQ) && (
               <button
@@ -224,7 +224,7 @@ function ParcalarV2Inner() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
         {/* ── Başlık ── */}
         {step !== 'parts' && (
           <div className="mb-6">
@@ -478,7 +478,7 @@ function PartsStep({
     : ''
 
   return (
-    <div className="grid lg:grid-cols-[300px_1fr] gap-5">
+    <div className="grid lg:grid-cols-[260px_1fr] gap-5">
       {/* Sol: Kategori ağacı */}
       <aside className="space-y-2 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-2 lg:sticky lg:top-32">
         {!categories && loading && (
@@ -566,7 +566,7 @@ function PartsStep({
               </div>
             </div>
 
-            <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <ul className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-2.5">
               {partsRes.parts.map(p => (
                 <li key={p.id}>
                   <PartCard part={p} vehicleLabel={vehicleLabel} categoryLabel={selectedCategory?.description_tr || ''} />
@@ -579,6 +579,15 @@ function PartsStep({
                 <p className="font-semibold text-gray-700">Bu kategoride listelenecek parça yok</p>
                 <p className="text-xs text-gray-500 mt-1">Başka bir kategori deneyin veya WhatsApp'tan sorun.</p>
               </div>
+            )}
+
+            {/* Kategori bazlı SEO içerik bloğu */}
+            {partsRes.parts.length > 0 && (
+              <CategorySeoBlock
+                categoryName={selectedCategory?.description_tr || selectedCategory?.description_en || 'Bu Kategori'}
+                vehicleLabel={vehicleLabel}
+                totalParts={partsRes.total}
+              />
             )}
           </>
         )}
@@ -621,14 +630,18 @@ function PartCard({
         )}
       </div>
 
-      {/* İçerik */}
-      <div className="flex-1 flex flex-col p-3.5 gap-2">
+      {/* İçerik — 5-col grid için kompakt */}
+      <div className="flex-1 flex flex-col p-2.5 gap-2">
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-gray-900 text-sm truncate" title={part.supplier_name ?? ''}>
+          <div className="font-bold text-gray-900 text-[13px] leading-tight truncate" title={part.supplier_name ?? ''}>
             {part.supplier_name || `Tedarikçi #${part.supplier_id}`}
           </div>
-          <div className="font-mono text-xs text-gray-500 truncate mt-0.5" title={part.part_number}>
+          <div className="font-mono text-[11px] text-gray-500 truncate mt-1" title={part.part_number}>
             {part.part_number}
+          </div>
+          <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700">
+            <Check className="w-3 h-3" />
+            <span>Aracınıza uygun</span>
           </div>
         </div>
 
@@ -636,11 +649,48 @@ function PartCard({
           href={getWhatsAppUrl(message)}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-bold transition-colors"
+          className="flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white text-[11px] font-bold transition-colors"
         >
-          <MessageCircle className="w-3.5 h-3.5" />
-          WhatsApp ile Sor
+          <MessageCircle className="w-3 h-3" />
+          Fiyat Sor
         </a>
+      </div>
+    </div>
+  )
+}
+
+// SEO content block — kategori altında teknik açıklama
+function CategorySeoBlock({
+  categoryName, vehicleLabel, totalParts,
+}: { categoryName: string; vehicleLabel: string; totalParts: number }) {
+  return (
+    <div className="mt-10 rounded-2xl bg-white border border-gray-200 p-6 md:p-8">
+      <h3 className="text-lg font-bold text-gray-900 mb-3">
+        {categoryName} Hakkında
+      </h3>
+      <div className="space-y-3 text-sm text-gray-600 leading-relaxed">
+        <p>
+          {vehicleLabel ? `${vehicleLabel} aracınıza ` : 'Aracınıza '}uyumlu <strong>{totalParts.toLocaleString('tr-TR')}</strong>
+          {' '}adet <strong>{categoryName.toLowerCase()}</strong> parçası TecDoc kataloğu üzerinden listelenmiştir. Listedeki tüm parçalar
+          orijinal ekipman üreticisi (OEM) numarası ile birebir araç uyumluluğu doğrulanarak filtrelenmiştir.
+        </p>
+        <p>
+          Parça seçimi yaparken tedarikçi markası, üretim kalitesi ve garanti süresi gibi etkenleri göz önünde bulundurun.
+          Tek tıkla WhatsApp üzerinden talep oluşturabilir, fiyat ve stok bilgisini uzman ekibimizden alabilirsiniz.
+        </p>
+      </div>
+
+      <div className="mt-5 grid sm:grid-cols-3 gap-3 text-xs">
+        {[
+          ['OEM Eşleştirme',  'Orijinal parça numaralarıyla birebir doğrulama'],
+          ['Kalite Garanti',  'Sadece tanınmış tedarikçi markalarından parça'],
+          ['Hızlı Teslimat',  'Türkiye geneli kargo, kapınıza kadar'],
+        ].map(([title, desc]) => (
+          <div key={title} className="rounded-xl bg-gray-50 border border-gray-100 p-3">
+            <div className="font-bold text-gray-900 mb-0.5">{title}</div>
+            <div className="text-gray-500">{desc}</div>
+          </div>
+        ))}
       </div>
     </div>
   )
