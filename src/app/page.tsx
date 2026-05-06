@@ -5,22 +5,18 @@ import Categories from '@/components/landing/Categories'
 import Brands from '@/components/landing/Brands'
 import WhyUs from '@/components/landing/WhyUs'
 import Cta from '@/components/landing/Cta'
-import HeroSection from '@/components/HeroSection'
 
 /**
- * Ana sayfa — 6 sade bölüm.
+ * Ana sayfa — 6 bölüm, ritm: dark → white → gray → white → gray → white.
  *
- * Tasarım hiyerarşisi:
- *  1. Hero (dark)        — tek odak: arama
- *  2. HowItWorks (white) — açıklama
- *  3. Categories (gray)  — discovery
- *  4. (Search engine)    — kullanıcı arama yapmaya hazır
- *  5. Brands (white)     — sosyal kanıt
- *  6. WhyUs (gray)       — değer önerisi
- *  7. Cta (white)        — son ask
+ *  1. Hero (dark)        — VehicleFinder + VIN/OEM tek odak
+ *  2. HowItWorks (white) — 3 statik adım
+ *  3. Categories (gray)  — 16 kategori discovery grid
+ *  4. Brands (white)     — 18 marka logo grid
+ *  5. WhyUs (gray)       — 3 değer önerisi
+ *  6. Cta (white)        — son WhatsApp CTA
  *
- * Karanlık/aydınlık ritmi: dark → light → gray → light → light → gray → light
- * Animasyon disiplini: yalnızca hover ve focus state'leri. Carousel/marquee yok.
+ * Tasarım disiplini: hover/focus dışı animasyon yok, sahte içerik yok.
  */
 
 export default function Home() {
@@ -31,22 +27,6 @@ export default function Home() {
       <Hero />
       <HowItWorks />
       <Categories />
-
-      {/* Mevcut arama motoru — kullanıcı doğrudan parça araması yapabilsin */}
-      <section id="arama" className="border-y border-gray-200 bg-gray-50 py-20 md:py-28">
-        <div className="mx-auto max-w-6xl px-4">
-          <header className="mb-10 max-w-2xl">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-primary-600">
-              Parça Arama Motoru
-            </p>
-            <h2 className="text-3xl font-black tracking-tight text-gray-900 md:text-4xl">
-              Hemen aramaya başlayın
-            </h2>
-          </header>
-          <HeroSection />
-        </div>
-      </section>
-
       <Brands />
       <WhyUs />
       <Cta />

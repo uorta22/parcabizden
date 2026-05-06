@@ -7,12 +7,10 @@ import {
   Menu, X, Car, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus,
   ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
 } from 'lucide-react'
-import dynamic from 'next/dynamic'
 import { useAuth } from '@/contexts/AuthContext'
 import CartIcon from '@/components/CartIcon'
 
-// BrandBar lazy load — API çağrısı yapan ağır bileşen, sadece desktop'ta görünür
-const BrandBar = dynamic(() => import('@/components/BrandBar'), { ssr: false })
+// BrandBar kaldırıldı (Faz 3.1) — landing'de Brands grid'i var, header'da gerek yok
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -208,10 +206,6 @@ export default function Header() {
             </div>
           </div>
 
-          {/* ═══ Desktop Sub-bar: Brand Navigation ═══ */}
-          <div className="hidden lg:block pb-2">
-            <BrandBar />
-          </div>
         </div>
 
         {/* ═══ Mobile Menu ═══ */}
