@@ -165,66 +165,9 @@ html {
 }
 
 /* ═══════════════════════════════════════════════════
- * Landing Page — Cinematic Hero
+ * Landing — Header dark hero üzerinde şeffaf
  * ═══════════════════════════════════════════════════ */
 
-/* Glow orbs (radial gradient bubbles) */
-@keyframes orb1 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(40px, -40px) scale(1.1); }
-}
-@keyframes orb2 {
-  0%, 100% { transform: translate(0, 0) scale(1); }
-  50%      { transform: translate(-50px, 30px) scale(0.95); }
-}
-@keyframes orb3 {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50%      { transform: translate(-50%, -50%) scale(1.05); }
-}
-
-/* Floating particles */
-@keyframes particle {
-  0%, 100% { transform: translateY(0) translateX(0); opacity: 0.2; }
-  50%      { transform: translateY(-30px) translateX(15px); opacity: 0.5; }
-}
-
-/* Shimmer headline gradient */
-@keyframes shimmer {
-  0%   { background-position: 0% center; }
-  100% { background-position: 200% center; }
-}
-
-/* Marquee tracks (brand strip) */
-@keyframes marquee {
-  0%   { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-.marquee-track {
-  width: max-content;
-  animation: marquee 40s linear infinite;
-  will-change: transform;
-}
-.marquee-track-reverse {
-  width: max-content;
-  animation: marquee 50s linear infinite reverse;
-  will-change: transform;
-}
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track,
-  .marquee-track-reverse { animation: none; }
-}
-
-/* Hero input (dark glass) */
-.hero-input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-.hero-input:focus {
-  border-color: rgba(249, 172, 27, 0.5);
-  box-shadow: 0 0 0 3px rgba(249, 172, 27, 0.1);
-}
-
-/* Header — şeffaf hero üzerinde */
 .header-transparent {
   background: transparent !important;
   backdrop-filter: none !important;
@@ -232,8 +175,8 @@ html {
   box-shadow: none !important;
 }
 .header-transparent .text-gray-900     { color: white !important; }
-.header-transparent .text-gray-500     { color: rgba(255,255,255,0.5) !important; }
-.header-transparent .text-gray-400     { color: rgba(255,255,255,0.4) !important; }
-.header-transparent .bg-gray-50        { background: rgba(255,255,255,0.08) !important; }
-.header-transparent .border-gray-200   { border-color: rgba(255,255,255,0.15) !important; }
-.header-transparent .placeholder-gray-400::placeholder { color: rgba(255,255,255,0.3) !important; }
+.header-transparent .text-gray-500     { color: rgba(255, 255, 255, 0.55) !important; }
+.header-transparent .text-gray-400     { color: rgba(255, 255, 255, 0.45) !important; }
+.header-transparent .bg-gray-50        { background: rgba(255, 255, 255, 0.08) !important; }
+.header-transparent .border-gray-200   { border-color: rgba(255, 255, 255, 0.15) !important; }
+.header-transparent .placeholder-gray-400::placeholder { color: rgba(255, 255, 255, 0.35) !important; }
