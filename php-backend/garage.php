@@ -15,19 +15,41 @@
  * Donen dizi: ['spec_id' => bool, 'plaka' => bool, 'sase_no' => bool]
  */
 function ensure_garage_columns($pdo): array {
-    $cols = ['spec_id' => false, 'plaka' => false, 'sase_no' => false];
+    $cols = [
+        'spec_id'           => false,
+        'plaka'             => false,
+        'sase_no'           => false,
+        'manufacturer_id'   => false,
+        'model_id'          => false,
+        'vehicle_id_ktype'  => false,
+        'model_name'        => false,
+    ];
     try {
         $existing = $pdo->query("SHOW COLUMNS FROM garage")->fetchAll(PDO::FETCH_COLUMN);
-        $cols['spec_id'] = in_array('spec_id', $existing);
-        $cols['plaka']   = in_array('plaka', $existing);
-        $cols['sase_no'] = in_array('sase_no', $existing);
+        foreach ($cols as $name => $_) {
+            $cols[$name] = in_array($name, $existing, true);
+        }
     } catch (PDOException $e) {}
 
+    // Eski opsiyonel kolonlar
     if (!$cols['plaka']) {
         try { $pdo->exec("ALTER TABLE garage ADD COLUMN plaka VARCHAR(20) DEFAULT NULL"); $cols['plaka'] = true; } catch (PDOException $e) {}
     }
     if (!$cols['sase_no']) {
         try { $pdo->exec("ALTER TABLE garage ADD COLUMN sase_no VARCHAR(50) DEFAULT NULL"); $cols['sase_no'] = true; } catch (PDOException $e) {}
+    }
+    // TecDoc ID kolonları (Faz 3.2)
+    if (!$cols['manufacturer_id']) {
+        try { $pdo->exec("ALTER TABLE garage ADD COLUMN manufacturer_id INT UNSIGNED DEFAULT NULL"); $cols['manufacturer_id'] = true; } catch (PDOException $e) {}
+    }
+    if (!$cols['model_id']) {
+        try { $pdo->exec("ALTER TABLE garage ADD COLUMN model_id INT UNSIGNED DEFAULT NULL"); $cols['model_id'] = true; } catch (PDOException $e) {}
+    }
+    if (!$cols['vehicle_id_ktype']) {
+        try { $pdo->exec("ALTER TABLE garage ADD COLUMN vehicle_id_ktype INT UNSIGNED DEFAULT NULL, ADD INDEX idx_ktype (vehicle_id_ktype)"); $cols['vehicle_id_ktype'] = true; } catch (PDOException $e) {}
+    }
+    if (!$cols['model_name']) {
+        try { $pdo->exec("ALTER TABLE garage ADD COLUMN model_name VARCHAR(200) DEFAULT NULL"); $cols['model_name'] = true; } catch (PDOException $e) {}
     }
 
     return $cols;
@@ -50,6 +72,10 @@ function handle_garage_list($pdo) {
         if ($hasSpecId) $cols .= ', spec_id';
         if ($hasPlaka) $cols .= ', plaka';
         if ($hasSaseNo) $cols .= ', sase_no';
+        if ($garageCols['manufacturer_id'])  $cols .= ', manufacturer_id';
+        if ($garageCols['model_id'])         $cols .= ', model_id';
+        if ($garageCols['vehicle_id_ktype']) $cols .= ', vehicle_id_ktype';
+        if ($garageCols['model_name'])       $cols .= ', model_name';
         $stmt = $pdo->prepare("SELECT $cols FROM garage WHERE user_id = ? ORDER BY created_at DESC");
         $stmt->execute([$user_id]);
         $vehicles = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -105,43 +131,67 @@ function handle_garage_add($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $brand_slug      = trim($_POST['brand_slug'] ?? '');
-        $brand_name      = trim($_POST['brand_name'] ?? '');
+        // Opsiyonel kolonlari kontrol et ve eksikleri ekle
+        $garageCols = ensure_garage_columns($pdo);
+
+        // ── TecDoc ID payload (Faz 3.2 yeni yol) ──
+        $manufacturer_id  = isset($_POST['manufacturer_id'])  && $_POST['manufacturer_id']  !== '' ? intval($_POST['manufacturer_id'])  : null;
+        $model_id         = isset($_POST['model_id'])         && $_POST['model_id']         !== '' ? intval($_POST['model_id'])         : null;
+        $vehicle_id_ktype = isset($_POST['vehicle_id_ktype']) && $_POST['vehicle_id_ktype'] !== '' ? intval($_POST['vehicle_id_ktype']) : null;
+        $model_name_in    = trim($_POST['model_name'] ?? '');
+
+        // ── Eski slug payload (geriye uyum) ──
+        $brand_slug      = trim($_POST['brand_slug']      ?? '');
+        $brand_name      = trim($_POST['brand_name']      ?? '');
         $generation_slug = trim($_POST['generation_slug'] ?? '');
         $generation_name = trim($_POST['generation_name'] ?? '');
-        $nickname        = trim($_POST['nickname'] ?? '');
+        $nickname        = trim($_POST['nickname']        ?? '');
         $year            = isset($_POST['year']) && $_POST['year'] !== '' ? intval($_POST['year']) : null;
 
-        if (!$brand_slug || !$brand_name || !$generation_slug || !$generation_name) {
+        // İki yoldan biri zorunlu
+        $isTecDocPayload = $manufacturer_id && $model_id && $vehicle_id_ktype;
+        $isLegacyPayload = $brand_slug && $brand_name && $generation_slug && $generation_name;
+        if (!$isTecDocPayload && !$isLegacyPayload) {
             http_response_code(400);
-            echo json_encode(['error' => 'brand_slug, brand_name, generation_slug ve generation_name zorunludur']);
+            echo json_encode(['error' => 'TecDoc ID (manufacturer_id, model_id, vehicle_id_ktype) veya slug seti (brand_slug, brand_name, generation_slug, generation_name) zorunludur']);
             return;
         }
 
-        // Prevent duplicate: same brand+generation for same user
-        $check = $pdo->prepare('SELECT id FROM garage WHERE user_id = ? AND brand_slug = ? AND generation_slug = ?');
-        $check->execute([$user_id, $brand_slug, $generation_slug]);
+        // TecDoc payload geldiyse slug alanlarını türet (uniqueness ve eski UI uyumluluğu için)
+        if ($isTecDocPayload && !$isLegacyPayload) {
+            $brand_slug      = $brand_slug      ?: ('tecdoc-mfr-' . $manufacturer_id);
+            $brand_name      = $brand_name      ?: ('Marka #' . $manufacturer_id);
+            $generation_slug = $generation_slug ?: ('tecdoc-ktype-' . $vehicle_id_ktype);
+            $generation_name = $generation_name ?: ($model_name_in ?: ('KType ' . $vehicle_id_ktype));
+        }
+
+        // Duplicate kontrol: TecDoc varsa ktype ile, yoksa slug ile
+        if ($isTecDocPayload && $garageCols['vehicle_id_ktype']) {
+            $check = $pdo->prepare('SELECT id FROM garage WHERE user_id = ? AND vehicle_id_ktype = ?');
+            $check->execute([$user_id, $vehicle_id_ktype]);
+        } else {
+            $check = $pdo->prepare('SELECT id FROM garage WHERE user_id = ? AND brand_slug = ? AND generation_slug = ?');
+            $check->execute([$user_id, $brand_slug, $generation_slug]);
+        }
         if ($check->fetch()) {
             http_response_code(409);
-            echo json_encode(['error' => 'Bu arac zaten garajinizda kayitli']);
+            echo json_encode(['error' => 'Bu araç zaten garajınızda kayıtlı']);
             return;
         }
 
         $spec_id = isset($_POST['spec_id']) && $_POST['spec_id'] !== '' ? intval($_POST['spec_id']) : null;
-        $plaka   = isset($_POST['plaka']) && trim($_POST['plaka']) !== '' ? strtoupper(trim($_POST['plaka'])) : null;
+        $plaka   = isset($_POST['plaka'])   && trim($_POST['plaka'])   !== '' ? strtoupper(trim($_POST['plaka']))   : null;
         $sase_no = isset($_POST['sase_no']) && trim($_POST['sase_no']) !== '' ? strtoupper(trim($_POST['sase_no'])) : null;
-
-        // Opsiyonel kolonlari kontrol et ve eksikleri ekle
-        $garageCols = ensure_garage_columns($pdo);
-        $hasSpecCol  = $garageCols['spec_id'];
-        $hasPlakaCol = $garageCols['plaka'];
-        $hasSaseCol  = $garageCols['sase_no'];
 
         $insertCols = ['user_id', 'brand_slug', 'brand_name', 'generation_slug', 'generation_name', 'year', 'nickname'];
         $insertVals = [$user_id, $brand_slug, $brand_name, $generation_slug, $generation_name, $year, $nickname ?: null];
-        if ($hasSpecCol) { $insertCols[] = 'spec_id'; $insertVals[] = $spec_id; }
-        if ($hasPlakaCol) { $insertCols[] = 'plaka'; $insertVals[] = $plaka; }
-        if ($hasSaseCol) { $insertCols[] = 'sase_no'; $insertVals[] = $sase_no; }
+        if ($garageCols['spec_id'])          { $insertCols[] = 'spec_id';           $insertVals[] = $spec_id; }
+        if ($garageCols['plaka'])            { $insertCols[] = 'plaka';             $insertVals[] = $plaka; }
+        if ($garageCols['sase_no'])          { $insertCols[] = 'sase_no';           $insertVals[] = $sase_no; }
+        if ($garageCols['manufacturer_id'])  { $insertCols[] = 'manufacturer_id';   $insertVals[] = $manufacturer_id; }
+        if ($garageCols['model_id'])         { $insertCols[] = 'model_id';          $insertVals[] = $model_id; }
+        if ($garageCols['vehicle_id_ktype']) { $insertCols[] = 'vehicle_id_ktype';  $insertVals[] = $vehicle_id_ktype; }
+        if ($garageCols['model_name'])       { $insertCols[] = 'model_name';        $insertVals[] = ($model_name_in ?: null); }
 
         $placeholders = implode(', ', array_fill(0, count($insertCols), '?'));
         $stmt = $pdo->prepare('INSERT INTO garage (' . implode(', ', $insertCols) . ') VALUES (' . $placeholders . ')');

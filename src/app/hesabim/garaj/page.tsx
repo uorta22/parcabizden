@@ -5,9 +5,9 @@ import { Plus, Car, AlertTriangle, Clock, Gauge } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import GarageCard from '@/components/GarageCard'
 import EmptyState from '@/components/EmptyState'
-import AddVehicleModal from '@/components/AddVehicleModal'
+import AddVehicleTecDoc from '@/components/AddVehicleTecDoc'
 import type { GarageVehicleNatro } from '@/types/api'
-import { garageList, garageAdd, garageRemove } from '@/lib/api'
+import { garageList, garageRemove } from '@/lib/api'
 import { findAutodataGenerationImage } from '@/lib/vehicleImage'
 
 export default function HesabimGarajPage() {
@@ -28,16 +28,8 @@ export default function HesabimGarajPage() {
     }
   }, [user])
 
-  const handleAddVehicle = async (data: {
-    brand_slug: string
-    brand_name: string
-    generation_slug: string
-    generation_name: string
-    year?: number
-    nickname?: string
-    spec_id?: number
-  }) => {
-    await garageAdd(data)
+  // Yeni TecDoc modal kendi garageAdd çağrısını yapıyor; biz sadece listeyi yeniliyoruz.
+  const refreshGarageList = async () => {
     const updated = await garageList()
     setVehicles(updated.vehicles)
   }
@@ -147,10 +139,10 @@ export default function HesabimGarajPage() {
         </div>
       )}
 
-      <AddVehicleModal
-        isOpen={showAddModal}
+      <AddVehicleTecDoc
+        open={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddVehicle}
+        onAdded={refreshGarageList}
       />
     </div>
   )

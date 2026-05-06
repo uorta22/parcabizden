@@ -134,28 +134,37 @@ export async function garageList(): Promise<{ vehicles: GarageVehicleNatro[] }> 
 }
 
 export async function garageAdd(data: {
-  brand_slug: string
-  brand_name: string
-  generation_slug: string
-  generation_name: string
+  // Yeni: TecDoc ID payload (Faz 3.2)
+  manufacturer_id?: number
+  model_id?: number
+  vehicle_id_ktype?: number
+  model_name?: string
+  // Eski: slug payload (geriye uyum)
+  brand_slug?: string
+  brand_name?: string
+  generation_slug?: string
+  generation_name?: string
+  // Ortak alanlar
   year?: number
   nickname?: string
   spec_id?: number
   plaka?: string
   sase_no?: string
 }): Promise<{ success: boolean; id?: number }> {
-  const params: Record<string, string> = {
-    action: 'garage_add',
-    brand_slug: data.brand_slug,
-    brand_name: data.brand_name,
-    generation_slug: data.generation_slug,
-    generation_name: data.generation_name,
-  }
-  if (data.year) params.year = String(data.year)
-  if (data.nickname) params.nickname = data.nickname
-  if (data.spec_id) params.spec_id = String(data.spec_id)
-  if (data.plaka) params.plaka = data.plaka
-  if (data.sase_no) params.sase_no = data.sase_no
+  const params: Record<string, string> = { action: 'garage_add' }
+  if (data.manufacturer_id)  params.manufacturer_id   = String(data.manufacturer_id)
+  if (data.model_id)         params.model_id          = String(data.model_id)
+  if (data.vehicle_id_ktype) params.vehicle_id_ktype  = String(data.vehicle_id_ktype)
+  if (data.model_name)       params.model_name        = data.model_name
+  if (data.brand_slug)       params.brand_slug        = data.brand_slug
+  if (data.brand_name)       params.brand_name        = data.brand_name
+  if (data.generation_slug)  params.generation_slug   = data.generation_slug
+  if (data.generation_name)  params.generation_name   = data.generation_name
+  if (data.year)             params.year              = String(data.year)
+  if (data.nickname)         params.nickname          = data.nickname
+  if (data.spec_id)          params.spec_id           = String(data.spec_id)
+  if (data.plaka)            params.plaka             = data.plaka
+  if (data.sase_no)          params.sase_no           = data.sase_no
   return actionPost<{ success: boolean; id?: number }>(params)
 }
 
