@@ -1,1551 +1,647 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from 'react'
-import Link from 'next/link'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { Car, ChevronRight, ChevronLeft, Search, MessageCircle, Loader2, AlertCircle, Package, Copy, Check, Calendar, Zap, Fuel, Settings2, ArrowRight, Grid3x3, List } from 'lucide-react'
-import { siteConfig, getWhatsAppUrl } from '@/lib/config'
-import { CategoryIcon, getCategoryColor } from '@/components/CategoryIcons'
-import { ProductCardSkeleton, GenerationCardSkeleton, Skeleton } from '@/components/Skeleton'
-import Pagination from '@/components/Pagination'
-import Tabs from '@/components/Tabs'
-import { fetchVehicleCategories, fetchVehicleNodes, fetchVehicleParts, fetchGenerations, searchOemParts, fetchAutodataGenerations, fetchAutodataModels, fetchAutodataBrands, resolveAutodataSlug, fetchVehicleSpecs } from '@/lib/api'
-import type { VehicleCategory, VehicleNode, VehiclePart } from '@/lib/api'
-import type { AutodataGeneration, AutodataModel, SlugMatch, VehicleSpecRow } from '@/types/api'
-import { findAutodataGenerationImage } from '@/lib/vehicleImage'
-import PartDiagram from '@/components/PartDiagram'
+import { useEffect, useMemo, useState, useCallback, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Search, Car, Calendar, Cog, Package, ChevronRight, ArrowLeft, MessageCircle, Image as ImageIcon, Check } from 'lucide-react'
+import { BrandLogo } from '@/components/BrandLogos'
+import { getWhatsAppUrl } from '@/lib/config'
+import {
+  getTecBrands, getTecModels, getTecVehicles,
+  getTecVehicleCategories, getTecVehicleParts,
+  type TecBrand, type TecModel, type TecVehicle,
+  type TecCategoriesResponse, type TecPartsResponse,
+} from '@/lib/tecdoc'
 
-// All 17 API categories with Turkish names (hardcoded — these don't change)
-import { VEHICLE_CATEGORIES } from '@/data/categories'
-const STATIC_API_CATEGORIES = VEHICLE_CATEGORIES
+type Step = 'brand' | 'model' | 'vehicle' | 'parts'
 
-const PARTS_PER_PAGE = 20
+// "ALFA ROMEO" → "Alfa Romeo" (brand logo lookup için)
+function titleCase(s: string): string {
+  return s.toLowerCase().replace(/(^|\s|-)\w/g, c => c.toUpperCase())
+}
 
-// ── OEM Copy Button ──
-function OemBadge({ oem }: { oem: string }) {
-  const [copied, setCopied] = useState(false)
-  const copy = () => {
-    navigator.clipboard.writeText(oem)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
+// Backend marka adı → BrandLogos.tsx'in beklediği key'e normalize et.
+// Diacritic'leri temizle (CITROËN → CITROEN), kısaltmaları aç (VW → Volkswagen).
+const BRAND_LOGO_ALIASES: Record<string, string> = {
+  'Vw':            'Volkswagen',
+  'Bmw':           'BMW',
+  'Amc':           'AMC',
+  'Mercedes-Benz': 'Mercedes-Benz',
+  'Land Rover':    'Land Rover',
+  'Rolls-Royce':   'Rolls-Royce',
+  'Mini':          'Mini',
+  'Seat':          'Seat',
+  'Ssangyong':     'SsangYong',
+  'Gmc':           'GMC',
+}
+function normalizeBrandForLogo(name: string): string {
+  // 1) Diacritic stripping: CITROËN → CITROEN
+  const stripped = name.normalize('NFD').replace(/[̀-ͯ]/g, '')
+  // 2) Title case: CITROEN → Citroen
+  const titled = titleCase(stripped)
+  // 3) Alias map
+  return BRAND_LOGO_ALIASES[titled] ?? titled
+}
+
+export default function ParcalarV2Page() {
   return (
-    <button onClick={copy} className="inline-flex items-center gap-1.5 px-2 py-1 bg-gray-100 border border-gray-200 rounded-md text-xs font-mono text-gray-600 hover:text-gray-900 hover:border-primary-400 transition-all" title="Kopyala">
-      <span className="tracking-wider">{oem}</span>
-      {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+    <Suspense fallback={<PageSkeleton />}>
+      <ParcalarV2Inner />
+    </Suspense>
+  )
+}
+
+function PageSkeleton() {
+  return (
+    <main className="container mx-auto px-4 py-12 max-w-6xl">
+      <div className="animate-pulse space-y-4">
+        <div className="h-8 bg-gray-200 rounded w-64" />
+        <div className="h-4 bg-gray-100 rounded w-96" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-8">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="h-24 bg-gray-100 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    </main>
+  )
+}
+
+function ParcalarV2Inner() {
+  const router = useRouter()
+  const sp = useSearchParams()
+
+  const brandIdQ    = sp.get('brand')   ? parseInt(sp.get('brand')!, 10)   : null
+  const modelIdQ    = sp.get('model')   ? parseInt(sp.get('model')!, 10)   : null
+  const vehicleIdQ  = sp.get('vehicle') ? parseInt(sp.get('vehicle')!, 10) : null
+  const categoryIdQ = sp.get('cat')     ? parseInt(sp.get('cat')!, 10)     : null
+
+  const [brands, setBrands]         = useState<TecBrand[]>([])
+  const [models, setModels]         = useState<TecModel[]>([])
+  const [vehicles, setVehicles]     = useState<TecVehicle[]>([])
+  const [categories, setCategories] = useState<TecCategoriesResponse | null>(null)
+  const [partsRes, setPartsRes]     = useState<TecPartsResponse | null>(null)
+
+  const [loading, setLoading] = useState(false)
+  const [search, setSearch]   = useState('')
+  const [error, setError]     = useState<string | null>(null)
+
+  const step: Step =
+    !brandIdQ ? 'brand' :
+    !modelIdQ ? 'model' :
+    !vehicleIdQ ? 'vehicle' : 'parts'
+
+  // ── Veri yükleme efektleri ──
+  useEffect(() => { setSearch('') }, [step])
+
+  useEffect(() => {
+    setLoading(true); setError(null)
+    getTecBrands().then(setBrands).catch(e => setError(e.message)).finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => {
+    if (!brandIdQ) { setModels([]); return }
+    setLoading(true); setError(null)
+    getTecModels(brandIdQ).then(setModels).catch(e => setError(e.message)).finally(() => setLoading(false))
+  }, [brandIdQ])
+
+  useEffect(() => {
+    if (!modelIdQ) { setVehicles([]); return }
+    setLoading(true); setError(null)
+    getTecVehicles(modelIdQ).then(setVehicles).catch(e => setError(e.message)).finally(() => setLoading(false))
+  }, [modelIdQ])
+
+  useEffect(() => {
+    if (!vehicleIdQ) { setCategories(null); return }
+    setLoading(true); setError(null)
+    getTecVehicleCategories(vehicleIdQ).then(setCategories).catch(e => setError(e.message)).finally(() => setLoading(false))
+  }, [vehicleIdQ])
+
+  useEffect(() => {
+    if (!vehicleIdQ || !categoryIdQ) { setPartsRes(null); return }
+    setLoading(true); setError(null)
+    getTecVehicleParts(vehicleIdQ, categoryIdQ, 1, 50)
+      .then(setPartsRes).catch(e => setError(e.message)).finally(() => setLoading(false))
+  }, [vehicleIdQ, categoryIdQ])
+
+  // ── Filtreli listeler ──
+  const visibleBrands = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return brands
+    return brands.filter(b => b.name.toLowerCase().includes(q))
+  }, [brands, search])
+
+  const visibleModels = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return models
+    return models.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      (m.full_name?.toLowerCase().includes(q) ?? false)
+    )
+  }, [models, search])
+
+  const visibleVehicles = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return vehicles
+    return vehicles.filter(v =>
+      (v.description?.toLowerCase().includes(q) ?? false) ||
+      (v.engine_codes?.toLowerCase().includes(q) ?? false) ||
+      (v.full_name?.toLowerCase().includes(q) ?? false)
+    )
+  }, [vehicles, search])
+
+  // ── Navigasyon ──
+  const updateUrl = useCallback((updates: Record<string, number | null>) => {
+    const params = new URLSearchParams()
+    const merged: Record<string, number | null> = {
+      brand: brandIdQ, model: modelIdQ, vehicle: vehicleIdQ, cat: categoryIdQ, ...updates,
+    }
+    Object.entries(merged).forEach(([k, v]) => { if (v !== null && v !== undefined) params.set(k, String(v)) })
+    router.push(`/parcalar?${params.toString()}`)
+  }, [router, brandIdQ, modelIdQ, vehicleIdQ, categoryIdQ])
+
+  const selectBrand    = (id: number) => router.push(`/parcalar?brand=${id}`)
+  const selectModel    = (id: number) => router.push(`/parcalar?brand=${brandIdQ}&model=${id}`)
+  const selectVehicle  = (id: number) => router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}&vehicle=${id}`)
+  const selectCategory = (id: number) => updateUrl({ cat: id })
+  const goBack = () => {
+    if (categoryIdQ)     router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}&vehicle=${vehicleIdQ}`)
+    else if (vehicleIdQ) router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}`)
+    else if (modelIdQ)   router.push(`/parcalar?brand=${brandIdQ}`)
+    else                 router.push(`/parcalar`)
+  }
+
+  const selectedBrand    = brands.find(b => b.id === brandIdQ)
+  const selectedModel    = models.find(m => m.id === modelIdQ)
+  const selectedVehicle  = vehicles.find(v => v.id === vehicleIdQ)
+  const selectedCategory = categories?.flat.find(c => c.id === categoryIdQ)
+
+  const stepIndex = step === 'brand' ? 0 : step === 'model' ? 1 : step === 'vehicle' ? 2 : 3
+
+  // ─────────────────────────────────────────────────────────
+  return (
+    <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* ── Üst başlık + breadcrumb ── */}
+      <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
+        <div className="container mx-auto px-4 py-4 max-w-6xl">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {(brandIdQ || modelIdQ || vehicleIdQ) && (
+              <button
+                onClick={goBack}
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-primary-600 transition-colors w-fit"
+              >
+                <ArrowLeft className="w-4 h-4" /> Geri
+              </button>
+            )}
+            <Stepper current={stepIndex} />
+          </div>
+
+          {/* Seçimler özeti */}
+          {(selectedBrand || selectedModel || selectedVehicle) && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-3 text-xs">
+              {selectedBrand && (
+                <SelectionPill onClick={() => router.push(`/parcalar?brand=${brandIdQ}`)} icon={<Car className="w-3 h-3" />}>
+                  {selectedBrand.name}
+                </SelectionPill>
+              )}
+              {selectedModel && (
+                <SelectionPill onClick={() => router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}`)}>
+                  {selectedModel.name}
+                </SelectionPill>
+              )}
+              {selectedVehicle && (
+                <SelectionPill onClick={() => router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}&vehicle=${vehicleIdQ}`)} icon={<Calendar className="w-3 h-3" />}>
+                  {selectedVehicle.description || `KType ${selectedVehicle.id}`}
+                  {selectedVehicle.year_from ? ` · ${selectedVehicle.year_from}${selectedVehicle.year_to ? `–${selectedVehicle.year_to}` : '+'}` : ''}
+                </SelectionPill>
+              )}
+              {selectedCategory && (
+                <span className="px-3 py-1 rounded-full bg-primary-500 text-white font-semibold">
+                  {selectedCategory.description_tr || selectedCategory.description_en}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        {/* ── Başlık ── */}
+        {step !== 'parts' && (
+          <div className="mb-6">
+            <h1 className="text-2xl md:text-3xl font-black text-gray-900 mb-1">
+              {step === 'brand'   && <>Aracınızın <span className="text-primary-500">markasını</span> seçin</>}
+              {step === 'model'   && <>Hangi <span className="text-primary-500">model?</span></>}
+              {step === 'vehicle' && <><span className="text-primary-500">Varyantınızı</span> seçin</>}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {step === 'brand'   && 'TecDoc katalog kapsamındaki tüm markalar'}
+              {step === 'model'   && `${selectedBrand?.name} ailesindeki modeller`}
+              {step === 'vehicle' && 'Yıl, motor ve şasi koduna göre tam uyumlu varyant'}
+            </p>
+          </div>
+        )}
+
+        {/* ── Arama kutusu ── */}
+        {step !== 'parts' && (
+          <div className="relative mb-6">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder={
+                step === 'brand'   ? `${brands.length} marka içinde ara…` :
+                step === 'model'   ? `${models.length} model içinde ara…` :
+                `${vehicles.length} varyant içinde ara (motor kodu, açıklama)…`
+              }
+              className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-white border border-gray-200 text-sm outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 transition"
+              autoFocus
+            />
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm">
+            <strong>Hata:</strong> {error}
+          </div>
+        )}
+
+        {loading && <LoadingGrid step={step} />}
+
+        {/* ─── ADIM 1: MARKA ─── */}
+        {!loading && step === 'brand' && (
+          <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            {visibleBrands.map(b => (
+              <li key={b.id}>
+                <button
+                  onClick={() => selectBrand(b.id)}
+                  className="group w-full px-4 py-5 rounded-2xl bg-white border border-gray-200 hover:border-primary-500 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 flex flex-col items-center gap-3"
+                >
+                  <div className="w-14 h-14 flex items-center justify-center">
+                    <BrandLogo brand={normalizeBrandForLogo(b.name)} size={56} />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800 group-hover:text-primary-600 text-center line-clamp-2">
+                    {b.name}
+                  </span>
+                </button>
+              </li>
+            ))}
+            {visibleBrands.length === 0 && (
+              <li className="col-span-full text-center py-16 text-gray-400 text-sm">
+                Eşleşen marka yok.
+              </li>
+            )}
+          </ul>
+        )}
+
+        {/* ─── ADIM 2: MODEL ─── */}
+        {!loading && step === 'model' && (
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {visibleModels.map(m => (
+              <li key={m.id}>
+                <button
+                  onClick={() => selectModel(m.id)}
+                  className="group w-full px-5 py-4 rounded-2xl bg-white border border-gray-200 hover:border-primary-500 hover:shadow-md transition-all text-left flex items-center gap-3"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-gray-900 truncate group-hover:text-primary-600">{m.name}</div>
+                    {(m.full_name && m.full_name !== m.name) && (
+                      <div className="text-xs text-gray-500 truncate mt-0.5">{m.full_name}</div>
+                    )}
+                    {m.year_range && (
+                      <div className="inline-flex items-center gap-1 mt-1.5 text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full">
+                        <Calendar className="w-2.5 h-2.5" />
+                        {m.year_range}
+                      </div>
+                    )}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                </button>
+              </li>
+            ))}
+            {visibleModels.length === 0 && (
+              <li className="col-span-full text-center py-16 text-gray-400 text-sm">
+                Eşleşen model yok.
+              </li>
+            )}
+          </ul>
+        )}
+
+        {/* ─── ADIM 3: VARYANT ─── */}
+        {!loading && step === 'vehicle' && (
+          <ul className="space-y-2">
+            {visibleVehicles.map(v => (
+              <li key={v.id}>
+                <button
+                  onClick={() => selectVehicle(v.id)}
+                  className="group w-full px-5 py-4 rounded-2xl bg-white border border-gray-200 hover:border-primary-500 hover:shadow-md transition-all text-left"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold text-gray-900 group-hover:text-primary-600">
+                        {v.description || v.full_name || `KType ${v.id}`}
+                      </div>
+                      {v.engine_codes && (
+                        <div className="flex items-center gap-1.5 mt-1.5 text-xs text-gray-500">
+                          <Cog className="w-3.5 h-3.5" />
+                          <span className="font-mono">{v.engine_codes}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      {v.year_from && (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-primary-700 bg-primary-50 border border-primary-200 px-2.5 py-1 rounded-full">
+                          <Calendar className="w-3 h-3" />
+                          {v.year_from}{v.year_to ? `–${v.year_to}` : '+'}
+                        </span>
+                      )}
+                      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all" />
+                    </div>
+                  </div>
+                </button>
+              </li>
+            ))}
+            {visibleVehicles.length === 0 && (
+              <li className="text-center py-16 text-gray-400 text-sm">
+                Eşleşen varyant yok.
+              </li>
+            )}
+          </ul>
+        )}
+
+        {/* ─── ADIM 4: KATEGORİ + PARÇA ─── */}
+        {step === 'parts' && (
+          <PartsStep
+            categories={categories}
+            partsRes={partsRes}
+            categoryIdQ={categoryIdQ}
+            loading={loading}
+            selectedBrand={selectedBrand}
+            selectedModel={selectedModel}
+            selectedVehicle={selectedVehicle}
+            selectedCategory={selectedCategory}
+            onSelectCategory={selectCategory}
+          />
+        )}
+      </div>
+    </main>
+  )
+}
+
+// ═══════════════════════════════════════════════════════════
+// Alt Bileşenler
+// ═══════════════════════════════════════════════════════════
+
+function Stepper({ current }: { current: number }) {
+  const steps = ['Marka', 'Model', 'Varyant', 'Parça']
+  return (
+    <ol className="flex items-center gap-1 sm:gap-3 text-xs">
+      {steps.map((label, i) => {
+        const active = i === current
+        const done   = i < current
+        return (
+          <li key={label} className="flex items-center gap-1 sm:gap-3">
+            <span className={`flex items-center gap-1.5 ${active ? 'text-primary-600 font-bold' : done ? 'text-gray-700' : 'text-gray-400'}`}>
+              <span className={`flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-black ${
+                active ? 'bg-primary-500 text-white' :
+                done ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {done ? <Check className="w-3 h-3" /> : i + 1}
+              </span>
+              <span className="hidden sm:inline">{label}</span>
+            </span>
+            {i < steps.length - 1 && (
+              <span className={`w-4 sm:w-6 h-px ${done ? 'bg-gray-300' : 'bg-gray-200'}`} />
+            )}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function SelectionPill({
+  children, onClick, icon,
+}: { children: React.ReactNode; onClick?: () => void; icon?: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors max-w-full"
+    >
+      {icon}
+      <span className="truncate">{children}</span>
     </button>
   )
 }
 
-// ── Static view (no vehicle selected) — marka seçimi göster ──
-function StaticCategoriesView() {
-  const router = useRouter()
-  const [brands, setBrands] = useState<{ name: string; slug: string }[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetchAutodataBrands()
-      .then(data => setBrands(data.brands || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
-
-  const getBrandLogo = (slug: string): string => `/brands/${slug}.webp`
-
-  const handleBrandClick = (slug: string, name: string) => {
-    router.push(`/parcalar?brand=${slug}&marka=${encodeURIComponent(name)}`)
-  }
-
+function LoadingGrid({ step }: { step: Step }) {
+  const cols = step === 'brand' ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6' :
+               step === 'model' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' :
+               'grid-cols-1'
+  const heightCls = step === 'brand' ? 'h-32' : 'h-20'
   return (
-    <div>
-      <div className="text-center mb-10">
-        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">Marka Seçin</h2>
-        <p className="text-gray-500">Aracınızın markasını seçerek parça kataloğuna ulaşın</p>
-      </div>
-
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
-        </div>
-      ) : (
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
-          {brands.map(b => (
-            <button
-              key={b.slug}
-              onClick={() => handleBrandClick(b.slug, b.name)}
-              className="group flex flex-col items-center gap-2 p-4 bg-white border border-gray-200 rounded-xl hover:border-primary-300 hover:shadow-md transition-all"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={getBrandLogo(b.slug)} alt={b.name} className="w-12 h-12 object-contain" loading="lazy" />
-              <span className="text-xs text-gray-700 font-medium text-center group-hover:text-primary-600 transition-colors">{b.name}</span>
-            </button>
-          ))}
-        </div>
-      )}
+    <div className={`grid gap-3 ${cols}`}>
+      {Array.from({ length: 12 }).map((_, i) => (
+        <div key={i} className={`${heightCls} bg-gray-100 rounded-2xl animate-pulse`} />
+      ))}
     </div>
   )
 }
 
-// ── Dynamic vehicle parts explorer ──
-function VehiclePartsExplorer({ brand, gen, marka, modelName, generationName }: { brand: string; gen: string; marka: string; modelName: string; generationName?: string }) {
-  type View = 'categories' | 'nodes' | 'parts'
+function PartsStep({
+  categories, partsRes, categoryIdQ, loading,
+  selectedBrand, selectedModel, selectedVehicle, selectedCategory,
+  onSelectCategory,
+}: {
+  categories: TecCategoriesResponse | null
+  partsRes: TecPartsResponse | null
+  categoryIdQ: number | null
+  loading: boolean
+  selectedBrand?: TecBrand
+  selectedModel?: TecModel
+  selectedVehicle?: TecVehicle
+  selectedCategory?: TecCategoriesResponse['flat'][0]
+  onSelectCategory: (id: number) => void
+}) {
+  // Accordion: tek seferde tek grup açık
+  const [openGroup, setOpenGroup] = useState<string | null>(null)
 
-  const [view, setView] = useState<View>('categories')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [fallbackToGenerations, setFallbackToGenerations] = useState(false)
-
-  // Data
-  const [apiCategories, setApiCategories] = useState<VehicleCategory[]>([])
-  const [totalParts, setTotalParts] = useState(0)
-  const [nodes, setNodes] = useState<VehicleNode[]>([])
-  const [parts, setParts] = useState<VehiclePart[]>([])
-
-  // Selection
-  const [selectedCat, setSelectedCat] = useState<VehicleCategory | null>(null)
-  const [selectedNode, setSelectedNode] = useState<VehicleNode | null>(null)
-
-  // Search & Pagination
-  const [nodeSearch, setNodeSearch] = useState('')
-  const [partSearch, setPartSearch] = useState('')
-  const [partsPage, setPartsPage] = useState(1)
-
-  // Vehicle image
-  const [vehicleImage, setVehicleImage] = useState('')
-  const searchParams = useSearchParams()
-  const modelSlug = searchParams.get('model_slug')
-  const modelKey = searchParams.get('model_key')
-
-  // Marka logosu
-  const brandLogo = brand ? getBrandLogoPath(brand) : ''
-
-  // Load vehicle image — önce spesifik nesil adı, sonra vehicle-tree.json, en son genel model adı
   useEffect(() => {
-    if (!marka) return
-    let cancelled = false
-
-    const loadImage = async () => {
-      // 1. Spesifik nesil adı varsa önce onu dene (GenerationPicker'dan gelen)
-      if (!cancelled && generationName) {
-        const img = await findAutodataGenerationImage(brand, generationName)
-        if (img && !cancelled) { setVehicleImage(img); return }
-      }
-
-      // 2. vehicle-tree.json'dan dene (URL'den gelen model slug ile)
-      if (modelSlug) {
-        try {
-          const res = await fetch('/data/vehicle-tree.json')
-          const tree = await res.json()
-          const b = tree[marka]
-          if (b) {
-            for (const models of Object.values(b.body_types) as { slug: string; key: string; image: string }[][]) {
-              const found = models.find((m: { slug: string; key: string }) => m.slug === modelSlug || m.key === modelKey)
-              if (found && !cancelled) { setVehicleImage(found.image); return }
-            }
-          }
-        } catch { /* devam et */ }
-      }
-
-      // 3. Fallback: genel model adı ile autodata görseli
-      if (!cancelled && modelName) {
-        const img = await findAutodataGenerationImage(brand, modelName)
-        if (img && !cancelled) setVehicleImage(img)
-      }
+    if (categories && !openGroup) {
+      const firstGroup = Object.keys(categories.tree)[0]
+      if (firstGroup) setOpenGroup(firstGroup)
     }
+  }, [categories]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    loadImage()
-    return () => { cancelled = true }
-  }, [marka, modelSlug, modelKey, gen, generationName])
-
-  const handleCategoryClick = useCallback(async (cat: VehicleCategory) => {
-    setSelectedCat(cat)
-    setView('nodes')
-    setLoading(true)
-    setError('')
-    setNodeSearch('')
-    try {
-      const data = await fetchVehicleNodes(brand, gen, cat.id)
-      setNodes(data.nodes)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Hata oluştu')
-    } finally {
-      setLoading(false)
-    }
-  }, [brand, gen])
-
-  // Load categories — anında statik isimlerle göster, arka planda sayıları doldur
-  useEffect(() => {
-    setError('')
-    setFallbackToGenerations(false)
-
-    // Anında statik kategorileri göster (sayılar 0 olarak, loading yok)
-    const placeholder: VehicleCategory[] = STATIC_API_CATEGORIES.map((c, i) => ({
-      id: c.id, name_tr: c.name_tr, name_en: c.id, icon: c.id,
-      sort_order: i, total_parts: 0, node_count: 0,
-    }))
-    setApiCategories(placeholder)
-    setLoading(false)
-
-    // Arka planda gerçek sayıları fetch et
-    fetchVehicleCategories(brand, gen)
-      .then(data => {
-        if (data.total_parts === 0 || data.categories.length === 0) {
-          setFallbackToGenerations(true)
-          return
-        }
-        setApiCategories(data.categories)
-        setTotalParts(data.total_parts)
-
-        // Auto-select preselected category from sessionStorage
-        const preselect = sessionStorage.getItem('preselect_cat')
-        if (preselect) {
-          sessionStorage.removeItem('preselect_cat')
-          const matched = data.categories.find(c => c.id === preselect)
-          if (matched) {
-            setTimeout(() => handleCategoryClick(matched), 0)
-          }
-        }
-      })
-      .catch(e => setError(e.message))
-  }, [brand, gen, handleCategoryClick])
-
-  const handleNodeClick = useCallback(async (node: VehicleNode) => {
-    setSelectedNode(node)
-    setView('parts')
-    setLoading(true)
-    setError('')
-    setPartSearch('')
-    setPartsPage(1)
-    try {
-      const data = await fetchVehicleParts(brand, gen, node.name)
-      setParts(data.parts || [])
-    } catch {
-      setParts([])
-    } finally {
-      setLoading(false)
-    }
-  }, [brand, gen])
-
-  const goBack = () => {
-    if (view === 'parts') { setView('nodes'); setParts([]); setSelectedNode(null) }
-    else if (view === 'nodes') { setView('categories'); setNodes([]); setSelectedCat(null) }
-  }
-
-  const whatsappText = `Merhaba, ${marka} ${modelName} aracım için parça arıyorum.${selectedCat ? `\nKategori: ${selectedCat.name_tr}` : ''}${selectedNode ? `\nGrup: ${selectedNode.label}` : ''}`
-
-  // Filtered lists
-  const filteredNodes = nodes.filter(n => !nodeSearch || n.label.toLowerCase().includes(nodeSearch.toLowerCase()))
-  const filteredParts = parts.filter(p => !partSearch || p.name.toLowerCase().includes(partSearch.toLowerCase()) || p.oem_number.toLowerCase().includes(partSearch.toLowerCase()))
-  const totalPages = Math.ceil(filteredParts.length / PARTS_PER_PAGE)
-  const paginatedParts = filteredParts.slice((partsPage - 1) * PARTS_PER_PAGE, partsPage * PARTS_PER_PAGE)
-
-  // If generation slug doesn't match DB, fallback to generation picker
-  if (fallbackToGenerations) {
-    return <GenerationPicker brand={brand} marka={marka} modelName={modelName} />
-  }
+  const vehicleLabel = selectedVehicle
+    ? `${selectedBrand?.name} ${selectedModel?.name}${selectedVehicle.description ? ' · ' + selectedVehicle.description : ''}`
+    : ''
 
   return (
-    <>
-      {/* Vehicle Banner */}
-      <div className="mb-8 bg-white border border-gray-200 shadow-sm rounded-2xl overflow-hidden">
-        <div className="px-6 py-3 bg-primary-50 border-b border-primary-100">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Car className="w-4 h-4 text-primary-500" />
-              <span className="text-primary-600 text-sm font-medium">Seçili Araç</span>
-            </div>
-            <span className="text-xs text-gray-400 tabular-nums">{totalParts.toLocaleString('tr-TR')} parça</span>
-          </div>
-        </div>
-        <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-6">
-          {vehicleImage ? (
-            <div className="w-36 h-24 md:w-44 md:h-28 rounded-xl bg-gray-100 border border-gray-200 flex-shrink-0 overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={vehicleImage} alt={modelName} className="w-full h-full object-contain p-2" />
-            </div>
-          ) : brandLogo && (
-            <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={brandLogo} alt={marka} className="w-full h-full object-contain" />
-            </div>
-          )}
-          <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka} {modelName}</h2>
-            <p className="text-sm text-gray-500 mt-1">Aşağıdan kategori seçin veya WhatsApp ile bize ulaşın.</p>
-          </div>
-          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all flex-shrink-0">
-            <MessageCircle className="w-5 h-5" />
-            Parça Talep Et
-          </a>
-        </div>
-      </div>
-
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm mb-6 flex-wrap">
-        <button onClick={() => { setView('categories'); setSelectedCat(null); setSelectedNode(null) }}
-          className={`transition-colors ${view === 'categories' ? 'text-gray-900 font-medium' : 'text-gray-500 hover:text-gray-900'}`}>
-          Kategoriler
-        </button>
-        {selectedCat && (
-          <>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <button onClick={() => { setView('nodes'); setSelectedNode(null) }}
-              className={`transition-colors ${view === 'nodes' ? 'text-gray-900 font-medium' : 'text-gray-500 hover:text-gray-900'}`}>
-              {selectedCat.name_tr}
-            </button>
-          </>
-        )}
-        {selectedNode && (
-          <>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-900 font-medium">{selectedNode.label}</span>
-          </>
-        )}
-      </nav>
-
-      {/* Loading */}
-      {loading && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <ProductCardSkeleton key={i} />
-          ))}
-        </div>
-      )}
-
-      {/* Error */}
-      {error && !loading && (
-        <div className="flex items-center gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl mb-6">
-          <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0" />
-          <p className="text-red-400 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* ── CATEGORIES VIEW ── */}
-      {view === 'categories' && !loading && !error && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {apiCategories.map(cat => {
-            const color = getCategoryColor(cat.id)
-            return (
-              <button key={cat.id} onClick={() => handleCategoryClick(cat)}
-                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-5 hover:border-primary-400 hover:shadow-md transition-all text-left">
-                <div className="flex items-start gap-3">
-                  <div className={`w-11 h-11 rounded-lg bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform`}>
-                    <CategoryIcon id={cat.id} className="text-white" size={22} strokeWidth={2} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-gray-900 font-semibold text-sm mb-1 group-hover:text-primary-500 transition-colors">{cat.name_tr}</h3>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-400 text-xs">{cat.total_parts.toLocaleString('tr-TR')} parça</span>
-                      <span className="text-gray-400 text-xs">{cat.node_count} grup</span>
-                    </div>
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* ── NODES VIEW ── */}
-      {view === 'nodes' && !loading && !error && (
-        <div>
-          <button onClick={goBack} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors">
-            <ChevronLeft className="w-4 h-4" /> Kategorilere Dön
-          </button>
-
-          {/* Node Search */}
-          {nodes.length > 10 && (
-            <div className="relative mb-5">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-              <input type="text" value={nodeSearch} onChange={e => setNodeSearch(e.target.value)} placeholder="Grup ara..."
-                className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
-            </div>
-          )}
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredNodes.map(node => (
-              <button key={node.name} onClick={() => handleNodeClick(node)}
-                className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-400 hover:shadow-md transition-all text-left flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-gray-100 group-hover:bg-primary-500/10 flex items-center justify-center flex-shrink-0 transition-colors">
-                  <Package className="w-4 h-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-gray-700 group-hover:text-gray-900 font-medium transition-colors truncate">{node.label}</p>
-                  <p className="text-xs text-gray-400">{node.part_count} parça</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-primary-500 flex-shrink-0 transition-colors" />
-              </button>
+    <div className="grid lg:grid-cols-[300px_1fr] gap-5">
+      {/* Sol: Kategori ağacı */}
+      <aside className="space-y-2 lg:max-h-[calc(100vh-12rem)] lg:overflow-y-auto lg:pr-2 lg:sticky lg:top-32">
+        {!categories && loading && (
+          <div className="space-y-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-20 bg-gray-100 rounded-xl animate-pulse" />
             ))}
           </div>
-          {filteredNodes.length === 0 && (
-            <p className="text-gray-500 text-sm text-center py-10">Sonuç bulunamadı</p>
-          )}
-        </div>
-      )}
-
-      {/* ── PARTS VIEW ── */}
-      {view === 'parts' && !loading && (
-        <div>
-          <button onClick={goBack} className="flex items-center gap-1.5 text-gray-500 hover:text-gray-900 text-sm mb-4 transition-colors">
-            <ChevronLeft className="w-4 h-4" /> {selectedCat?.name_tr || 'Geri'}
-          </button>
-
-          {/* Part Diagram */}
-          {selectedNode && (
-            <PartDiagram brand={brand} gen={gen} node={selectedNode.name} nodeLabel={selectedNode.label} />
-          )}
-
-          {parts.length > 0 ? (
-            <>
-              {/* Parts Search */}
-              {parts.length > 10 && (
-                <div className="relative mb-5">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                  <input type="text" value={partSearch} onChange={e => { setPartSearch(e.target.value); setPartsPage(1) }} placeholder="Parça adı veya OEM numarası ara..."
-                    className="w-full pl-9 pr-4 py-2.5 bg-white border border-gray-300 rounded-xl text-gray-900 text-sm placeholder-gray-500 focus:outline-none focus:border-primary-500 transition-colors" />
-                </div>
-              )}
-
-              <p className="text-xs text-gray-400 mb-4">{filteredParts.length} parça listeleniyor</p>
-
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                {paginatedParts.map((part, i) => {
-                  const detailParams = new URLSearchParams()
-                  if (brand) detailParams.set('brand', brand)
-                  if (gen) detailParams.set('gen', gen)
-                  if (marka) detailParams.set('marka', marka)
-                  if (modelName) detailParams.set('model_name', modelName)
-                  if (selectedCat) { detailParams.set('cat', selectedCat.id); detailParams.set('cat_name', selectedCat.name_tr) }
-                  if (selectedNode) { detailParams.set('node', selectedNode.name); detailParams.set('node_name', selectedNode.label) }
-                  const detailHref = `/parca/${encodeURIComponent(part.oem_number)}?${detailParams.toString()}`
-
-                  return (
-                    <Link
-                      key={`${part.oem_number}-${i}`}
-                      href={detailHref}
-                      className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all duration-200 text-left block"
-                    >
-                      <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
-                      <div className="mb-3">
-                        <OemBadge oem={part.oem_number} />
-                      </div>
-                      <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
-                        Detay & Fiyat Al
-                      </span>
-                    </Link>
-                  )
-                })}
-              </div>
-
-              <Pagination currentPage={partsPage} totalPages={totalPages} onPageChange={setPartsPage} />
-
-              {filteredParts.length === 0 && (
-                <p className="text-gray-500 text-sm text-center py-10">Aramanızla eşleşen parça bulunamadı</p>
-              )}
-            </>
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-xl p-8 text-center">
-              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
-                <Package className="w-6 h-6 text-gray-400" />
-              </div>
-              <p className="text-gray-500 mb-1 text-sm">Bu grup için parça detayları yüklenemedi.</p>
-              <p className="text-gray-400 text-xs mb-4">WhatsApp üzerinden bu gruptaki parçaları talep edebilirsiniz.</p>
-              <a href={getWhatsAppUrl(`Merhaba, ${marka} ${modelName} için "${selectedNode?.label}" grubundaki parçalar hakkında bilgi almak istiyorum.`)}
-                target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
-                <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
-              </a>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bottom CTA */}
-      <div className="mt-10 bg-gradient-to-r from-green-500/10 to-green-600/5 border border-green-500/20 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-4">
-        <div className="flex-1 text-center md:text-left">
-          <h4 className="text-gray-900 font-bold text-base mb-1">Aradığınız parça listede yok mu?</h4>
-          <p className="text-gray-500 text-sm">WhatsApp&apos;tan talep gönderin, size en uygun parçayı bulalım.</p>
-        </div>
-        <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-          className="flex-shrink-0 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors flex items-center gap-2">
-          <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Oluştur
-        </a>
-      </div>
-
-    </>
-  )
-}
-
-// ── Spec summary type for generation cards ──
-interface GenSpecSummary {
-  powerRange: string
-  engineRange: string
-  fuelTypes: string
-  transmissions: string
-}
-
-function getBrandLogoPath(slug: string): string {
-  return `/brands/${slug}.webp`
-}
-
-function summarizeSpecs(specs: VehicleSpecRow[]): GenSpecSummary | null {
-  if (!specs || specs.length === 0) return null
-  const powers = specs.map(s => s.power_hp).filter((v): v is number => v != null && v > 0)
-  const engines = specs.map(s => s.engine_cc).filter((v): v is number => v != null && v > 0)
-  const fuels = Array.from(new Set(specs.map(s => s.fuel_type).filter(Boolean) as string[]))
-  const trans = Array.from(new Set(specs.map(s => {
-    const t = s.transmission
-    if (!t) return null
-    const lower = t.toLowerCase()
-    if (lower.includes('otomatik') || lower.includes('automatic') || lower.includes('auto')) return 'Otomatik'
-    if (lower.includes('manuel') || lower.includes('manual')) return 'Manuel'
-    if (lower.includes('cvt')) return 'CVT'
-    if (lower.includes('robot')) return 'Robot'
-    return t.split(' ')[0]
-  }).filter(Boolean) as string[]))
-
-  const minP = powers.length ? Math.min(...powers) : 0
-  const maxP = powers.length ? Math.max(...powers) : 0
-  const minE = engines.length ? Math.min(...engines) : 0
-  const maxE = engines.length ? Math.max(...engines) : 0
-
-  return {
-    powerRange: powers.length === 0 ? '' : minP === maxP ? `${minP} HP` : `${minP}–${maxP} HP`,
-    engineRange: engines.length === 0 ? '' : minE === maxE ? `${minE} cc` : `${minE}–${maxE} cc`,
-    fuelTypes: fuels.join(', '),
-    transmissions: trans.join(', '),
-  }
-}
-
-// ── Model Picker (when brand is known but model_name is missing) ──
-function ModelPicker({ brand, marka }: { brand: string; marka: string }) {
-  const [models, setModels] = useState<AutodataModel[]>([])
-  const [loading, setLoading] = useState(true)
-  const router = useRouter()
-
-  useEffect(() => {
-    fetchAutodataModels(brand)
-      .then(data => setModels(data.models || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [brand])
-
-  const handleModelClick = (model: AutodataModel) => {
-    router.push(`/parcalar?brand=${brand}&marka=${encodeURIComponent(marka)}&model_name=${encodeURIComponent(model.name)}`)
-  }
-
-  return (
-    <>
-      {/* Vehicle Banner */}
-      <div className="mb-8 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-        <div className="p-5 md:p-6 flex flex-col sm:flex-row items-center gap-4 md:gap-5">
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center flex-shrink-0 p-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={getBrandLogoPath(brand)} alt={marka} className="w-full h-full object-contain" />
+        )}
+        {categories && Object.keys(categories.tree).length === 0 && (
+          <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm">
+            Bu varyanta atanmış parça kategorisi yok.
           </div>
-          <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="text-xl md:text-2xl font-bold text-gray-900">{marka}</h2>
-            <p className="text-sm text-gray-500 mt-1">Aracınızın modelini seçin</p>
-          </div>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="bg-white border border-gray-100 rounded-xl p-4 space-y-2" aria-hidden="true">
-              <Skeleton className="h-5 w-3/5" />
-              <Skeleton className="h-3 w-2/5" />
-            </div>
-          ))}
-        </div>
-      ) : models.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-          {models.map(m => (
-            <button
-              key={m.name}
-              onClick={() => handleModelClick(m)}
-              className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-4 text-left transition-all"
-            >
-              <p className="text-sm font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">{m.name}</p>
-              <p className="text-xs text-gray-400 mt-1">{m.gen_count} nesil{m.min_year && m.max_year ? ` · ${m.min_year}–${m.max_year}` : ''}</p>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-          <p className="text-gray-600 mb-4">Bu marka için model bilgisi bulunamadı.</p>
-          <a href={getWhatsAppUrl(`Merhaba, ${marka} aracım için parça arıyorum.`)} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
-            <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
-          </a>
-        </div>
-      )}
-    </>
-  )
-}
-
-// ── Generation Picker (when brand is known but gen is missing) ──
-function GenerationPicker({ brand, marka, modelName }: { brand: string; marka: string; modelName: string }) {
-  // Autodata generations (richer data)
-  const [autodataGens, setAutodataGens] = useState<AutodataGeneration[]>([])
-  // Fallback: parts DB generations
-  const [dbGenerations, setDbGenerations] = useState<Array<{ generation_slug: string; generation_name: string; part_count: number }>>([])
-  const [loading, setLoading] = useState(true)
-  const [resolving, setResolving] = useState(false)
-  const [error, setError] = useState('')
-  const [selectedGen, setSelectedGen] = useState<string | null>(null)
-  const [selectedGenName, setSelectedGenName] = useState<string | null>(null)
-  const [useAutodata, setUseAutodata] = useState(false)
-
-  // New states for enhanced UX
-  const [genImages, setGenImages] = useState<Record<string, string>>({})
-  const [genSpecs, setGenSpecs] = useState<Record<string, GenSpecSummary>>({})
-  const [selectedGenDisplay, setSelectedGenDisplay] = useState<{ name: string; yearRange: string; image?: string; specs?: GenSpecSummary } | null>(null)
-  const [activeBodyType, setActiveBodyType] = useState('__all__')
-  const fetchedSpecsRef = useRef<Set<string>>(new Set())
-
-  // Read autodata_gen / autodata_year from URL (passed by VehicleSelector on resolve fail)
-  const genSearchParams = useSearchParams()
-  const autodataGen = genSearchParams.get('autodata_gen')
-  const autodataYear = genSearchParams.get('autodata_year')
-
-  // Helper: filter matches/generations by model name relevance
-  const filterByModel = useCallback((matches: Array<{ generation_slug: string; generation_name: string; part_count: number }>) => {
-    if (!modelName) return matches
-
-    // "3 Serisi" → ["3", "serisi"], "X5" → ["x5"], "Golf" → ["golf"]
-    const modelWords = modelName.toLowerCase().split(/\s+/).filter(Boolean)
-    const baseModel = modelWords[0]
-    if (!baseModel) return matches
-
-    // "Serisi" gibi genel kelimeleri çıkar, asıl model tanımlayıcısını bul
-    const genericWords = ['serisi', 'series', 'class', 'klasse', 'sınıfı']
-    const significantWords = modelWords.filter(w => !genericWords.includes(w))
-
-    return matches.filter(m => {
-      const name = m.generation_name.toLowerCase()
-      const slug = m.generation_slug.toLowerCase()
-
-      // Kısa sayısal model isimleri için (3, 5, 7 gibi): "3 serisi" → generation'da "3" ile başlaması lazım
-      if (baseModel.length <= 2 && /^\d+$/.test(baseModel)) {
-        // "3 Serisi (E90)" gibi generation_name'lerde "3 " ile başlama veya "3-" içerme kontrolü
-        const pattern = new RegExp(`\\b${baseModel}\\b`)
-        return pattern.test(name) || pattern.test(slug)
-      }
-
-      // Uzun model isimleri için: herhangi bir önemli kelime generation_name'de geçmeli
-      if (significantWords.length > 0) {
-        return significantWords.some(w => name.includes(w) || slug.includes(w))
-      }
-
-      return name.startsWith(baseModel) || name.includes(baseModel)
-    })
-  }, [modelName])
-
-  // Fetch generation images — model+body_type bazlı tek görsel (aynı model için tek fetch)
-  useEffect(() => {
-    if (!marka || autodataGens.length === 0) return
-    setGenImages({})
-    let cancelled = false
-    const fetchImages = async () => {
-      // Model adına göre grupla — her grup için sadece 1 fetch yap
-      const modelGroups = new Map<string, string[]>() // modelBaseKey → genKey[]
-      for (const gen of autodataGens) {
-        const genKey = `${gen.name}-${gen.body_type}`
-        // Model adını nesil adından çıkar (ilk kelime)
-        const modelBase = gen.name.split(/[\s(]/)[0].toLowerCase()
-        const groupKey = `${modelBase}_${gen.body_type || ''}`
-        if (!modelGroups.has(groupKey)) modelGroups.set(groupKey, [])
-        modelGroups.get(groupKey)!.push(genKey)
-      }
-
-      // Her model grubu için tek bir neslin görselini fetch et
-      const fetched = new Map<string, string | null>()
-      const uniqueGens = Array.from(modelGroups.entries()).map(([groupKey, genKeys]) => {
-        // Grubun ilk nesil adını kullan (representative)
-        const repGen = autodataGens.find(g => `${g.name}-${g.body_type}` === genKeys[0])!
-        return { groupKey, genKeys, repGen }
-      })
-
-      const results = await Promise.all(
-        uniqueGens.map(async ({ groupKey, repGen }) => {
-          const img = await findAutodataGenerationImage(brand, modelName)
-          return { groupKey, img }
-        })
-      )
-      if (cancelled) return
-
-      for (const { groupKey, img } of results) {
-        fetched.set(groupKey, img)
-      }
-
-      // Tüm nesillere model grubunun görselini ata
-      const images: Record<string, string> = {}
-      for (const [groupKey, genKeys] of Array.from(modelGroups.entries())) {
-        const img = fetched.get(groupKey)
-        if (img) {
-          for (const gk of genKeys) images[gk] = img
-        }
-      }
-      setGenImages(images)
-    }
-    fetchImages()
-    return () => { cancelled = true }
-  }, [marka, autodataGens])
-
-  // Lazy fetch specs on hover/focus
-  const prefetchSpec = useCallback((gen: AutodataGeneration) => {
-    const key = `${gen.name}-${gen.body_type}`
-    if (fetchedSpecsRef.current.has(key) || !brand || !modelName) return
-    fetchedSpecsRef.current.add(key)
-    fetchVehicleSpecs(brand, gen.name, gen.year_start ?? undefined, modelName)
-      .then(data => {
-        const summary = summarizeSpecs(data.specs)
-        if (summary) setGenSpecs(prev => ({ ...prev, [key]: summary }))
-      })
-      .catch(() => {})
-  }, [brand, modelName])
-
-  // Body type tabs derived from autodata generations
-  const bodyTypeTabs = useMemo(() => {
-    if (autodataGens.length < 3) return []
-    const counts = new Map<string, number>()
-    for (const gen of autodataGens) {
-      const bt = gen.body_type || 'Diger'
-      counts.set(bt, (counts.get(bt) || 0) + 1)
-    }
-    if (counts.size < 2) return []
-    return Array.from(counts.entries()).map(([type, count]) => ({ type, count }))
-  }, [autodataGens])
-
-  // Filtered generations by body type
-  const filteredAutodataGens = useMemo(() => {
-    if (activeBodyType === '__all__') return autodataGens
-    return autodataGens.filter(g => (g.body_type || 'Diger') === activeBodyType)
-  }, [autodataGens, activeBodyType])
-
-  // Auto-resolve when autodata_gen is present in URL — handles everything in one effect
-  useEffect(() => {
-    if (!autodataGen || !brand || !modelName) return
-    setResolving(true)
-    setLoading(false)
-    setError('')
-
-    // Run resolve + DB generations in parallel
-    const resolvePromise = resolveAutodataSlug(brand, modelName, autodataGen, autodataYear ? parseInt(autodataYear) : undefined)
-      .catch(() => null)
-    const dbPromise = fetchGenerations(brand)
-      .then(data => data.generations || [])
-      .catch(() => [] as Array<{ generation_slug: string; generation_name: string; part_count: number }>)
-
-    Promise.all([resolvePromise, dbPromise]).then(([result, allDbGens]) => {
-      // Try auto_selected first
-      if (result?.auto_selected) {
-        setSelectedGen(result.auto_selected)
-        return
-      }
-
-      // Filter resolve matches by model name
-      const relevantMatches = result?.matches ? filterByModel(result.matches) : []
-      if (relevantMatches.length === 1) {
-        setSelectedGen(relevantMatches[0].generation_slug)
-        return
-      }
-      if (relevantMatches.length > 1) {
-        setDbGenerations(relevantMatches)
-        setUseAutodata(false)
-        setResolving(false)
-        return
-      }
-
-      // Filter DB generations by model name
-      const relevantDbGens = filterByModel(allDbGens)
-      if (relevantDbGens.length === 1) {
-        setSelectedGen(relevantDbGens[0].generation_slug)
-        return
-      }
-      if (relevantDbGens.length > 1) {
-        setDbGenerations(relevantDbGens)
-        setUseAutodata(false)
-        setResolving(false)
-        return
-      }
-
-      // Eşleşme bulunamadı
-      setError('no_parts')
-      setResolving(false)
-    })
-  }, [autodataGen, autodataYear, brand, modelName, filterByModel])
-
-  // Normal generation loading (no autodata_gen in URL)
-  useEffect(() => {
-    if (autodataGen) return
-
-    setLoading(true)
-    setError('')
-
-    // Pre-fetch DB generations filtered by modelName
-    const dbPromise = fetchGenerations(brand)
-      .then(data => {
-        let gens = data.generations || []
-        const filtered = filterByModel(gens)
-        if (filtered.length > 0) gens = filtered
-        setDbGenerations(gens)
-        return gens
-      })
-      .catch(() => [] as Array<{ generation_slug: string; generation_name: string; part_count: number }>)
-
-    // If we have a model_name, try autodata first
-    if (modelName) {
-      fetchAutodataGenerations(brand, modelName)
-        .then(async data => {
-          if (data.generations && data.generations.length > 0) {
-            setAutodataGens(data.generations)
-            setUseAutodata(true)
-            setLoading(false)
-          } else {
-            const dbGens = await dbPromise
-            setUseAutodata(false)
-            if (dbGens.length === 1) {
-              setSelectedGen(dbGens[0].generation_slug)
-            }
-            setLoading(false)
-          }
-        })
-        .catch(async () => {
-          const dbGens = await dbPromise
-          setUseAutodata(false)
-          if (dbGens.length === 1) {
-            setSelectedGen(dbGens[0].generation_slug)
-          }
-          setLoading(false)
-        })
-    } else {
-      dbPromise.then(dbGens => {
-        setUseAutodata(false)
-        if (dbGens.length === 1) {
-          setSelectedGen(dbGens[0].generation_slug)
-        }
-        setLoading(false)
-      })
-    }
-  }, [brand, modelName, autodataGen, filterByModel])
-
-  // Handle autodata generation selection — resolve to parts DB slug
-  const handleAutodataSelect = async (gen: AutodataGeneration) => {
-    const genKey = `${gen.name}-${gen.body_type}`
-    const yearRange = `${gen.year_start || '?'}–${gen.year_end || 'gunumuz'}`
-    setSelectedGenDisplay({
-      name: gen.name,
-      yearRange,
-      image: genImages[genKey],
-      specs: genSpecs[genKey],
-    })
-    setSelectedGenName(gen.name)
-    setResolving(true)
-    setError('')
-
-    // 15 saniye timeout — API aşırı yavaşsa takılmayı önle
-    const timeout = setTimeout(() => {
-      setResolving(false)
-      setError('no_parts')
-      setSelectedGenDisplay(null)
-    }, 15000)
-
-    try {
-      const result = await resolveAutodataSlug(brand, modelName, gen.name, gen.year_start ?? undefined)
-      clearTimeout(timeout)
-      if (result.auto_selected) {
-        setSelectedGen(result.auto_selected)
-      } else if (result.matches.length === 1) {
-        setSelectedGen(result.matches[0].generation_slug)
-      } else if (result.matches.length > 1) {
-        const relevant = filterByModel(result.matches)
-        if (relevant.length === 1) {
-          setSelectedGen(relevant[0].generation_slug)
-        } else if (relevant.length > 1) {
-          setDbGenerations(relevant)
-          setAutodataGens([])
-          setUseAutodata(false)
-          setResolving(false)
-          setSelectedGenDisplay(null)
-        } else {
-          setError('no_parts')
-          setResolving(false)
-          setSelectedGenDisplay(null)
-        }
-      } else {
-        setError('no_parts')
-        setResolving(false)
-        setSelectedGenDisplay(null)
-      }
-    } catch {
-      clearTimeout(timeout)
-      setError('no_parts')
-      setResolving(false)
-      setSelectedGenDisplay(null)
-    }
-  }
-
-  const whatsappText = `Merhaba, ${marka} ${modelName} aracim icin parca ariyorum.`
-  const [genSearch, setGenSearch] = useState('')
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-
-  // Nesil arama filtresi
-  const searchFilteredAutodataGens = useMemo(() => {
-    if (!genSearch.trim()) return filteredAutodataGens
-    const q = genSearch.toLowerCase()
-    return filteredAutodataGens.filter(g =>
-      g.name.toLowerCase().includes(q) ||
-      (g.body_type && g.body_type.toLowerCase().includes(q)) ||
-      `${g.year_start}`.includes(q) ||
-      `${g.year_end}`.includes(q)
-    )
-  }, [filteredAutodataGens, genSearch])
-
-  const searchFilteredDbGens = useMemo(() => {
-    if (!genSearch.trim()) return dbGenerations
-    const q = genSearch.toLowerCase()
-    return dbGenerations.filter(g =>
-      g.generation_name.toLowerCase().includes(q) ||
-      g.generation_slug.toLowerCase().includes(q)
-    )
-  }, [dbGenerations, genSearch])
-
-  // If a generation is selected, show the full parts explorer
-  if (selectedGen) {
-    return <VehiclePartsExplorer brand={brand} gen={selectedGen} marka={marka} modelName={modelName} generationName={selectedGenName || undefined} />
-  }
-
-  return (
-    <>
-      {/* Vehicle Banner — gradient hero */}
-      <div className="mb-8 rounded-2xl overflow-hidden bg-gradient-to-r from-secondary-800 via-secondary-700 to-secondary-600 shadow-lg">
-        <div className="p-6 md:p-8 flex flex-col sm:flex-row items-center gap-5 md:gap-8">
-          {/* Marka logo */}
-          <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center flex-shrink-0 p-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={getBrandLogoPath(brand)} alt={marka} className="w-full h-full object-contain drop-shadow-lg" />
-          </div>
-          <div className="flex-1 text-center sm:text-left min-w-0">
-            <h2 className="text-2xl md:text-3xl font-bold text-white">{marka} {modelName}</h2>
-            <p className="text-secondary-200 text-sm mt-2">Aracınızın nesil/dönemini seçerek parça kataloğuna ulaşın</p>
-            {!loading && useAutodata && autodataGens.length > 0 && (
-              <div className="flex items-center justify-center sm:justify-start gap-3 mt-3">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full text-xs font-medium text-white">
-                  <Car className="w-3.5 h-3.5" />
-                  {autodataGens.length} nesil
-                </span>
-                {bodyTypeTabs.length > 0 && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full text-xs font-medium text-white">
-                    {bodyTypeTabs.length} kasa tipi
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="flex items-center gap-2 px-5 py-3 bg-green-500 hover:bg-green-400 text-white font-semibold rounded-xl transition-all flex-shrink-0 text-sm shadow-lg shadow-green-500/30 hover:shadow-green-400/40">
-            <MessageCircle className="w-4 h-4" />
-            Parça Talep Et
-          </a>
-        </div>
-      </div>
-
-      {/* Resolving overlay — profesyonel tam ekran loading */}
-      {resolving && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm" style={{ animation: 'fadeIn 0.3s ease-out' }}>
-          <div className="relative flex flex-col items-center gap-6 p-8 max-w-md w-full">
-            {/* Araç görseli veya marka logosu */}
-            <div className="relative w-56 h-36 rounded-2xl overflow-hidden">
-              {selectedGenDisplay?.image ? (
-                <>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={selectedGenDisplay.image}
-                    alt={selectedGenDisplay.name}
-                    className="w-full h-full object-contain p-4"
-                    style={{ animation: 'carSlideIn 0.6s ease-out' }}
-                  />
-                  {/* Parçacık efekti */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    {[...Array(6)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="absolute w-1.5 h-1.5 rounded-full bg-primary-400/40"
-                        style={{
-                          left: `${15 + i * 15}%`,
-                          top: `${20 + (i % 3) * 25}%`,
-                          animation: `particleFloat ${1.5 + i * 0.3}s ease-in-out infinite`,
-                          animationDelay: `${i * 0.2}s`,
-                        }}
-                      />
-                    ))}
-                  </div>
-                </>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-2xl">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={getBrandLogoPath(brand)} alt={marka} className="w-16 h-16 object-contain opacity-30" style={{ animation: 'logoPulse 2s ease-in-out infinite' }} />
-                </div>
-              )}
-            </div>
-
-            {/* Bilgi */}
-            <div className="text-center">
-              {selectedGenDisplay ? (
-                <>
-                  <h3 className="text-xl font-bold text-gray-900" style={{ animation: 'slideUp 0.4s ease-out 0.2s both' }}>
-                    {marka} {selectedGenDisplay.name}
-                  </h3>
-                  <p className="text-sm text-gray-500 mt-1" style={{ animation: 'slideUp 0.4s ease-out 0.3s both' }}>
-                    {selectedGenDisplay.yearRange}
-                  </p>
-                  {selectedGenDisplay.specs && (
-                    <div className="flex items-center justify-center gap-4 mt-2" style={{ animation: 'slideUp 0.4s ease-out 0.4s both' }}>
-                      {selectedGenDisplay.specs.powerRange && (
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Zap className="w-3 h-3 text-amber-500" />{selectedGenDisplay.specs.powerRange}
-                        </span>
-                      )}
-                      {selectedGenDisplay.specs.fuelTypes && (
-                        <span className="text-xs text-gray-500 flex items-center gap-1">
-                          <Fuel className="w-3 h-3 text-blue-500" />{selectedGenDisplay.specs.fuelTypes}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-gray-600 font-medium">Parça kataloğu hazırlanıyor...</p>
-              )}
-            </div>
-
-            {/* Animasyonlu ilerleme çubuğu */}
-            <div className="w-full max-w-xs">
-              <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-primary-400 via-primary-500 to-primary-400 rounded-full"
-                  style={{
-                    width: '40%',
-                    animation: 'progressSlide 1.8s ease-in-out infinite',
-                  }}
-                />
-              </div>
-              <p className="text-[11px] text-gray-400 text-center mt-2" style={{ animation: 'fadeIn 0.5s ease-out 0.5s both' }}>
-                Parça kataloğu eşleştiriliyor...
-              </p>
-            </div>
-          </div>
-
-          {/* CSS animasyonları */}
-          <style jsx>{`
-            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-            @keyframes carSlideIn { from { opacity: 0; transform: translateX(30px) scale(0.95); } to { opacity: 1; transform: translateX(0) scale(1); } }
-            @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            @keyframes logoPulse { 0%, 100% { transform: scale(1); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.5; } }
-            @keyframes particleFloat {
-              0%, 100% { transform: translateY(0) scale(1); opacity: 0.4; }
-              50% { transform: translateY(-8px) scale(1.3); opacity: 0.7; }
-            }
-            @keyframes progressSlide {
-              0% { transform: translateX(-100%); }
-              50% { transform: translateX(150%); }
-              100% { transform: translateX(300%); }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {/* Loading state (initial) */}
-      {loading && !resolving && (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <GenerationCardSkeleton key={i} />
-          ))}
-        </div>
-      )}
-
-      {error === 'no_parts' && !loading && !resolving && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-            <Package className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-gray-900 font-bold text-lg mb-2">Parça kataloğu henüz hazır değil</h3>
-          <p className="text-gray-500 text-sm mb-6 max-w-md mx-auto">
-            {marka} {modelName} için parça kataloğu henüz sistemimizde bulunmuyor. WhatsApp üzerinden talep oluşturabilirsiniz.
-          </p>
-          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors shadow-md">
-            <MessageCircle className="w-5 h-5" /> WhatsApp ile Talep Et
-          </a>
-        </div>
-      )}
-
-      {error && error !== 'no_parts' && !loading && !resolving && (
-        <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-xl mb-6">
-          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-          <p className="text-red-600 text-sm">{error}</p>
-        </div>
-      )}
-
-      {/* Autodata generations — visual cards with images and specs */}
-      {!loading && !resolving && !error && useAutodata && autodataGens.length > 0 && (
-        <div>
-          {/* Toolbar: Body type tabs + Search + View toggle */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-5">
-            {/* Body Type Tabs */}
-            {bodyTypeTabs.length > 0 && (
-              <div className="flex-1 min-w-0 w-full sm:w-auto">
-                <Tabs
-                  tabs={[
-                    { id: '__all__', label: 'Tümü', count: autodataGens.length },
-                    ...bodyTypeTabs.map(({ type, count }) => ({ id: type, label: type, count })),
-                  ]}
-                  activeTab={activeBodyType}
-                  onChange={setActiveBodyType}
-                />
-              </div>
-            )}
-            <div className="flex items-center gap-2 w-full sm:w-auto">
-              {/* Arama */}
-              {autodataGens.length > 6 && (
-                <div className="relative flex-1 sm:flex-none sm:w-52">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={genSearch}
-                    onChange={e => setGenSearch(e.target.value)}
-                    placeholder="Nesil ara..."
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-100 transition-all"
-                  />
-                </div>
-              )}
-              {/* Görünüm değiştirici */}
-              <div className="flex items-center bg-white border border-gray-200 rounded-lg p-0.5">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
-                  title="Izgara görünüm"
-                >
-                  <Grid3x3 className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-primary-50 text-primary-600' : 'text-gray-400 hover:text-gray-600'}`}
-                  title="Liste görünüm"
-                >
-                  <List className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Sonuç sayısı */}
-          {genSearch && (
-            <p className="text-xs text-gray-400 mb-3">{searchFilteredAutodataGens.length} nesil eşleşiyor</p>
-          )}
-
-          {/* Grid View */}
-          {viewMode === 'grid' && (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {searchFilteredAutodataGens.map((gen) => {
-                const genKey = `${gen.name}-${gen.body_type}`
-                const genImg = genImages[genKey]
-                const specs = genSpecs[genKey]
-                return (
-                  <button
-                    key={genKey}
-                    onClick={() => handleAutodataSelect(gen)}
-                    onMouseEnter={() => prefetchSpec(gen)}
-                    onFocus={() => prefetchSpec(gen)}
-                    className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl overflow-hidden text-left transition-all duration-200 hover:-translate-y-0.5"
-                  >
-                    {/* Nesil görseli */}
-                    <div className="relative aspect-[16/10] bg-gradient-to-br from-gray-50 to-gray-100/50 overflow-hidden">
-                      {genImg ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img
-                          src={genImg}
-                          alt={gen.name}
-                          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={getBrandLogoPath(brand)} alt={marka} className="w-12 h-12 object-contain opacity-15" />
-                        </div>
-                      )}
-                      {/* Yıl badge */}
-                      {(gen.year_start || gen.year_end) && (
-                        <span className="absolute top-2 right-2 inline-flex items-center gap-1 text-[11px] font-medium text-white bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-md">
-                          <Calendar className="w-3 h-3" />
-                          {gen.year_start || '?'}–{gen.year_end || 'günümüz'}
-                        </span>
-                      )}
-                      {/* Hover overlay */}
-                      <div className="absolute inset-0 bg-primary-500/0 group-hover:bg-primary-500/5 transition-colors duration-300" />
-                    </div>
-
-                    {/* Kart gövdesi */}
-                    <div className="p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="text-sm font-bold text-gray-900 group-hover:text-primary-600 transition-colors leading-snug">{gen.name}</p>
-                        <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
-                      </div>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1.5">
-                        {gen.body_type && (
-                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600 font-medium">{gen.body_type}</span>
-                        )}
-                        <span className="text-[11px] text-gray-400">{gen.mod_count} varyant</span>
-                      </div>
-
-                      {/* Teknik özellikler */}
-                      <div className="mt-3 pt-3 border-t border-gray-100 min-h-[48px]">
-                        {specs && (specs.powerRange || specs.fuelTypes) ? (
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-1.5">
-                            {specs.powerRange && (
-                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                                <Zap className="w-3 h-3 text-amber-500 flex-shrink-0" />
-                                <span className="truncate">{specs.powerRange}</span>
-                              </div>
-                            )}
-                            {specs.engineRange && (
-                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                                <Settings2 className="w-3 h-3 text-gray-400 flex-shrink-0" />
-                                <span className="truncate">{specs.engineRange}</span>
-                              </div>
-                            )}
-                            {specs.fuelTypes && (
-                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                                <Fuel className="w-3 h-3 text-blue-500 flex-shrink-0" />
-                                <span className="truncate">{specs.fuelTypes}</span>
-                              </div>
-                            )}
-                            {specs.transmissions && (
-                              <div className="flex items-center gap-1.5 text-[11px] text-gray-600">
-                                <Settings2 className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                                <span className="truncate">{specs.transmissions}</span>
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                            <Settings2 className="w-3 h-3 flex-shrink-0" />
-                            <span>{gen.mod_count} varyant mevcut</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {/* List View */}
-          {viewMode === 'list' && (
-            <div className="space-y-2">
-              {searchFilteredAutodataGens.map((gen) => {
-                const genKey = `${gen.name}-${gen.body_type}`
-                const genImg = genImages[genKey]
-                const specs = genSpecs[genKey]
-                return (
-                  <button
-                    key={genKey}
-                    onClick={() => handleAutodataSelect(gen)}
-                    onMouseEnter={() => prefetchSpec(gen)}
-                    onFocus={() => prefetchSpec(gen)}
-                    className="group w-full bg-white border border-gray-200 hover:border-primary-400 hover:shadow-md rounded-xl p-3 md:p-4 text-left transition-all duration-200 flex items-center gap-4"
-                  >
-                    {/* Küçük görsel */}
-                    <div className="w-24 h-16 md:w-32 md:h-20 rounded-lg bg-gradient-to-br from-gray-50 to-gray-100/50 overflow-hidden flex-shrink-0">
-                      {genImg ? (
-                        /* eslint-disable-next-line @next/next/no-img-element */
-                        <img src={genImg} alt={gen.name} className="w-full h-full object-contain p-1" loading="lazy" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={getBrandLogoPath(brand)} alt={marka} className="w-8 h-8 object-contain opacity-15" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Bilgi */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 group-hover:text-primary-600 transition-colors">{gen.name}</p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        {(gen.year_start || gen.year_end) && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-gray-500">
-                            <Calendar className="w-3 h-3" />
-                            {gen.year_start || '?'}–{gen.year_end || 'günümüz'}
-                          </span>
-                        )}
-                        {gen.body_type && (
-                          <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 rounded text-[11px] text-gray-600 font-medium">{gen.body_type}</span>
-                        )}
-                        <span className="text-[11px] text-gray-400">{gen.mod_count} varyant</span>
-                      </div>
-                      {/* Spec satırı */}
-                      {specs && (specs.powerRange || specs.fuelTypes) && (
-                        <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-[11px] text-gray-500">
-                          {specs.powerRange && <span className="flex items-center gap-1"><Zap className="w-3 h-3 text-amber-500" />{specs.powerRange}</span>}
-                          {specs.fuelTypes && <span className="flex items-center gap-1"><Fuel className="w-3 h-3 text-blue-500" />{specs.fuelTypes}</span>}
-                          {specs.transmissions && <span className="flex items-center gap-1"><Settings2 className="w-3 h-3 text-purple-400" />{specs.transmissions}</span>}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Ok */}
-                    <ArrowRight className="w-5 h-5 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-1 transition-all flex-shrink-0" />
-                  </button>
-                )
-              })}
-            </div>
-          )}
-
-          {/* Arama sonuç yok */}
-          {genSearch && searchFilteredAutodataGens.length === 0 && (
-            <div className="text-center py-12">
-              <Search className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">&ldquo;{genSearch}&rdquo; ile eşleşen nesil bulunamadı</p>
-              <button onClick={() => setGenSearch('')} className="mt-2 text-primary-500 hover:text-primary-600 text-sm font-medium">Aramayı temizle</button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* DB generations fallback — enhanced cards */}
-      {!loading && !resolving && !error && !useAutodata && dbGenerations.length > 0 && (
-        <div>
-<div className="flex items-center justify-between gap-3 mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
-                <Car className="w-5 h-5 text-primary-500" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">{marka} — {dbGenerations.length} nesil mevcut</h3>
-                <p className="text-gray-500 text-xs">Doğru nesil/dönem seçimi daha iyi parça listesi sağlar</p>
-              </div>
-            </div>
-            {dbGenerations.length > 6 && (
-              <div className="relative w-48 hidden sm:block">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={genSearch}
-                  onChange={e => setGenSearch(e.target.value)}
-                  placeholder="Ara..."
-                  className="w-full pl-9 pr-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-400 transition-colors"
-                />
-              </div>
-            )}
-          </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {searchFilteredDbGens.map((gen) => (
+        )}
+        {categories && Object.entries(categories.tree).map(([group, nodes]) => {
+          const open = openGroup === group
+          const totalCount = nodes.reduce((a, n) => a + n.part_count, 0)
+          return (
+            <div key={group} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
               <button
-                key={gen.generation_slug}
-                onClick={() => setSelectedGen(gen.generation_slug)}
-                className="group bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg rounded-xl p-5 text-left transition-all duration-200 hover:-translate-y-0.5"
+                onClick={() => setOpenGroup(open ? null : group)}
+                className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="text-gray-900 font-bold text-sm group-hover:text-primary-600 transition-colors leading-snug">{gen.generation_name}</p>
-                  <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-primary-500 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-0.5" />
+                <div className="flex flex-col items-start min-w-0">
+                  <span className="font-bold text-xs text-gray-900 uppercase tracking-wider truncate">{group}</span>
+                  <span className="text-[10px] text-gray-500">{nodes.length} kategori · {totalCount.toLocaleString('tr-TR')} parça</span>
                 </div>
-                <div className="flex items-center gap-2 mt-3">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-primary-50 border border-primary-100 rounded-lg text-xs font-medium text-primary-600 tabular-nums">
-                    <Package className="w-3 h-3" />
-                    {gen.part_count.toLocaleString('tr-TR')} parça
-                  </span>
-                </div>
+                <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${open ? 'rotate-90' : ''}`} />
               </button>
+              {open && (
+                <ul className="border-t border-gray-100 divide-y divide-gray-50">
+                  {nodes.map(n => (
+                    <li key={n.id}>
+                      <button
+                        onClick={() => onSelectCategory(n.id)}
+                        className={`w-full text-left text-xs px-3 py-2 transition flex items-center justify-between gap-2 ${
+                          n.id === categoryIdQ
+                            ? 'bg-primary-500 text-white font-bold'
+                            : 'hover:bg-primary-50 text-gray-700'
+                        }`}
+                      >
+                        <span className="truncate">{n.description_tr || n.description_en}</span>
+                        <span className={`flex-shrink-0 text-[10px] tabular-nums ${n.id === categoryIdQ ? 'text-white/80' : 'text-gray-400'}`}>
+                          {n.part_count}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )
+        })}
+      </aside>
+
+      {/* Sağ: Parça listesi */}
+      <section>
+        {!categoryIdQ && (
+          <div className="rounded-2xl bg-white border border-dashed border-gray-300 p-12 text-center">
+            <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="font-semibold text-gray-700 mb-1">Parça aramak için kategori seçin</p>
+            <p className="text-xs text-gray-500">Soldaki listeden bir kategori seçtiğinizde aracınıza uygun parçalar burada listelenir.</p>
+          </div>
+        )}
+
+        {categoryIdQ && loading && (
+          <div className="space-y-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-20 bg-gray-100 rounded-2xl animate-pulse" />
             ))}
           </div>
-          {genSearch && searchFilteredDbGens.length === 0 && (
-            <div className="text-center py-12">
-              <Search className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 text-sm">&ldquo;{genSearch}&rdquo; ile eşleşen nesil bulunamadı</p>
-              <button onClick={() => setGenSearch('')} className="mt-2 text-primary-500 hover:text-primary-600 text-sm font-medium">Aramayı temizle</button>
-            </div>
-          )}
-        </div>
-      )}
+        )}
 
-      {!loading && !resolving && !error && (useAutodata ? autodataGens.length === 0 : dbGenerations.length === 0) && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-5">
-            <Car className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-gray-900 font-bold text-lg mb-2">Nesil bilgisi bulunamadı</h3>
-          <p className="text-gray-500 text-sm mb-6">WhatsApp üzerinden parça talebinde bulunabilirsiniz.</p>
-          <a href={getWhatsAppUrl(whatsappText)} target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors shadow-md">
-            <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
-          </a>
-        </div>
-      )}
-    </>
+        {categoryIdQ && partsRes && !loading && (
+          <>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="font-bold text-gray-900">
+                  {selectedCategory?.description_tr || selectedCategory?.description_en}
+                </p>
+                <p className="text-xs text-gray-500">
+                  <span className="font-semibold">{partsRes.total.toLocaleString('tr-TR')}</span> uyumlu parça
+                  {partsRes.has_more && <> · ilk {partsRes.limit} gösteriliyor</>}
+                </p>
+              </div>
+            </div>
+
+            <ul className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+              {partsRes.parts.map(p => (
+                <li key={p.id}>
+                  <PartCard part={p} vehicleLabel={vehicleLabel} categoryLabel={selectedCategory?.description_tr || ''} />
+                </li>
+              ))}
+            </ul>
+
+            {partsRes.parts.length === 0 && (
+              <div className="rounded-2xl bg-gray-50 border border-gray-200 p-8 text-center">
+                <p className="font-semibold text-gray-700">Bu kategoride listelenecek parça yok</p>
+                <p className="text-xs text-gray-500 mt-1">Başka bir kategori deneyin veya WhatsApp'tan sorun.</p>
+              </div>
+            )}
+          </>
+        )}
+      </section>
+    </div>
   )
 }
 
-// ── OEM Search Results View ──
-function OemSearchView({ query }: { query: string }) {
-  const [results, setResults] = useState<{ oem_number: string; name: string; brand_slug?: string }[]>([])
-  const [loading, setLoading] = useState(true)
+function PartCard({
+  part, vehicleLabel, categoryLabel,
+}: { part: TecPartsResponse['parts'][0]; vehicleLabel: string; categoryLabel: string }) {
+  const message = `Merhaba, ${vehicleLabel} aracım için ${categoryLabel ? `"${categoryLabel}" kategorisinden ` : ''}${part.supplier_name || ''} marka ${part.part_number} numaralı parçayı arıyorum.`
+  const [imgFailed, setImgFailed] = useState(false)
+  const hasCover = !!part.cover_url && !imgFailed
+  const otherImagesCount = (part.images?.length ?? 0) - (part.cover_url ? 1 : 0)
 
-  useEffect(() => {
-    if (!query) return
-    setLoading(true)
-    searchOemParts(query)
-      .then(data => setResults(data.results || []))
-      .catch(() => setResults([]))
-      .finally(() => setLoading(false))
-  }, [query])
-
-  // Aynı OEM numaralarını grupla — her OEM'den sadece biri gösterilsin, uyumlu araç sayısı badge olarak
-  const uniqueParts = useMemo(() => {
-    const map = new Map<string, { oem_number: string; name: string; count: number }>()
-    for (const r of results) {
-      const existing = map.get(r.oem_number)
-      if (existing) {
-        existing.count++
-      } else {
-        map.set(r.oem_number, { oem_number: r.oem_number, name: r.name, count: 1 })
-      }
-    }
-    return Array.from(map.values())
-  }, [results])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-primary-500 animate-spin" />
+  return (
+    <div className="group h-full flex flex-col rounded-2xl bg-white border border-gray-200 hover:border-primary-400 hover:shadow-lg transition-all overflow-hidden">
+      {/* Görsel kapak */}
+      <div className="relative aspect-square bg-gray-50 border-b border-gray-100 flex items-center justify-center overflow-hidden">
+        {hasCover ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={part.cover_url!}
+            alt={`${part.supplier_name ?? ''} ${part.part_number}`}
+            className="w-full h-full object-contain p-3 group-hover:scale-105 transition-transform duration-300"
+            onError={() => setImgFailed(true)}
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-1.5 text-gray-300">
+            <Package className="w-10 h-10" />
+            <span className="text-[10px] font-medium">Görsel yok</span>
+          </div>
+        )}
+        {otherImagesCount > 0 && (
+          <span className="absolute top-2 right-2 px-2 py-0.5 text-[10px] font-bold bg-black/60 text-white rounded-full backdrop-blur-sm">
+            +{otherImagesCount}
+          </span>
+        )}
       </div>
-    )
-  }
 
-  if (uniqueParts.length === 0) {
-    return (
-      <div className="bg-white border border-gray-200 rounded-xl p-8 text-center">
-        <div className="w-14 h-14 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-          <Search className="w-7 h-7 text-gray-400" />
+      {/* İçerik */}
+      <div className="flex-1 flex flex-col p-3.5 gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-gray-900 text-sm truncate" title={part.supplier_name ?? ''}>
+            {part.supplier_name || `Tedarikçi #${part.supplier_id}`}
+          </div>
+          <div className="font-mono text-xs text-gray-500 truncate mt-0.5" title={part.part_number}>
+            {part.part_number}
+          </div>
         </div>
-        <h3 className="text-gray-900 font-semibold mb-2">&ldquo;{query}&rdquo; için sonuç bulunamadı</h3>
-        <p className="text-gray-500 text-sm mb-5">Farklı bir arama terimi deneyin veya WhatsApp ile bize ulaşın.</p>
-        <a href={getWhatsAppUrl(`Merhaba, "${query}" araması için yardım istiyorum.`)} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold rounded-xl transition-colors">
-          <MessageCircle className="w-4 h-4" /> WhatsApp ile Talep Et
+
+        <a
+          href={getWhatsAppUrl(message)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-bold transition-colors"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          WhatsApp ile Sor
         </a>
       </div>
-    )
-  }
-
-  return (
-    <div>
-      <p className="text-sm text-gray-500 mb-6">&ldquo;{query}&rdquo; için {uniqueParts.length} parça bulundu</p>
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {uniqueParts.map((part) => (
-          <Link
-            key={part.oem_number}
-            href={`/parca/${encodeURIComponent(part.oem_number)}`}
-            className="group bg-white border border-gray-200 shadow-sm rounded-xl p-4 hover:border-primary-300 hover:shadow-md transition-all block"
-          >
-            <h4 className="text-gray-900 font-semibold text-sm mb-2 group-hover:text-primary-500 transition-colors leading-snug">{part.name}</h4>
-            <div className="mb-3">
-              <OemBadge oem={part.oem_number} />
-            </div>
-            <span className="flex items-center justify-center gap-1.5 w-full px-3 py-2.5 bg-primary-500/10 group-hover:bg-primary-500 text-primary-600 group-hover:text-dark-900 rounded-lg transition-all text-xs font-semibold">
-              Detay & Fiyat Al
-            </span>
-          </Link>
-        ))}
-      </div>
     </div>
-  )
-}
-
-// ── Main Page ──
-function ParcalarContent() {
-  const searchParams = useSearchParams()
-  const brand = searchParams.get('brand')
-  const gen = searchParams.get('gen')
-  const marka = searchParams.get('marka')
-  const modelName = searchParams.get('model_name')
-  const qParam = searchParams.get('q')
-
-  // Durum tespiti
-  const hasVehicleWithGen = brand && gen && marka && modelName
-  const hasBrandWithModel = brand && marka && modelName && !gen
-  const hasBrandOnly = brand && marka && !modelName && !gen
-  const hasSearch = qParam && !brand && !gen
-
-  return (
-    <div className="min-h-screen py-8 md:py-12">
-      <div className="container mx-auto px-4">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-          <Link href="/" className="hover:text-gray-900 transition-colors">Ana Sayfa</Link>
-          <ChevronRight className="w-4 h-4" />
-          {brand ? (
-            <Link href="/parcalar" className="hover:text-gray-900 transition-colors">Parçalar</Link>
-          ) : (
-            <span className="text-gray-900">Parçalar</span>
-          )}
-          {marka && (
-            <>
-              <ChevronRight className="w-4 h-4" />
-              <span className="text-primary-500">{marka} {modelName || ''}</span>
-            </>
-          )}
-          {hasSearch && (
-            <>
-              <ChevronRight className="w-4 h-4" />
-              <span className="text-primary-500">Arama: {qParam}</span>
-            </>
-          )}
-        </nav>
-
-        {hasVehicleWithGen ? (
-          <VehiclePartsExplorer brand={brand} gen={gen} marka={marka} modelName={modelName} />
-        ) : hasBrandWithModel ? (
-          <GenerationPicker brand={brand} marka={marka} modelName={modelName} />
-        ) : hasBrandOnly ? (
-          <ModelPicker brand={brand} marka={marka} />
-        ) : hasSearch ? (
-          <OemSearchView query={qParam} />
-        ) : (
-          <StaticCategoriesView />
-        )}
-
-        {/* CTA Section */}
-        {!hasVehicleWithGen && !hasBrandWithModel && !hasBrandOnly && (
-          <div className="mt-16 text-center">
-            <div className="bg-gradient-to-r from-secondary-700 to-secondary-900 rounded-2xl p-8 md:p-12">
-              <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Aradığınız Parçayı Bulamadınız mı?</h2>
-              <p className="text-gray-300 mb-6 max-w-xl mx-auto">WhatsApp üzerinden bize ulaşın, şase numaranızı ve ihtiyacınız olan parçayı belirtin.</p>
-              <a href={getWhatsAppUrl('Merhaba, bir parça arıyorum. Yardımcı olur musunuz?')} target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-all">
-                WhatsApp ile Sorun
-              </a>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
-export default function ParcalarPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    }>
-      <ParcalarContent />
-    </Suspense>
   )
 }
