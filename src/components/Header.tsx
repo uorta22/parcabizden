@@ -18,6 +18,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [scrolled, setScrolled] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
   const { user, logout } = useAuth()
   const pathname = usePathname()
@@ -32,6 +33,15 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Anasayfada hero üzerinde transparent, scroll ile cam efektine geçer
+  useEffect(() => {
+    if (pathname !== '/') { setScrolled(true); return }
+    const onScroll = () => setScrolled(window.scrollY > 60)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [pathname])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,7 +67,7 @@ export default function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 glass">
+      <header className={`sticky top-0 z-50 transition-all duration-500 ${scrolled ? 'glass border-b border-gray-200/80' : 'header-transparent'}`}>
         {/* ═══ Top Bar ═══ */}
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 md:h-20 gap-4">
