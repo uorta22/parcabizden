@@ -333,10 +333,11 @@ function tecdoc_image_stats($pdo) {
     } catch (PDOException $e) { $stats['catalog_part_images_total'] = 'tablo yok'; }
 
     // İlk 5 örnek (görseli olan parça → araç → kategori → marka/model)
+    // PERF: 78M-row catalog_part_vehicles JOIN'i ağır olduğu için önce küçük
+    // bir part_images sample'ı materialize edilir; tüm JOIN'ler bu 50 satır
+    // üzerinde çalışır. Bu yapı 60sn time-out yerine ~1sn'de döner.
     $samples = [];
     try {
-        // part_images.part_number (utf8mb4_unicode_ci) ile catalog_parts.part_number
-        // (utf8mb4_turkish_ci) farklı collation; explicit COLLATE ile zorla.
         $stmt = $pdo->query("
             SELECT pi.supplier_id, pi.part_number, pi.file_path,
                    p.id AS part_id,
@@ -345,7 +346,12 @@ function tecdoc_image_stats($pdo) {
                    mo.id AS model_id, mo.name AS model_name,
                    m.id AS manufacturer_id, m.name AS manufacturer_name,
                    c.description_tr AS category_name
-            FROM part_images pi
+            FROM (
+                SELECT supplier_id, part_number, file_path
+                FROM part_images
+                WHERE uploaded = 1 AND file_path IS NOT NULL AND file_path <> ''
+                LIMIT 50
+            ) pi
             JOIN catalog_parts p
                  ON p.supplier_id = pi.supplier_id
                 AND p.part_number = pi.part_number COLLATE utf8mb4_unicode_ci
@@ -354,7 +360,6 @@ function tecdoc_image_stats($pdo) {
             JOIN catalog_models mo ON mo.id = v.model_id
             JOIN catalog_manufacturers m ON m.id = mo.manufacturer_id
             LEFT JOIN catalog_categories c ON c.id = pv.category_id
-            WHERE pi.uploaded = 1 AND pi.file_path IS NOT NULL AND pi.file_path <> ''
             LIMIT 5
         ");
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {

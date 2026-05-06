@@ -118,7 +118,9 @@ export interface TecPartDetail extends TecPart {
 
 async function tdFetch<T>(action: string, params: Record<string, string | number> = {}): Promise<T> {
   const search = new URLSearchParams({ action, ...Object.fromEntries(Object.entries(params).map(([k, v]) => [k, String(v)])) })
-  const res = await fetch(`${API_BASE}/?${search.toString()}`, { cache: 'no-store' })
+  // Browser HTTP cache'ini açıyoruz; backend zaten 'Cache-Control: public, max-age=3600'
+  // dönüyor, böylece marka/model gibi statik veriler tekrar tekrar DB'ye gitmiyor.
+  const res = await fetch(`${API_BASE}/?${search.toString()}`)
   if (!res.ok) throw new Error(`TecDoc API error: ${res.status}`)
   const data = await res.json()
   if (data?.error) throw new Error(data.error)
