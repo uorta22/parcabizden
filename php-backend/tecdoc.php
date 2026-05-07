@@ -386,6 +386,116 @@ function tecdoc_image_stats($pdo) {
 }
 
 // ============================================================
+// 6.6) DB Inventory — tüm tablolar, boyut, satır, kategori
+// ============================================================
+function db_inventory($pdo) {
+    $database = $pdo->query("SELECT DATABASE()")->fetchColumn();
+
+    $stmt = $pdo->prepare("
+        SELECT TABLE_NAME      AS name,
+               TABLE_ROWS      AS estimated_rows,
+               DATA_LENGTH     AS data_bytes,
+               INDEX_LENGTH    AS index_bytes,
+               (DATA_LENGTH + INDEX_LENGTH) AS total_bytes,
+               TABLE_COLLATION AS collation,
+               UPDATE_TIME     AS last_updated,
+               CREATE_TIME     AS created_at
+        FROM information_schema.TABLES
+        WHERE TABLE_SCHEMA = :db
+        ORDER BY total_bytes DESC
+    ");
+    $stmt->execute([':db' => $database]);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Kategorize et
+    $categorized = [
+        'tecdoc_catalog' => ['rows' => [], 'total_mb' => 0, 'total_records' => 0],
+        'e_commerce'     => ['rows' => [], 'total_mb' => 0, 'total_records' => 0],
+        'admin_security' => ['rows' => [], 'total_mb' => 0, 'total_records' => 0],
+        'legacy_slug'    => ['rows' => [], 'total_mb' => 0, 'total_records' => 0],
+        'image_cache'    => ['rows' => [], 'total_mb' => 0, 'total_records' => 0],
+        'other'          => ['rows' => [], 'total_mb' => 0, 'total_records' => 0],
+    ];
+
+    $totalBytes = 0;
+    $totalRecords = 0;
+
+    foreach ($rows as $r) {
+        $name  = $r['name'];
+        $bytes = (int)$r['total_bytes'];
+        $recs  = (int)$r['estimated_rows'];
+        $totalBytes += $bytes;
+        $totalRecords += $recs;
+
+        $entry = [
+            'name'           => $name,
+            'estimated_rows' => $recs,
+            'data_mb'        => round((int)$r['data_bytes']  / 1048576, 1),
+            'index_mb'       => round((int)$r['index_bytes'] / 1048576, 1),
+            'total_mb'       => round($bytes / 1048576, 1),
+            'collation'      => $r['collation'],
+            'last_updated'   => $r['last_updated'],
+        ];
+
+        if (preg_match('/^catalog_/', $name)) {
+            $cat = 'tecdoc_catalog';
+        } elseif (in_array($name, [
+            'users', 'addresses', 'orders', 'order_items', 'products', 'favorites',
+            'reviews', 'review_helpful', 'cart_items', 'garage', 'maintenance_records',
+            'maintenance_types', 'chat_threads', 'chat_messages',
+            'email_verifications', 'password_resets', 'verification_tokens',
+        ], true)) {
+            $cat = 'e_commerce';
+        } elseif (in_array($name, [
+            'admin_audit_log', 'ip_blacklist', 'failed_logins', 'rate_limits',
+        ], true)) {
+            $cat = 'admin_security';
+        } elseif (preg_match('/^part_images$|^part_images_/', $name)) {
+            $cat = 'image_cache';
+        } elseif (in_array($name, [
+            'parts', 'vin_patterns', 'parts_brand_summary', 'parts_gen_summary',
+            'node_categories', 'categories', 'auto_brands', 'auto_models',
+            'auto_generations', 'autodata_specs', 'autodata_brands', 'autodata_models',
+            'autodata_generations', 'cross_ref',
+        ], true)) {
+            $cat = 'legacy_slug';
+        } else {
+            $cat = 'other';
+        }
+
+        $categorized[$cat]['rows'][]         = $entry;
+        $categorized[$cat]['total_mb']      += $entry['total_mb'];
+        $categorized[$cat]['total_records'] += $recs;
+    }
+
+    // Yuvarla
+    foreach ($categorized as $k => $_) {
+        $categorized[$k]['total_mb'] = round($categorized[$k]['total_mb'], 1);
+    }
+
+    // En büyük 10 tablo (top-level, kategoriden bağımsız)
+    $top10 = array_slice($rows, 0, 10);
+    foreach ($top10 as &$t) {
+        $t = [
+            'name'    => $t['name'],
+            'rows'    => (int)$t['estimated_rows'],
+            'size_mb' => round((int)$t['total_bytes'] / 1048576, 1),
+        ];
+    }
+    unset($t);
+
+    echo json_encode([
+        'database'        => $database,
+        'total_size_mb'   => round($totalBytes / 1048576, 1),
+        'total_size_gb'   => round($totalBytes / 1073741824, 2),
+        'total_records'   => $totalRecords,
+        'table_count'     => count($rows),
+        'top_10_largest'  => $top10,
+        'categories'      => $categorized,
+    ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+}
+
+// ============================================================
 // 7) OEM/parça numarası ile arama (TecDoc)
 // ============================================================
 function tecdoc_search($pdo) {
