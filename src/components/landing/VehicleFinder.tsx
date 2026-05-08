@@ -72,7 +72,9 @@ export default function VehicleFinder() {
   const canSubmit = brandId && modelId && vehicleId
   const submit = () => {
     if (!canSubmit) return
-    router.push(`/parcalar?brand=${brandId}&model=${modelId}&vehicle=${vehicleId}`)
+    // Önce vehicle hub kartı; oradan kullanıcı 'Yedek Parçalar'a giderek
+    // /parcalar?vehicle=KType akışına geçer.
+    router.push(`/arac/${vehicleId}`)
   }
 
   return (
