@@ -75,8 +75,8 @@ function ChassisBars({ size = 1, interactive = true }: { size?: number; interact
 export function LogoWordmark({ size = 1, interactive = true, className = '' }: LogoProps) {
   return (
     <span
-      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] text-gray-900 ${className}`}
-      style={{ gap: `${14 * size}px`, fontSize: `${56 * size}px` }}
+      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] ${className}`}
+      style={{ color: 'var(--logo-fg, #111827)', gap: `${14 * size}px`, fontSize: `${56 * size}px` }}
     >
       <ChassisBars size={size} interactive={interactive} />
       <span>
@@ -93,8 +93,8 @@ export function LogoWordmark({ size = 1, interactive = true, className = '' }: L
 export function LogoMonogram({ size = 1, interactive = true, className = '' }: LogoProps) {
   return (
     <span
-      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] text-gray-900 ${className}`}
-      style={{ gap: `${10 * size}px`, fontSize: `${28 * size}px` }}
+      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] ${className}`}
+      style={{ color: 'var(--logo-fg, #111827)', gap: `${10 * size}px`, fontSize: `${28 * size}px` }}
     >
       <ChassisBars size={size * 0.5} interactive={interactive} />
       <span>

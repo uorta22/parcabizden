@@ -168,11 +168,20 @@ html {
  * Landing — Header dark hero üzerinde şeffaf
  * ═══════════════════════════════════════════════════ */
 
+/* Logo otomatik renk değişkenleri — Header durumu ile cascade eder */
+:root {
+  --logo-fg: #111827;          /* gray-900 — scrolled / light bg */
+  --logo-fg-muted: #6b7280;    /* gray-500 */
+}
+
 .header-transparent {
   background: transparent !important;
   backdrop-filter: none !important;
   border-bottom-color: transparent !important;
   box-shadow: none !important;
+  /* Logo + diğer header öğeleri için açık ton */
+  --logo-fg: #ffffff;
+  --logo-fg-muted: rgba(255, 255, 255, 0.7);
 }
 .header-transparent .text-gray-900     { color: white !important; }
 .header-transparent .text-gray-500     { color: rgba(255, 255, 255, 0.55) !important; }
