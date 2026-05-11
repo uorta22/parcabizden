@@ -12,7 +12,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { siteConfig } from '@/lib/config'
 
 // Lazy load: başlangıçta görünmeyen veya etkileşim sonrası açılan bileşenler
-const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false })
+const AssistantWidget = dynamic(() => import('@/components/AssistantWidget'), { ssr: false })
 const BackToTop = dynamic(() => import('@/components/BackToTop'), { ssr: false })
 const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false })
 
@@ -75,7 +75,7 @@ export default function RootLayout({
                 {children}
               </main>
               <Footer />
-              <ChatWidget />
+              <AssistantWidget />
               <BackToTop />
               <CookieConsent />
               <SpeedInsights />
