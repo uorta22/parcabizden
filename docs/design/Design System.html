@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ParçaBizden — Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Syne:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="lib/tokens.css"/>
+<style>
+  body { background: var(--bg); }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 64px 48px 96px; }
+  section { margin-bottom: 96px; }
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 32px; padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-head h2 {
+    font-family: 'Archivo Black'; font-size: 36px;
+    letter-spacing: -0.03em; margin: 0;
+  }
+  .section-head .num {
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--fg-muted); letter-spacing: 0.18em;
+  }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .card {
+    background: var(--bg-elev); border: 1px solid var(--line);
+    border-radius: 14px; padding: 24px;
+  }
+  .swatch {
+    aspect-ratio: 4/3; border-radius: 10px; margin-bottom: 14px;
+    border: 1px solid var(--line);
+    display: flex; align-items: flex-end; padding: 14px;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .label-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  .label-row .name { color: var(--fg); font-weight: 500; }
+  .label-row .hex { color: var(--fg-muted); }
+  .type-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 24px 0; border-bottom: 1px solid var(--line);
+  }
+  .type-row:last-child { border-bottom: none; }
+  .type-meta {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--fg-muted); letter-spacing: 0.12em;
+    text-transform: uppercase; min-width: 220px;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+<!-- Header -->
+<header style="margin-bottom:80px;">
+  <a href="index.html" style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;text-transform:uppercase;display:inline-block;margin-bottom:24px;">← TÜM ÇALIŞMALAR</a>
+  <h1 style="font-family:'Archivo Black';font-size:96px;letter-spacing:-0.04em;line-height:0.9;margin:0 0 24px;">
+    Design<br/>System.
+  </h1>
+  <p style="font-size:18px;color:var(--fg-muted);max-width:600px;line-height:1.55;margin:0;">
+    ParçaBizden için kullanılan tipografi, renk paleti, boşluk ölçeği ve temel bileşenler. Tüm dosyalarda <code style="font-family:var(--font-mono);background:var(--bg-elev);padding:2px 8px;border-radius:4px;font-size:14px;">lib/tokens.css</code> üzerinden CSS değişkenleri olarak okunur.
+  </p>
+</header>
+
+<!-- 01 — TYPE -->
+<section>
+  <div class="section-head">
+    <h2>Tipografi</h2><span class="num">01</span>
+  </div>
+
+  <div style="background:var(--bg-elev);border:1px solid var(--line);border-radius:14px;padding:0 36px;margin-bottom:24px;">
+    <div class="type-row">
+      <div class="type-meta">DISPLAY · ARCHIVO BLACK · 96/0.9</div>
+      <div style="font-family:'Archivo Black';font-size:96px;letter-spacing:-0.04em;line-height:0.9;flex:1;text-align:right;">parça<span style="color:var(--accent)">bizden.</span></div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">H1 · SPACE GROTESK 600 · 64/1.0</div>
+      <div style="font-family:'Space Grotesk';font-weight:600;font-size:64px;letter-spacing:-0.03em;line-height:1;flex:1;text-align:right;">Aradığınız parça</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">H2 · SPACE GROTESK 600 · 40/1.05</div>
+      <div style="font-family:'Space Grotesk';font-weight:600;font-size:40px;letter-spacing:-0.025em;line-height:1.05;flex:1;text-align:right;">Nasıl çalışır.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">H3 · SPACE GROTESK 600 · 22/1.2</div>
+      <div style="font-family:'Space Grotesk';font-weight:600;font-size:22px;letter-spacing:-0.01em;line-height:1.2;flex:1;text-align:right;">Stoğumuzda mevcut</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">BODY · INTER 400 · 16/1.55</div>
+      <div style="font-family:'Inter';font-size:16px;line-height:1.55;flex:1;text-align:right;max-width:560px;margin-left:auto;color:var(--fg-muted);">VIN, OEM ya da marka-model girin — uzmanlarımız parçayı bulur, dakikalar içinde fiyat iletir.</div>
+    </div>
+    <div class="type-row">
+      <div class="type-meta">MONO · JETBRAINS · 12/1.4</div>
+      <div style="font-family:'JetBrains Mono';font-size:12px;letter-spacing:0.12em;flex:1;text-align:right;color:var(--accent);text-transform:uppercase;">VIN · OEM · MARKA·MODEL</div>
+    </div>
+  </div>
+</section>
+
+<!-- 02 — COLORS -->
+<section>
+  <div class="section-head">
+    <h2>Renk paleti</h2><span class="num">02</span>
+  </div>
+
+  <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 16px;">VURGU PALETLERİ · 4 YÖN</h3>
+  <div class="grid-4" style="margin-bottom:40px;">
+    <div class="card">
+      <div class="swatch" style="background:#ff7a1a;color:#1a0f00;">EMBER</div>
+      <div class="label-row"><span class="name">Ember</span><span class="hex">#FF7A1A</span></div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-dim);margin-top:8px;letter-spacing:0.1em;">VARSAYILAN · TURUNCU</div>
+    </div>
+    <div class="card">
+      <div class="swatch" style="background:#4f7cff;color:#0a0f1f;">MIDNIGHT</div>
+      <div class="label-row"><span class="name">Midnight</span><span class="hex">#4F7CFF</span></div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-dim);margin-top:8px;letter-spacing:0.1em;">ELEKTRİK MAVİSİ</div>
+    </div>
+    <div class="card">
+      <div class="swatch" style="background:#c8ff3a;color:#1a1f08;">ACID</div>
+      <div class="label-row"><span class="name">Acid</span><span class="hex">#C8FF3A</span></div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-dim);margin-top:8px;letter-spacing:0.1em;">CESARETLİ NEON</div>
+    </div>
+    <div class="card">
+      <div class="swatch" style="background:#d94a36;color:#1f0a07;">RUST</div>
+      <div class="label-row"><span class="name">Rust</span><span class="hex">#D94A36</span></div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-dim);margin-top:8px;letter-spacing:0.1em;">DERİN PAS · GELENEKSEL</div>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 16px;">NÖTR · KARANLIK / AYDINLIK</h3>
+  <div class="grid-4" style="margin-bottom:40px;">
+    <div class="card"><div class="swatch" style="background:#0e1014;color:#9ba2af;">BG</div><div class="label-row"><span class="name">--bg</span><span class="hex">#0E1014</span></div></div>
+    <div class="card"><div class="swatch" style="background:#14171d;color:#9ba2af;">BG-ELEV</div><div class="label-row"><span class="name">--bg-elev</span><span class="hex">#14171D</span></div></div>
+    <div class="card"><div class="swatch" style="background:#1a1e26;color:#9ba2af;">BG-CARD</div><div class="label-row"><span class="name">--bg-card</span><span class="hex">#1A1E26</span></div></div>
+    <div class="card"><div class="swatch" style="background:#262b35;color:#9ba2af;">LINE</div><div class="label-row"><span class="name">--line</span><span class="hex">#262B35</span></div></div>
+    <div class="card"><div class="swatch" style="background:#fafaf7;color:#5a6068;">BG (LIGHT)</div><div class="label-row"><span class="name">--bg light</span><span class="hex">#FAFAF7</span></div></div>
+    <div class="card"><div class="swatch" style="background:#ffffff;color:#5a6068;border:1px solid var(--line);">SURFACE</div><div class="label-row"><span class="name">--bg-elev light</span><span class="hex">#FFFFFF</span></div></div>
+    <div class="card"><div class="swatch" style="background:#e8e6df;color:#5a6068;">LINE (LIGHT)</div><div class="label-row"><span class="name">--line light</span><span class="hex">#E8E6DF</span></div></div>
+    <div class="card"><div class="swatch" style="background:#14171d;color:#fafaf7;">FG</div><div class="label-row"><span class="name">--fg</span><span class="hex">#14171D</span></div></div>
+  </div>
+
+  <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 16px;">SEMANTIK</h3>
+  <div class="grid-4">
+    <div class="card"><div class="swatch" style="background:#2dd17a;color:#0a1f12;">SUCCESS</div><div class="label-row"><span class="name">--success</span><span class="hex">#2DD17A</span></div></div>
+    <div class="card"><div class="swatch" style="background:#ffb020;color:#1f1505;">WARN</div><div class="label-row"><span class="name">--warn</span><span class="hex">#FFB020</span></div></div>
+    <div class="card"><div class="swatch" style="background:#ff4d5e;color:#1f0507;">DANGER</div><div class="label-row"><span class="name">--danger</span><span class="hex">#FF4D5E</span></div></div>
+    <div class="card"><div class="swatch" style="background:#25d366;color:#0a1f12;">WHATSAPP</div><div class="label-row"><span class="name">--wa</span><span class="hex">#25D366</span></div></div>
+  </div>
+</section>
+
+<!-- 03 — SPACING & RADII -->
+<section>
+  <div class="section-head">
+    <h2>Boşluk &amp; köşe</h2><span class="num">03</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <div class="card" style="padding:32px;">
+      <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 24px;">SPACING SCALE</h3>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-1 · 4</span><span style="height:14px;width:4px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-2 · 8</span><span style="height:14px;width:8px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-3 · 12</span><span style="height:14px;width:12px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-4 · 16</span><span style="height:14px;width:16px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-5 · 24</span><span style="height:14px;width:24px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-6 · 32</span><span style="height:14px;width:32px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-7 · 48</span><span style="height:14px;width:48px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-8 · 64</span><span style="height:14px;width:64px;background:var(--accent);border-radius:2px;"></span></div>
+        <div style="display:flex;align-items:center;gap:16px;"><span style="width:90px;font-family:var(--font-mono);font-size:12px;color:var(--fg-muted);">--s-9 · 96</span><span style="height:14px;width:96px;background:var(--accent);border-radius:2px;"></span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:32px;">
+      <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 24px;">RADII</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+        <div style="text-align:center;"><div style="aspect-ratio:1;background:var(--bg-card);border:1px solid var(--line);border-radius:4px;"></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:8px;">--r-xs · 4</div></div>
+        <div style="text-align:center;"><div style="aspect-ratio:1;background:var(--bg-card);border:1px solid var(--line);border-radius:8px;"></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:8px;">--r-sm · 8</div></div>
+        <div style="text-align:center;"><div style="aspect-ratio:1;background:var(--bg-card);border:1px solid var(--line);border-radius:12px;"></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:8px;">--r-md · 12</div></div>
+        <div style="text-align:center;"><div style="aspect-ratio:1;background:var(--bg-card);border:1px solid var(--line);border-radius:18px;"></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:8px;">--r-lg · 18</div></div>
+        <div style="text-align:center;"><div style="aspect-ratio:1;background:var(--bg-card);border:1px solid var(--line);border-radius:28px;"></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:8px;">--r-xl · 28</div></div>
+        <div style="text-align:center;"><div style="aspect-ratio:1;background:var(--bg-card);border:1px solid var(--line);border-radius:999px;"></div><div style="font-family:var(--font-mono);font-size:10px;color:var(--fg-muted);margin-top:8px;">--r-pill</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 — COMPONENTS -->
+<section>
+  <div class="section-head">
+    <h2>Bileşenler</h2><span class="num">04</span>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <!-- Buttons -->
+    <div class="card" style="padding:36px;">
+      <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 24px;">BUTONLAR</h3>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <button class="btn btn-primary">ARA →</button>
+        <button class="btn btn-ghost">İptal</button>
+        <button class="btn btn-primary" style="padding:16px 32px;font-size:15px;">Parça aramaya başla →</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:24px;flex-wrap:wrap;">
+        <span class="chip">VIN</span>
+        <span class="chip">OEM</span>
+        <span class="chip">200+ MARKA</span>
+      </div>
+    </div>
+
+    <!-- Inputs -->
+    <div class="card" style="padding:36px;">
+      <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 24px;">ARAMA ÇUBUĞU</h3>
+      <div style="background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 4px 4px 24px;display:flex;align-items:center;">
+        <span style="font-family:var(--font-mono);font-size:11px;color:var(--fg-muted);letter-spacing:0.12em;margin-right:14px;">VIN</span>
+        <span style="flex:1;font-family:var(--font-mono);font-size:14px;letter-spacing:0.04em;">WBA8A3C50G5G27123</span>
+        <button class="btn btn-primary" style="padding:10px 20px;">ARA →</button>
+      </div>
+    </div>
+
+    <!-- Card -->
+    <div class="card" style="padding:36px;">
+      <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 24px;">PARÇA KARTI</h3>
+      <div style="background:var(--bg-card);border:1px solid var(--line);border-radius:18px;padding:22px;">
+        <div style="aspect-ratio:4/3;background:var(--bg);background-image:linear-gradient(135deg,rgba(255,255,255,0.04) 25%,transparent 25%,transparent 50%,rgba(255,255,255,0.04) 50%,rgba(255,255,255,0.04) 75%,transparent 75%);background-size:12px 12px;border-radius:8px;margin-bottom:16px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;letter-spacing:0.18em;color:var(--fg-dim);">FRONT BUMPER</div>
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--accent);letter-spacing:0.18em;margin-bottom:6px;">KAPORTA</div>
+        <h4 style="font-family:'Space Grotesk';font-size:18px;font-weight:600;margin:0 0 4px;">Ön Tampon</h4>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--fg-muted);">OEM 51117222557</div>
+      </div>
+    </div>
+
+    <!-- Status pills -->
+    <div class="card" style="padding:36px;">
+      <h3 style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin:0 0 24px;">DURUM ETİKETLERİ</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(45,209,122,0.12);color:var(--success);font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">● MATCH FOUND</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,176,32,0.12);color:var(--warn);font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">● FİYAT BEKLENİYOR</span>
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:rgba(255,77,94,0.12);color:var(--danger);font-family:var(--font-mono);font-size:11px;letter-spacing:0.1em;text-transform:uppercase;">● STOK YOK</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

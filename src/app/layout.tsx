@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Archivo_Black, Space_Grotesk } from 'next/font/google'
 import dynamic from 'next/dynamic'
 import './globals.css'
 import Header from '@/components/Header'
@@ -16,7 +16,9 @@ const AssistantWidget = dynamic(() => import('@/components/AssistantWidget'), { 
 const BackToTop = dynamic(() => import('@/components/BackToTop'), { ssr: false })
 const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false })
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' })
+const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' })
+const archivoBlack = Archivo_Black({ subsets: ['latin'], weight: '400', display: 'swap', variable: '--font-archivo-black' })
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], display: 'swap', variable: '--font-space-grotesk' })
 
 export const metadata: Metadata = {
   title: {
@@ -65,7 +67,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#eab308" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body className={`${inter.className} bg-white text-gray-900`}>
+      <body className={`${inter.variable} ${archivoBlack.variable} ${spaceGrotesk.variable} ${inter.className} bg-white text-gray-900`}>
         <SchemaOrg />
         <ToastProvider>
           <AuthProvider>

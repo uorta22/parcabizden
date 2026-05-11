@@ -4,11 +4,12 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Menu, X, Car, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus,
+  Menu, X, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus,
   ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import CartIcon from '@/components/CartIcon'
+import LogoLink from '@/components/Logo'
 
 // BrandBar kaldırıldı (Faz 3.1) — landing'de Brands grid'i var, header'da gerek yok
 
@@ -69,18 +70,8 @@ export default function Header() {
         {/* ═══ Top Bar ═══ */}
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 md:h-20 gap-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2 group flex-shrink-0">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg gradient-accent flex items-center justify-center">
-                <Car className="w-6 h-6 md:w-7 md:h-7 text-dark-900" />
-              </div>
-              <div>
-                <span className="text-xl md:text-2xl font-bold text-gray-900">
-                  Parça<span className="text-primary-500">Bizden</span>
-                </span>
-                <p className="text-[10px] md:text-xs text-gray-500 -mt-1">Yedek & Çıkma Parça</p>
-              </div>
-            </Link>
+            {/* Logo — Wordmark (md+), Monogram (mobile) */}
+            <LogoLink size={1} className="flex-shrink-0" />
 
             {/* Desktop Search Bar — wide */}
             <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xl mx-6">

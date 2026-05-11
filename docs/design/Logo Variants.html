@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ParçaBizden — Logo Varyasyonları</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="lib/tokens.css"/>
+<style>
+  body { background: var(--bg); padding: 64px 48px; }
+  .grid {
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  .card {
+    background: var(--bg-elev); border: 1px solid var(--line);
+    border-radius: 18px; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .preview {
+    flex: 1; min-height: 280px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg-card);
+    position: relative;
+  }
+  .preview.light { background: #fafaf7; }
+  .preview.light * { color: #14171d; }
+  .meta {
+    padding: 18px 24px; border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .meta h3 {
+    font-family: var(--font-display); font-weight: 600; font-size: 18px;
+    letter-spacing: -0.02em; margin: 0;
+  }
+  .meta span {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--fg-muted); letter-spacing: 0.14em; text-transform: uppercase;
+  }
+  .header {
+    max-width: 1280px; margin: 0 auto 48px;
+  }
+  .eyebrow-back {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase;
+    margin-bottom: 16px; display: inline-block;
+  }
+  h1 {
+    font-family: "Archivo Black"; font-size: 64px; letter-spacing: -0.04em;
+    margin: 0 0 12px; line-height: 1;
+  }
+  p.lead {
+    color: var(--fg-muted); font-size: 16px; max-width: 560; line-height: 1.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="index.html" class="eyebrow-back">← TÜM ÇALIŞMALAR</a>
+  <h1>4 logo yönü.</h1>
+  <p class="lead">Karar için 4 farklı kimlik denemesi. Wordmark günlük kullanım için en güçlü; Monogram app icon olarak ideal; Bracket teknik vurgu yapıyor; Badge ise rozet gibi marka işareti haline geliyor.</p>
+</div>
+
+<div class="grid">
+
+  <!-- 1. Wordmark -->
+  <div class="card">
+    <div class="preview">
+      <span style="font-family:'Archivo Black';font-size:56px;letter-spacing:-0.04em;">
+        parça<span style="color:var(--accent)">bizden</span>.
+      </span>
+    </div>
+    <div class="preview light" style="min-height:140px">
+      <span style="font-family:'Archivo Black';font-size:40px;letter-spacing:-0.04em;">
+        parça<span style="color:var(--accent)">bizden</span>.
+      </span>
+    </div>
+    <div class="meta">
+      <h3>Wordmark</h3>
+      <span>01 · ÖNERİLEN</span>
+    </div>
+  </div>
+
+  <!-- 2. Monogram -->
+  <div class="card">
+    <div class="preview" style="gap:18px;flex-direction:row">
+      <div style="width:80px;height:80px;background:var(--accent);color:#1a0f00;border-radius:14px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black';font-size:48px;letter-spacing:-0.04em;">P</div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:32px;letter-spacing:-0.02em;">parçabizden</span>
+    </div>
+    <div class="preview light" style="min-height:140px;gap:14px;flex-direction:row">
+      <div style="width:48px;height:48px;background:#ff7a1a;color:#1a0f00;border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Archivo Black';font-size:30px;letter-spacing:-0.04em;">P</div>
+      <span style="font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:22px;letter-spacing:-0.02em;">parçabizden</span>
+    </div>
+    <div class="meta">
+      <h3>Monogram</h3>
+      <span>02 · APP / FAVICON</span>
+    </div>
+  </div>
+
+  <!-- 3. Bracket -->
+  <div class="card">
+    <div class="preview">
+      <div style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:32px;letter-spacing:0.04em;">
+        <span style="color:var(--accent)">[</span>
+        <span style="font-weight:600">parça/bizden</span>
+        <span style="color:var(--accent)">]</span>
+      </div>
+    </div>
+    <div class="preview light" style="min-height:140px">
+      <div style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:22px;letter-spacing:0.04em;">
+        <span style="color:#ff7a1a">[</span>
+        <span style="font-weight:600">parça/bizden</span>
+        <span style="color:#ff7a1a">]</span>
+      </div>
+    </div>
+    <div class="meta">
+      <h3>Bracket</h3>
+      <span>03 · TEKNİK / KOD</span>
+    </div>
+  </div>
+
+  <!-- 4. Badge -->
+  <div class="card">
+    <div class="preview">
+      <div style="display:inline-flex;align-items:center;gap:14px;border:2px solid var(--accent);padding:14px 32px;border-radius:999px;">
+        <span style="width:18px;height:18px;border-radius:50%;background:var(--accent);"></span>
+        <span style="font-family:'Archivo Black';font-size:24px;letter-spacing:0.06em;text-transform:uppercase;">parçabizden</span>
+      </div>
+    </div>
+    <div class="preview light" style="min-height:140px">
+      <div style="display:inline-flex;align-items:center;gap:10px;border:2px solid #ff7a1a;padding:10px 22px;border-radius:999px;">
+        <span style="width:12px;height:12px;border-radius:50%;background:#ff7a1a;"></span>
+        <span style="font-family:'Archivo Black';font-size:16px;letter-spacing:0.06em;text-transform:uppercase;">parçabizden</span>
+      </div>
+    </div>
+    <div class="meta">
+      <h3>Badge</h3>
+      <span>04 · ROZET / EMBLEM</span>
+    </div>
+  </div>
+
+</div>
+
+<div style="max-width:1280px;margin:64px auto 0;padding:32px;background:var(--bg-elev);border:1px solid var(--line);border-radius:18px;">
+  <div style="font-family:var(--font-mono);font-size:11px;color:var(--accent);letter-spacing:0.18em;margin-bottom:14px;">TASARIM NOTLARI</div>
+  <ul style="margin:0;padding-left:20px;font-size:14px;line-height:1.8;color:var(--fg-muted);">
+    <li><strong style="color:var(--fg)">Wordmark</strong> — Archivo Black + nokta. "Bizden" turuncu vurgu sahiplenme + güven hissi yaratır. Ana logo olarak tavsiye.</li>
+    <li><strong style="color:var(--fg)">Monogram</strong> — App icon, favicon ve sosyal avatar için. Köşeleri yumuşak.</li>
+    <li><strong style="color:var(--fg)">Bracket</strong> — Geliştirici/teknik partnerlere yönelik kullanım. API dokümantasyonu, tedarikçi portalı.</li>
+    <li><strong style="color:var(--fg)">Badge</strong> — Rozet, sticker, sertifika, garanti damgası gibi yardımcı işaret.</li>
+  </ul>
+</div>
+
+</body>
+</html>
