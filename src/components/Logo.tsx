@@ -1,13 +1,17 @@
 /**
- * Logo — ParçaBizden Wordmark + Monogram varyantları.
+ * Logo — ParçaBizden CHASSIS-BAR Wordmark.
  *
- * Tasarım sistemi kaynağı: parcabizden-design/Logo Variants.html
- *   • Wordmark: "parça" + "bizden" (#ff7a1a) + "." → Archivo Black, ana logo
- *   • Monogram: turuncu kare "P" + parçabizden (Space Grotesk) → kompakt
- *   • Mark   : sadece kare "P" (favicon/avatar)
+ * Tasarım kaynağı: docs/design/logo-explore.html → logo-1
+ *   01 · CHASSIS-BAR WORDMARK
+ *   SPACE GROTESK / ACCENT BARS
  *
- * Accent color: #ff7a1a (ember orange — eski #f9ac1b'in rafine hali).
- * Tailwind primary-500 ile uyumlu değil; logo özel rengi inline tutuluyor.
+ * Yapı:
+ *   ║ ║ ║   parça·bizden
+ *   ▌ ▌ ▌                ← 3 turuncu dikey bar (56 / 38 / 22 px,
+ *                          son bar yarı opak — şasi/aks görüntüsü)
+ *   parça(siyah) + bizden(turuncu) — Space Grotesk 700, -0.04em
+ *
+ * Mobile için kompakt versiyon (sadece bars + 'pb') da export edilir.
  */
 
 import Link from 'next/link'
@@ -15,91 +19,118 @@ import Link from 'next/link'
 const ACCENT = '#ff7a1a'
 
 interface LogoProps {
-  /** Boyut çarpanı (rem). Default 1 → ~24px x-height. */
+  /** Çarpan (1 = ~56px bar, 0.5 = ~28px). */
   size?: number
-  /** Hover/focus ile hafif animasyon */
+  /** Hover/focus animasyonu açık mı */
   interactive?: boolean
   className?: string
 }
 
 // ─────────────────────────────────────────────────────────
-// Wordmark — ana kullanım (Header desktop)
+// ChassisBars — 3 kademeli dikey çubuk (logo mark'ı)
+// ─────────────────────────────────────────────────────────
+function ChassisBars({ size = 1, interactive = true }: { size?: number; interactive?: boolean }) {
+  const heights = [56 * size, 38 * size, 22 * size] // px
+  const barW = 4 * size
+  const gap = 4 * size
+
+  return (
+    <span
+      aria-hidden
+      className={`inline-flex items-end ${interactive ? 'transition-transform group-hover:-translate-y-0.5' : ''}`}
+      style={{ gap: `${gap}px`, height: `${heights[0]}px` }}
+    >
+      <span
+        style={{
+          width: `${barW}px`,
+          height: `${heights[0]}px`,
+          background: ACCENT,
+          borderRadius: '2px',
+        }}
+      />
+      <span
+        style={{
+          width: `${barW}px`,
+          height: `${heights[1]}px`,
+          background: ACCENT,
+          borderRadius: '2px',
+        }}
+      />
+      <span
+        style={{
+          width: `${barW}px`,
+          height: `${heights[2]}px`,
+          background: ACCENT,
+          borderRadius: '2px',
+          opacity: 0.5,
+        }}
+      />
+    </span>
+  )
+}
+
+// ─────────────────────────────────────────────────────────
+// Wordmark — chassis-bar + Space Grotesk
 // ─────────────────────────────────────────────────────────
 export function LogoWordmark({ size = 1, interactive = true, className = '' }: LogoProps) {
   return (
     <span
-      className={`inline-flex items-baseline font-archivo-black leading-none tracking-[-0.04em] text-gray-900 ${interactive ? 'transition-transform group-hover:-translate-y-0.5' : ''} ${className}`}
-      style={{ fontSize: `${size * 1.5}rem` }}
+      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] text-gray-900 ${className}`}
+      style={{ gap: `${14 * size}px`, fontSize: `${56 * size}px` }}
     >
-      parça<span style={{ color: ACCENT }}>bizden</span><span style={{ color: ACCENT }}>.</span>
+      <ChassisBars size={size} interactive={interactive} />
+      <span>
+        parça<span style={{ color: ACCENT }}>bizden</span>
+      </span>
     </span>
   )
 }
 
 // ─────────────────────────────────────────────────────────
-// Monogram — kompakt (Header mobile, sticky, sosyal)
+// Monogram (kompakt) — chassis-bars + 'pb' küçük etiket
+// Mobile header + sticky için
 // ─────────────────────────────────────────────────────────
 export function LogoMonogram({ size = 1, interactive = true, className = '' }: LogoProps) {
   return (
-    <span className={`inline-flex items-center gap-2 ${className}`}>
-      <span
-        className={`flex aspect-square items-center justify-center rounded-[18%] font-archivo-black leading-none tracking-[-0.04em] ${interactive ? 'transition-transform group-hover:-translate-y-0.5' : ''}`}
-        style={{
-          width: `${size * 2.5}rem`,
-          height: `${size * 2.5}rem`,
-          background: ACCENT,
-          color: '#1a0f00',
-          fontSize: `${size * 1.6}rem`,
-        }}
-        aria-hidden
-      >
-        P
-      </span>
-      <span
-        className="font-space-grotesk font-semibold leading-none tracking-[-0.02em] text-gray-900"
-        style={{ fontSize: `${size * 1.15}rem` }}
-      >
-        parçabizden
+    <span
+      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] text-gray-900 ${className}`}
+      style={{ gap: `${10 * size}px`, fontSize: `${28 * size}px` }}
+    >
+      <ChassisBars size={size * 0.5} interactive={interactive} />
+      <span>
+        parça<span style={{ color: ACCENT }}>bizden</span>
       </span>
     </span>
   )
 }
 
 // ─────────────────────────────────────────────────────────
-// Mark — sadece kare P (favicon yedeği, avatar)
+// Mark — sadece chassis bars (favicon, avatar, footer)
 // ─────────────────────────────────────────────────────────
 export function LogoMark({ size = 1, interactive = false, className = '' }: LogoProps) {
   return (
     <span
-      className={`flex aspect-square items-center justify-center rounded-[18%] font-archivo-black leading-none tracking-[-0.04em] ${interactive ? 'transition-transform group-hover:-translate-y-0.5' : ''} ${className}`}
-      style={{
-        width: `${size * 2.5}rem`,
-        height: `${size * 2.5}rem`,
-        background: ACCENT,
-        color: '#1a0f00',
-        fontSize: `${size * 1.6}rem`,
-      }}
       aria-label="ParçaBizden"
+      className={`inline-flex ${className}`}
     >
-      P
+      <ChassisBars size={size} interactive={interactive} />
     </span>
   )
 }
 
 // ─────────────────────────────────────────────────────────
-// LogoLink — Header'da kullanılan default sürüm.
-// Mobile'da Monogram, md+ ekranda Wordmark gösterir.
+// LogoLink — Header'da kullanılan default sürüm
+//   Mobile: Monogram (chassis ~14px + küçük yazı)
+//   md+   : Wordmark (chassis 56px + büyük yazı)
 // ─────────────────────────────────────────────────────────
 export default function LogoLink({ size = 1, className = '' }: LogoProps) {
   return (
     <Link href="/" className={`group inline-flex items-center ${className}`} aria-label="ParçaBizden — Anasayfa">
-      {/* Mobile: kompakt monogram */}
       <span className="md:hidden">
         <LogoMonogram size={size * 0.9} />
       </span>
-      {/* Desktop: Archivo Black wordmark */}
-      <span className="hidden md:inline-block">
-        <LogoWordmark size={size} />
+      <span className="hidden md:inline-flex">
+        <LogoWordmark size={size * 0.55} />
       </span>
     </Link>
   )

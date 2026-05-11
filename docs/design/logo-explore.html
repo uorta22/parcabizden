@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>ParçaBizden — Logo Eksplorasyonu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Archivo+Black&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="lib/tokens.css">
+<style>
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    min-height: 100vh;
+    padding: 64px 32px;
+  }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+  header.page-head {
+    display: flex; justify-content: space-between; align-items: end;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 24px; margin-bottom: 48px;
+  }
+  h1 { font-family: var(--font-display); font-size: 42px; margin: 0; letter-spacing: -0.03em; font-weight: 600; }
+  .meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--fg-muted); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .card {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+  }
+  .card .stage {
+    padding: 80px 40px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 280px;
+    background: var(--bg-elev);
+    position: relative;
+    overflow: hidden;
+  }
+  .card .stage.alt { background: #fafaf7; color: #14171d; }
+  .card .stage.dark { background: #0a0c10; }
+  .card .meta-row {
+    border-top: 1px solid var(--line);
+    padding: 18px 24px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+  }
+  .meta-row .num { color: var(--accent); }
+
+  /* === LOGO 1: WORDMARK + CHASSIS BAR === */
+  .logo-1 {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 56px;
+    letter-spacing: -0.04em;
+  }
+  .logo-1 .mark {
+    display: inline-flex; align-items: center; gap: 4px;
+    height: 56px;
+  }
+  .logo-1 .bar {
+    width: 4px; height: 56px; background: var(--accent); border-radius: 2px;
+  }
+  .logo-1 .bar:nth-child(2) { height: 38px; }
+  .logo-1 .bar:nth-child(3) { height: 22px; opacity: 0.5; }
+  .logo-1 .word { color: inherit; }
+  .logo-1 .word .accent { color: var(--accent); }
+
+  /* === LOGO 2: MONOGRAM PB (hex bolt) === */
+  .logo-2 { display: inline-flex; align-items: center; gap: 16px; }
+  .logo-2 .hex {
+    width: 80px; height: 80px;
+    background: var(--accent);
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+    display: flex; align-items: center; justify-content: center;
+    color: #1a0f00;
+    font-family: "Archivo Black", sans-serif;
+    font-size: 36px;
+    letter-spacing: -0.06em;
+  }
+  .logo-2 .name {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 36px;
+    letter-spacing: -0.03em;
+    line-height: 0.95;
+  }
+  .logo-2 .name .sub {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--fg-muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+
+  /* === LOGO 3: CARET / WEDGE → "find" metaforu === */
+  .logo-3 {
+    display: inline-flex; align-items: center; gap: 14px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 50px;
+    letter-spacing: -0.035em;
+  }
+  .logo-3 svg { display: block; }
+  .logo-3 .word { display: inline-flex; align-items: baseline; }
+  .logo-3 .dot {
+    width: 12px; height: 12px; background: var(--accent);
+    margin-left: 4px; border-radius: 50%;
+  }
+
+  /* === LOGO 4: PIPE / TYPE-ONLY EDITORIAL === */
+  .logo-4 {
+    font-family: "Archivo Black", sans-serif;
+    font-size: 80px;
+    letter-spacing: -0.05em;
+    line-height: 0.85;
+    display: inline-block;
+  }
+  .logo-4 .row1 { display: flex; align-items: center; gap: 6px; }
+  .logo-4 .row2 { display: flex; align-items: center; gap: 6px; color: var(--fg-muted); }
+  .logo-4 .row1 .pipe {
+    width: 10px; height: 64px; background: var(--accent);
+  }
+  .logo-4 .stamp {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-top: 12px;
+    font-weight: 500;
+  }
+
+  /* lockup (small/horizontal forms) */
+  .lockup-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-top: 48px;
+  }
+  .lockup {
+    background: var(--bg-elev);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 28px 20px;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 110px;
+  }
+  .lockup small {
+    position: absolute;
+    transform: translateY(34px);
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--fg-dim);
+  }
+  .lockup-row .l { position: relative; }
+
+  /* small logo variants for lockup */
+  .lg-1 {
+    font-family: var(--font-display); font-weight: 700; font-size: 22px;
+    letter-spacing: -0.03em;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .lg-1 .b { width: 3px; height: 22px; background: var(--accent); border-radius: 1px; }
+  .lg-1 .acc { color: var(--accent); }
+
+  .lg-2 {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  .lg-2 .h {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%);
+    display: flex; align-items: center; justify-content: center;
+    color: #1a0f00;
+    font-family: "Archivo Black", sans-serif;
+    font-size: 14px;
+    letter-spacing: -0.04em;
+  }
+
+  .lg-3 {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-display); font-weight: 700; font-size: 22px;
+    letter-spacing: -0.025em;
+  }
+  .lg-3 .dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%; }
+
+  .lg-4 {
+    font-family: "Archivo Black", sans-serif; font-size: 22px;
+    letter-spacing: -0.04em; line-height: 0.9;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .lg-4 .p { width: 4px; height: 18px; background: var(--accent); }
+
+  section.foot {
+    margin-top: 80px;
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--fg-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    display: flex; justify-content: space-between;
+  }
+  .nav-links { display: flex; gap: 18px; }
+  .nav-links a { color: var(--accent); }
+</style>
+</head>
+<body data-screen-label="logo-explore">
+<div class="wrap">
+  <header class="page-head">
+    <div>
+      <p class="meta" style="margin: 0 0 12px; color: var(--accent);">FILE 01 · LOGO EKSPLORASYONU</p>
+      <h1>4 logo yönü, aynı marka</h1>
+    </div>
+    <p class="meta" style="margin: 0;">PARÇABIZDEN · 2026</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- LOGO 1 -->
+    <div class="card">
+      <div class="stage">
+        <div class="logo-1">
+          <span class="mark">
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+          </span>
+          <span class="word">parça<span class="accent">bizden</span></span>
+        </div>
+      </div>
+      <div class="meta-row">
+        <span><span class="num">01</span> · CHASSIS-BAR WORDMARK</span>
+        <span>SPACE GROTESK / ACCENT BARS</span>
+      </div>
+    </div>
+
+    <!-- LOGO 2 -->
+    <div class="card">
+      <div class="stage">
+        <div class="logo-2">
+          <div class="hex">PB</div>
+          <div class="name">
+            ParçaBizden
+            <span class="sub">OEM · VIN · MODEL</span>
+          </div>
+        </div>
+      </div>
+      <div class="meta-row">
+        <span><span class="num">02</span> · HEX MONOGRAM</span>
+        <span>BOLT-INSPIRED · PB</span>
+      </div>
+    </div>
+
+    <!-- LOGO 3 -->
+    <div class="card">
+      <div class="stage alt">
+        <div class="logo-3">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <path d="M8 14 L28 4 L48 14 L48 42 L28 52 L8 42 Z" stroke="#14171d" stroke-width="2.5" fill="none"/>
+            <path d="M20 22 L28 18 L36 22" stroke="#ff7a1a" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <circle cx="28" cy="32" r="4" fill="#ff7a1a"/>
+          </svg>
+          <span class="word" style="color:#14171d;">parçabizden<span class="dot"></span></span>
+        </div>
+      </div>
+      <div class="meta-row">
+        <span><span class="num">03</span> · CHASSIS + CARET (LIGHT MODE)</span>
+        <span>FIND METAPHOR</span>
+      </div>
+    </div>
+
+    <!-- LOGO 4 -->
+    <div class="card">
+      <div class="stage dark">
+        <div class="logo-4">
+          <div class="row1"><span class="pipe"></span>PARÇA</div>
+          <div class="row2">BİZDEN.</div>
+          <div class="stamp">EST · 2024 · ALL PARTS, ONE QUERY</div>
+        </div>
+      </div>
+      <div class="meta-row">
+        <span><span class="num">04</span> · EDITORIAL STACK</span>
+        <span>ARCHIVO BLACK · NEWSPRINT</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LOCKUPS / SMALL FORMS -->
+  <p class="meta" style="margin: 64px 0 16px; color: var(--accent);">SMALL · HEADER LOCKUP · 24PX</p>
+  <div class="lockup-row" style="margin-top: 16px;">
+    <div class="lockup l">
+      <span class="lg-1"><span class="b"></span><span class="b" style="height:14px;"></span><span class="b" style="height:8px;opacity:.5;"></span>parça<span class="acc">bizden</span></span>
+    </div>
+    <div class="lockup l">
+      <span class="lg-2"><span class="h">PB</span>ParçaBizden</span>
+    </div>
+    <div class="lockup l" style="background: #fafaf7;">
+      <span class="lg-3" style="color:#14171d;">
+        <svg width="22" height="22" viewBox="0 0 56 56" fill="none">
+          <path d="M8 14 L28 4 L48 14 L48 42 L28 52 L8 42 Z" stroke="#14171d" stroke-width="3" fill="none"/>
+          <circle cx="28" cy="28" r="5" fill="#ff7a1a"/>
+        </svg>
+        parçabizden<span class="dot"></span>
+      </span>
+    </div>
+    <div class="lockup l" style="background:#0a0c10;">
+      <span class="lg-4"><span class="p"></span>PARÇA<span style="color:#9ba2af;">BİZDEN.</span></span>
+    </div>
+  </div>
+
+  <section class="foot">
+    <span>4 LOGO · TYP. SPACE GROTESK / ARCHIVO BLACK</span>
+    <span class="nav-links">
+      <a href="design-system.html">→ Design System</a>
+      <a href="hero-animation.html">→ Hero Animasyon</a>
+      <a href="index.html">← Ana Index</a>
+    </span>
+  </section>
+</div>
+</body>
+</html>
