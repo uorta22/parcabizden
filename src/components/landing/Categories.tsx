@@ -1,13 +1,13 @@
 /**
- * Categories — autodoc tarzı ana parça grubu görünümü.
+ * Categories — 5 ana grup, her grup görsel ikon + accent tonu.
  *
- * 5 ana grup × her grupta 4-6 alt kategori.
- * Her grup: ikon + başlık + alt liste (chip'ler).
- * Alt grup tıklayınca /parcalar?cat=<id> ile filtreli sayfaya gider.
+ * Otoparcasan tarzı görsel kategori grid'i:
+ *  • Sol üst: turuncu ikon kutusu
+ *  • Sağ: başlık + alt kategori chip'leri
+ *  • Hover: kart hafif lift + accent border
  *
- * NOT: Şu an alt kategoriler /parcalar'a generic deep-link veriyor;
- * gerçek catalog_categories.id eşleştirmesi Faz 4.3'te (legacy frontend
- * migration) tamamlanacak.
+ * Alt chip tıklayınca /parcalar?cat=<id>'a gider (Faz 4.3'te
+ * gerçek catalog_categories.id eşlemesi yapılacak).
  */
 
 import Link from 'next/link'
@@ -15,110 +15,92 @@ import {
   Disc3, Cog, Wrench, Zap, Car as CarIcon,
 } from 'lucide-react'
 
+const ACCENT = '#ff7a1a'
+
 type Group = {
   icon: typeof Disc3
   title: string
-  accent: string
-  items: { label: string; query?: string }[]
+  items: { label: string }[]
 }
 
 const GROUPS: Group[] = [
   {
     icon: Disc3,
     title: 'Fren ve Debriyaj',
-    accent: '#dc2626',
     items: [
-      { label: 'Fren Diski' },
-      { label: 'Fren Balatası' },
-      { label: 'Fren Kaliperi' },
-      { label: 'Fren Hortumları' },
-      { label: 'Debriyaj Seti' },
-      { label: 'Debriyaj Pompası' },
+      { label: 'Fren Diski' }, { label: 'Fren Balatası' }, { label: 'Fren Kaliperi' },
+      { label: 'Fren Hortumları' }, { label: 'Debriyaj Seti' }, { label: 'Debriyaj Pompası' },
     ],
   },
   {
     icon: Cog,
     title: 'Motor ve Yakıt',
-    accent: '#0891b2',
     items: [
-      { label: 'Triger Kayışı' },
-      { label: 'Conta Setleri' },
-      { label: 'Yağ Filtresi' },
-      { label: 'Yakıt Filtresi' },
-      { label: 'Hava Filtresi' },
-      { label: 'Buji ve Bobin' },
+      { label: 'Triger Kayışı' }, { label: 'Conta Setleri' }, { label: 'Yağ Filtresi' },
+      { label: 'Yakıt Filtresi' }, { label: 'Hava Filtresi' }, { label: 'Buji ve Bobin' },
     ],
   },
   {
     icon: Wrench,
     title: 'Süspansiyon ve Direksiyon',
-    accent: '#7c3aed',
     items: [
-      { label: 'Amortisör' },
-      { label: 'Yay (Helezon)' },
-      { label: 'Salıncak Takımı' },
-      { label: 'Rotil ve Rot' },
-      { label: 'Tekerlek Yatağı' },
-      { label: 'Direksiyon Mili' },
+      { label: 'Amortisör' }, { label: 'Yay (Helezon)' }, { label: 'Salıncak Takımı' },
+      { label: 'Rotil ve Rot' }, { label: 'Tekerlek Yatağı' }, { label: 'Direksiyon Mili' },
     ],
   },
   {
     icon: Zap,
     title: 'Elektrik ve Aydınlatma',
-    accent: '#f59e0b',
     items: [
-      { label: 'Akü' },
-      { label: 'Marş Motoru' },
-      { label: 'Alternatör' },
-      { label: 'Far ve Sis' },
-      { label: 'Ampul ve LED' },
-      { label: 'ABS / ESP Sensörleri' },
+      { label: 'Akü' }, { label: 'Marş Motoru' }, { label: 'Alternatör' },
+      { label: 'Far ve Sis' }, { label: 'Ampul ve LED' }, { label: 'ABS / ESP Sensörleri' },
     ],
   },
   {
     icon: CarIcon,
     title: 'Kaporta ve Trim',
-    accent: '#0ea5e9',
     items: [
-      { label: 'Tampon ve Izgara' },
-      { label: 'Çamurluk' },
-      { label: 'Kaput' },
-      { label: 'Ayna ve Cam' },
-      { label: 'Silecek Sistemi' },
-      { label: 'Diğer Donanım' },
+      { label: 'Tampon ve Izgara' }, { label: 'Çamurluk' }, { label: 'Kaput' },
+      { label: 'Ayna ve Cam' }, { label: 'Silecek Sistemi' }, { label: 'Diğer Donanım' },
     ],
   },
 ]
 
+function slugify(s: string) {
+  return s.toLowerCase()
+    .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i')
+    .replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
 export default function Categories() {
   return (
-    <section className="bg-gray-50 py-20 md:py-24">
+    <section className="bg-white py-12 md:py-16">
       <div className="mx-auto max-w-6xl px-4">
-        <header className="mb-10 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-primary-600">
+        <header className="mb-8 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 md:text-2xl">
               Tüm Kategoriler
-            </p>
-            <h2 className="text-3xl font-black tracking-tight text-gray-900 md:text-4xl">
-              Ana parça gruplarına göz atın
             </h2>
+            <p className="text-sm text-gray-500">Aradığınız parçayı kategoriye göre bulun</p>
           </div>
           <Link
             href="/parcalar"
-            className="text-sm font-semibold text-gray-600 underline-offset-4 hover:text-primary-600 hover:underline"
+            className="text-sm font-semibold underline-offset-4 hover:underline"
+            style={{ color: ACCENT }}
           >
-            Tüm kategoriler →
+            Tümünü gör →
           </Link>
         </header>
 
         <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {GROUPS.map(({ icon: Icon, title, accent, items }) => (
+          {GROUPS.map(({ icon: Icon, title, items }) => (
             <li key={title}>
-              <article className="h-full rounded-2xl border border-gray-200 bg-white p-5 transition-all hover:border-gray-300 hover:shadow-md">
-                <header className="mb-4 flex items-center gap-3 border-b border-gray-100 pb-3">
+              <article className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#ff7a1a]/40 hover:shadow-md">
+                <header className="mb-4 flex items-center gap-3">
                   <div
-                    className="flex h-10 w-10 items-center justify-center rounded-xl"
-                    style={{ background: `${accent}15`, color: accent }}
+                    className="flex h-11 w-11 items-center justify-center rounded-lg"
+                    style={{ background: `${ACCENT}15`, color: ACCENT }}
                   >
                     <Icon className="h-5 w-5" strokeWidth={2.2} />
                   </div>
@@ -128,8 +110,8 @@ export default function Categories() {
                   {items.map(it => (
                     <li key={it.label}>
                       <Link
-                        href={it.query ? `/parcalar?${it.query}` : '/parcalar'}
-                        className="inline-block rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs font-semibold text-gray-700 transition-colors hover:border-gray-300 hover:bg-white hover:text-primary-600"
+                        href={`/parcalar?q=${encodeURIComponent(slugify(it.label))}`}
+                        className="inline-block rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700 transition-colors hover:border-[#ff7a1a]/50 hover:text-[#ff7a1a]"
                       >
                         {it.label}
                       </Link>

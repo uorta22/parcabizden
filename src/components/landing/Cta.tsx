@@ -1,43 +1,68 @@
 /**
- * Final CTA — sade beyaz kart, tek primary action.
- *
- * Önceki dark anchor kaldırıldı; otoparcasan/parcahane stilinde
- * temiz beyaz kutu içinde WhatsApp + telefon CTA'sı.
+ * Aradığınız parçayı bulamadınız mı? — banner tarzı CTA.
+ * Otoparcasan'daki "Anlaşmalı Servisler / Bakım Robotu" bantları
+ * stilinde: yan yana 2 destek bandı (telefon + WhatsApp), accent çubuk.
  */
 
-import { MessageCircle, ArrowRight } from 'lucide-react'
+import { Phone, MessageCircle, Headphones } from 'lucide-react'
 import { getWhatsAppUrl, siteConfig } from '@/lib/config'
 
 const ACCENT = '#ff7a1a'
 
 export default function Cta() {
   return (
-    <section className="bg-white py-16 md:py-20">
-      <div className="mx-auto max-w-4xl px-4">
-        <div className="rounded-2xl border border-gray-200 bg-gray-50 p-8 text-center md:p-12">
-          <h2 className="text-2xl font-bold text-gray-900 md:text-3xl">
-            Aradığınız parçayı bulamadınız mı?
-          </h2>
-          <p className="mx-auto mt-3 max-w-lg text-sm text-gray-500 md:text-base">
-            Kataloğa düşmeyen veya emin olmadığınız parçalar için uzman ekibimiz WhatsApp'ta — ortalama yanıt süresi 2 dakika.
-          </p>
+    <section className="bg-white py-12 md:py-16">
+      <div className="mx-auto max-w-6xl px-4">
+        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+          {/* Üst accent çubuk */}
+          <div className="h-1" style={{ background: ACCENT }} />
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <div className="grid divide-y divide-gray-200 md:grid-cols-3 md:divide-x md:divide-y-0">
+            {/* Sol: başlık */}
+            <div className="flex items-center gap-4 p-6 md:col-span-1">
+              <div
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg"
+                style={{ background: `${ACCENT}15`, color: ACCENT }}
+              >
+                <Headphones className="h-6 w-6" strokeWidth={2.2} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold leading-tight text-gray-900">
+                  Aradığınız parçayı bulamadınız mı?
+                </h2>
+                <p className="mt-0.5 text-xs text-gray-500">
+                  Uzman ekibimiz size yardımcı olsun
+                </p>
+              </div>
+            </div>
+
+            {/* Telefon */}
+            <a
+              href={`tel:${siteConfig.phone.raw}`}
+              className="flex items-center gap-4 p-6 transition-colors hover:bg-gray-50"
+            >
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+                <Phone className="h-5 w-5" strokeWidth={2.2} />
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wider text-gray-500">Hemen Arayın</div>
+                <div className="text-base font-bold text-gray-900">{siteConfig.phone.display}</div>
+              </div>
+            </a>
+
+            {/* WhatsApp */}
             <a
               href={getWhatsAppUrl(siteConfig.whatsapp.notFoundMessage)}
               target="_blank" rel="noopener noreferrer"
-              className="group inline-flex items-center gap-2 rounded-lg bg-[#22c55e] px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#16a34a]"
+              className="flex items-center gap-4 p-6 transition-colors hover:bg-gray-50"
             >
-              <MessageCircle className="h-4 w-4" />
-              WhatsApp ile sor
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-            </a>
-            <a
-              href={`tel:${siteConfig.phone.raw}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-white"
-              style={{ color: ACCENT, borderColor: '#ffd5b3' }}
-            >
-              {siteConfig.phone.display}
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                <MessageCircle className="h-5 w-5" strokeWidth={2.2} />
+              </div>
+              <div>
+                <div className="text-xs uppercase tracking-wider text-gray-500">WhatsApp Destek</div>
+                <div className="text-base font-bold text-gray-900">Anında yanıt al</div>
+              </div>
             </a>
           </div>
         </div>

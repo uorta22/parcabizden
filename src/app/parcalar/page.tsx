@@ -74,6 +74,7 @@ function ParcalarV2Inner() {
   const modelIdQ    = sp.get('model')   ? parseInt(sp.get('model')!, 10)   : null
   const vehicleIdQ  = sp.get('vehicle') ? parseInt(sp.get('vehicle')!, 10) : null
   const categoryIdQ = sp.get('cat')     ? parseInt(sp.get('cat')!, 10)     : null
+  const categoryQuery = sp.get('q') || ''   // anasayfadan gelen kategori ipucu (slug, örn. 'triger-kayisi')
 
   const [brands, setBrands]         = useState<TecBrand[]>([])
   const [models, setModels]         = useState<TecModel[]>([])
@@ -149,20 +150,39 @@ function ParcalarV2Inner() {
     )
   }, [vehicles, search])
 
-  // ── Navigasyon ──
+  // ── Navigasyon — `q` ipucu tüm step'ler boyunca korunur ──
+  const qSuffix = categoryQuery ? `&q=${encodeURIComponent(categoryQuery)}` : ''
   const updateUrl = useCallback((updates: Record<string, number | null>) => {
     const params = new URLSearchParams()
     const merged: Record<string, number | null> = {
       brand: brandIdQ, model: modelIdQ, vehicle: vehicleIdQ, cat: categoryIdQ, ...updates,
     }
     Object.entries(merged).forEach(([k, v]) => { if (v !== null && v !== undefined) params.set(k, String(v)) })
+    if (categoryQuery) params.set('q', categoryQuery)
     router.push(`/parcalar?${params.toString()}`)
-  }, [router, brandIdQ, modelIdQ, vehicleIdQ, categoryIdQ])
+  }, [router, brandIdQ, modelIdQ, vehicleIdQ, categoryIdQ, categoryQuery])
 
-  const selectBrand    = (id: number) => router.push(`/parcalar?brand=${id}`)
-  const selectModel    = (id: number) => router.push(`/parcalar?brand=${brandIdQ}&model=${id}`)
-  const selectVehicle  = (id: number) => router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}&vehicle=${id}`)
+  const selectBrand    = (id: number) => router.push(`/parcalar?brand=${id}${qSuffix}`)
+  const selectModel    = (id: number) => router.push(`/parcalar?brand=${brandIdQ}&model=${id}${qSuffix}`)
+  const selectVehicle  = (id: number) => router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}&vehicle=${id}${qSuffix}`)
   const selectCategory = (id: number) => updateUrl({ cat: id })
+
+  // Auto-select category: kullanıcı anasayfada 'triger-kayisi' tıkladıysa,
+  // varyant seçildikten sonra kategoriler yüklenince ilgili category_id'yi otomatik seç.
+  useEffect(() => {
+    if (!categoryQuery || categoryIdQ || !categories) return
+    const q = categoryQuery.toLowerCase()
+    const match = categories.flat.find(c => {
+      const tr = (c.description_tr || '').toLowerCase()
+      const en = (c.description_en || '').toLowerCase()
+      // q içeriyor mu? örn. 'triger-kayisi' → 'triger kayışı' eşleşmesi için kelime köküne bakıyoruz
+      const norm = q.replace(/-/g, ' ')
+      return tr.includes(norm) || en.includes(norm.replace(/i/g, 'i'))
+    })
+    if (match) {
+      updateUrl({ cat: match.id })
+    }
+  }, [categoryQuery, categoryIdQ, categories, updateUrl])
   const goBack = () => {
     if (categoryIdQ)     router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}&vehicle=${vehicleIdQ}`)
     else if (vehicleIdQ) router.push(`/parcalar?brand=${brandIdQ}&model=${modelIdQ}`)

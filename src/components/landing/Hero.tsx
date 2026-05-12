@@ -52,7 +52,7 @@ export default function Hero() {
             <span style={{ color: ACCENT }}> saniyeler</span> içinde bulun
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-sm text-gray-500 md:text-base">
-            Marka, model ve varyantınızı seçin — TecDoc kataloğundan birebir uyumlu parçaları listeleyelim.
+            Marka, model ve varyantınızı seçin aracınıza birebir uyumlu parçaları listeleyelin.
           </p>
         </div>
 
@@ -139,23 +139,6 @@ export default function Hero() {
           </div>
         </div>
 
-        {/* Trust strip */}
-        <div className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-gray-500 md:mt-12">
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-sm font-bold tabular-nums text-gray-900">10K+</span>
-            <span>parça çeşidi</span>
-          </span>
-          <span className="hidden h-3 w-px bg-gray-200 sm:block" />
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-sm font-bold tabular-nums text-gray-900">50+</span>
-            <span>araç markası</span>
-          </span>
-          <span className="hidden h-3 w-px bg-gray-200 sm:block" />
-          <span className="flex items-baseline gap-1.5">
-            <span className="text-sm font-bold tabular-nums text-gray-900">7/24</span>
-            <span>WhatsApp destek</span>
-          </span>
-        </div>
       </div>
     </section>
   )

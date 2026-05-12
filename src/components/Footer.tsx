@@ -1,154 +1,176 @@
+/**
+ * Footer — otoparcasan tarzı geniş 6 sütunlu yapı.
+ *
+ * Üst banner: logo + destek hatları
+ * 6 kolon: Kurumsal / Hızlı Erişim / Markalar / Araçlar / Modeller / Kategoriler
+ * Alt bant: copyright + kampanya notu (turuncu zemin)
+ */
+
 import Link from 'next/link'
-import { Car, Phone, Mail, MapPin, Clock, MessageCircle } from 'lucide-react'
+import { Phone, MessageCircle } from 'lucide-react'
 import { siteConfig, getWhatsAppUrl } from '@/lib/config'
+import { LogoWordmark } from './Logo'
+
+const ACCENT = '#ff7a1a'
+
+const KURUMSAL = [
+  { label: 'Çerez Ayarları',         href: '/gizlilik' },
+  { label: 'Çerez Politikası',       href: '/gizlilik' },
+  { label: 'Garanti ve İade',        href: '/kullanim-sartlari' },
+  { label: 'Gizlilik Politikası',    href: '/gizlilik' },
+  { label: 'Hakkımızda',             href: '/hakkimizda' },
+  { label: 'İletişim & Künye',       href: '/iletisim' },
+  { label: 'Kullanım Şartları',      href: '/kullanim-sartlari' },
+  { label: 'Site Haritası',          href: '/sitemap.xml' },
+]
+
+const HIZLI_ERISIM = [
+  { label: 'Anlaşmalı Servisler',    href: '/iletisim' },
+  { label: 'Ürün Kataloğu',          href: '/parcalar' },
+  { label: 'Bakım Robotu',           href: '/hesabim/garaj' },
+  { label: 'Garajım',                href: '/hesabim/garaj' },
+  { label: 'Şasi Sorgulama',         href: '/' },
+  { label: 'Sıkça Sorulan Sorular',  href: '/iletisim' },
+  { label: 'Kargo ve Teslimat',      href: '/kullanim-sartlari' },
+]
+
+const MARKALAR = ['Bosch', 'Delphi', 'Febi Bilstein', 'Filtron', 'Gates', 'Hella',
+                  'Magneti Marelli', 'Mahle', 'Sachs', 'Valeo']
+
+const ARACLAR = [
+  ['Audi',         121], ['BMW',  16], ['Fiat',  35], ['Ford',  36],
+  ['Honda',        45],  ['Hyundai', 183], ['Mercedes-Benz', 74], ['Opel', 84],
+  ['Peugeot',      88],  ['Renault', 93],  ['Toyota', 111], ['Volkswagen', 121],
+] as const
+
+const MODELLER = ['Audi A3', 'BMW 3 Serisi', 'Fiat Egea', 'Ford Focus', 'Honda Civic',
+                  'Hyundai i20', 'Mercedes C Serisi', 'Opel Astra', 'Peugeot 2008',
+                  'Renault Clio', 'Toyota Corolla', 'VW Passat']
+
+const KATEGORILER = ['ABS Sensörü', 'Amortisör', 'Ateşleme Bujisi', 'Debriyaj Seti',
+                     'Far Lambası', 'Fren Diski', 'Fren Balatası', 'Hava Filtresi',
+                     'Klima Kompresörü', 'Motor Yağı', 'Polen Filtresi', 'Triger Zincir Seti']
+
+function slugify(s: string) {
+  return s.toLowerCase()
+    .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i')
+    .replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
 
 export default function Footer() {
-  const currentYear = new Date().getFullYear()
-
   return (
-    <footer className="bg-gray-50 border-t border-gray-200">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {/* Logo & Description */}
-          <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-lg gradient-accent flex items-center justify-center">
-                <Car className="w-6 h-6 text-dark-900" />
-              </div>
-              <span className="text-xl font-bold text-gray-900">
-                Parça<span className="text-primary-500">Bizden</span>
-              </span>
+    <footer className="border-t border-gray-200 bg-gray-50">
+      {/* Üst banner: logo + destek */}
+      <div className="border-b border-gray-200 bg-white py-8">
+        <div className="mx-auto max-w-6xl px-4">
+          <div className="flex flex-col items-center gap-6">
+            <Link href="/" className="inline-block" aria-label="ParçaBizden — Anasayfa">
+              <LogoWordmark size={0.7} />
             </Link>
-            <p className="text-gray-500 text-sm leading-relaxed">
-              Yedek parça ve çıkma parça ihtiyaçlarınız için güvenilir çözüm ortağınız.
-              Tüm marka ve modellere uygun parçalar.
+            <p className="max-w-2xl text-center text-sm text-gray-500">
+              <strong className="text-gray-700">ParçaBizden</strong> aracınıza birebir uyumlu yedek parçaları TecDoc kataloğu üzerinden hızlı ve güvenilir şekilde sunan online satış platformudur.
             </p>
-            <div className="flex gap-3">
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <a
-                href={getWhatsAppUrl()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-10 h-10 rounded-lg bg-green-600 hover:bg-green-700 flex items-center justify-center transition-colors"
-                aria-label="WhatsApp ile iletişime geçin"
+                href={`tel:${siteConfig.phone.raw}`}
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-gray-300"
               >
-                <MessageCircle className="w-5 h-5" />
+                <Phone className="h-4 w-4 text-sky-500" />
+                <span className="text-gray-500">DESTEK</span>
+                <span>{siteConfig.phone.display}</span>
               </a>
-            </div>
-          </div>
-
-          {/* Quick Links */}
-          <div>
-            <h3 className="text-gray-900 font-semibold mb-4">Hızlı Erişim</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/parcalar" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Parça Kataloğu
-                </Link>
-              </li>
-              <li>
-                <Link href="/hakkimizda" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Hakkımızda
-                </Link>
-              </li>
-              <li>
-                <Link href="/iletisim" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  İletişim
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Popular Models */}
-          <div>
-            <h3 className="text-gray-900 font-semibold mb-4">Popüler Modeller</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/parcalar?brand=bmw&marka=BMW&model_name=3%20Serisi" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  BMW 3 Serisi
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar?brand=mercedes-benz&marka=Mercedes-Benz&model_name=C%20Serisi" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Mercedes C Serisi
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar?brand=volkswagen&marka=Volkswagen&model_name=Golf" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  VW Golf
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar?brand=audi&marka=Audi&model_name=A4" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Audi A4
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar?brand=toyota&marka=Toyota&model_name=Corolla" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Toyota Corolla
-                </Link>
-              </li>
-              <li>
-                <Link href="/parcalar?brand=ford&marka=Ford&model_name=Focus" className="text-gray-500 hover:text-primary-500 transition-colors text-sm">
-                  Ford Focus
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Contact Info */}
-          <div>
-            <h3 className="text-gray-900 font-semibold mb-4">İletişim</h3>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-3">
-                <Phone className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-gray-900 text-sm font-medium">{siteConfig.phone.display}</p>
-                  <p className="text-gray-500 text-xs">Şirket Hattı</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <MessageCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-gray-900 text-sm font-medium">WhatsApp Business</p>
-                  <p className="text-gray-500 text-xs">Hızlı destek için</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                <p className="text-gray-500 text-sm">{siteConfig.email}</p>
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                <p className="text-gray-500 text-sm">{siteConfig.address.full}</p>
-              </li>
-              <li className="flex items-start gap-3">
-                <Clock className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-gray-500 text-sm">{siteConfig.workingHours.weekdays}</p>
-                  <p className="text-gray-500 text-sm">{siteConfig.workingHours.weekend}</p>
-                </div>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-gray-200">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-500 text-sm">
-              &copy; {currentYear} ParcaBizden. Tüm hakları saklıdır.
-            </p>
-            <div className="flex gap-6">
-              <Link href="/gizlilik" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">
-                Gizlilik Politikası
-              </Link>
-              <Link href="/kullanim-sartlari" className="text-gray-500 hover:text-gray-700 text-sm transition-colors">
-                Kullanım Şartları
-              </Link>
+              <a
+                href={getWhatsAppUrl('Merhaba, bilgi almak istiyorum.')}
+                target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:border-gray-300"
+              >
+                <MessageCircle className="h-4 w-4 text-emerald-500" />
+                <span className="text-gray-500">WHATSAPP</span>
+                <span>{siteConfig.phone.display}</span>
+              </a>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Ana sütunlar */}
+      <div className="mx-auto max-w-6xl px-4 py-12">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 md:grid-cols-3 lg:grid-cols-6">
+          <Column title="Kurumsal"     items={KURUMSAL} />
+          <Column title="Hızlı Erişim" items={HIZLI_ERISIM} />
+
+          <ListCol title="Popüler Markalar">
+            <li><Link href="/parcalar" className={linkCls}>Tüm Markalar</Link></li>
+            {MARKALAR.map(m => (
+              <li key={m}>
+                <Link href={`/parcalar?q=${slugify(m)}`} className={linkCls}>{m} Yedek Parça</Link>
+              </li>
+            ))}
+          </ListCol>
+
+          <ListCol title="Popüler Araçlar">
+            <li><Link href="/parcalar" className={linkCls}>Tüm Araçlar</Link></li>
+            {ARACLAR.map(([name, brandId]) => (
+              <li key={name}>
+                <Link href={`/parcalar?brand=${brandId}`} className={linkCls}>{name} Yedek Parça</Link>
+              </li>
+            ))}
+          </ListCol>
+
+          <ListCol title="Popüler Modeller">
+            <li><Link href="/parcalar" className={linkCls}>Tüm Modeller</Link></li>
+            {MODELLER.map(m => (
+              <li key={m}>
+                <Link href={`/parcalar?q=${slugify(m)}`} className={linkCls}>{m} Yedek Parça</Link>
+              </li>
+            ))}
+          </ListCol>
+
+          <ListCol title="Popüler Kategoriler">
+            <li><Link href="/parcalar" className={linkCls}>Tüm Kategoriler</Link></li>
+            {KATEGORILER.map(k => (
+              <li key={k}>
+                <Link href={`/parcalar?q=${slugify(k)}`} className={linkCls}>{k}</Link>
+              </li>
+            ))}
+          </ListCol>
+        </div>
+      </div>
+
+      {/* Alt bant — accent */}
+      <div className="py-3" style={{ background: ACCENT }}>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 text-center text-xs text-white sm:flex-row">
+          <p>© {new Date().getFullYear()} ParçaBizden — Tüm hakları saklıdır.</p>
+          <p className="font-semibold uppercase tracking-wider">
+            7500₺ ve üzeri 2 taksitli alışverişlerde %0 komisyon
+          </p>
+        </div>
+      </div>
     </footer>
+  )
+}
+
+const linkCls = 'text-xs text-gray-600 hover:text-[#ff7a1a]'
+
+function Column({ title, items }: { title: string; items: { label: string; href: string }[] }) {
+  return (
+    <ListCol title={title}>
+      {items.map(it => (
+        <li key={it.label}>
+          <Link href={it.href} className={linkCls}>{it.label}</Link>
+        </li>
+      ))}
+    </ListCol>
+  )
+}
+
+function ListCol({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <h3 className="mb-4 text-sm font-bold text-gray-900">{title}</h3>
+      <ul className="space-y-2">{children}</ul>
+    </div>
   )
 }

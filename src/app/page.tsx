@@ -1,22 +1,22 @@
 import SchemaOrg from '@/components/SchemaOrg'
 import Hero from '@/components/landing/Hero'
+import PromoSlider from '@/components/landing/PromoSlider'
 import HowItWorks from '@/components/landing/HowItWorks'
 import Categories from '@/components/landing/Categories'
 import Brands from '@/components/landing/Brands'
-import WhyUs from '@/components/landing/WhyUs'
 import Cta from '@/components/landing/Cta'
 
 /**
- * Ana sayfa — 6 bölüm, ritm: dark → white → gray → white → gray → white.
+ * Anasayfa — sade beyaz e-ticaret tonu.
  *
- *  1. Hero (dark)        — VehicleFinder + VIN/OEM tek odak
- *  2. HowItWorks (white) — 3 statik adım
- *  3. Categories (gray)  — 16 kategori discovery grid
- *  4. Brands (white)     — 18 marka logo grid
- *  5. WhyUs (gray)       — 3 değer önerisi
- *  6. Cta (white)        — son WhatsApp CTA
+ *  1. Hero          — VehicleFinder + VIN/OEM
+ *  2. PromoSlider   — kampanya banner (auto-rotate)
+ *  3. Categories    — 5 ana grup, görselli
+ *  4. HowItWorks    — 3 adım
+ *  5. Brands        — 18 marka logo grid
+ *  6. Cta           — banner tarz destek bantları
  *
- * Tasarım disiplini: hover/focus dışı animasyon yok, sahte içerik yok.
+ * WhyUs kaldırıldı — sade akış için gerekmiyor.
  */
 
 export default function Home() {
@@ -25,10 +25,10 @@ export default function Home() {
       <SchemaOrg showFaq />
 
       <Hero />
-      <HowItWorks />
+      <PromoSlider />
       <Categories />
+      <HowItWorks />
       <Brands />
-      <WhyUs />
       <Cta />
     </main>
   )
