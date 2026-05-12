@@ -168,15 +168,4 @@ html {
  * Landing — Header dark hero üzerinde şeffaf
  * ═══════════════════════════════════════════════════ */
 
-.header-transparent {
-  background: transparent !important;
-  backdrop-filter: none !important;
-  border-bottom-color: transparent !important;
-  box-shadow: none !important;
-}
-.header-transparent .text-gray-900     { color: white !important; }
-.header-transparent .text-gray-500     { color: rgba(255, 255, 255, 0.55) !important; }
-.header-transparent .text-gray-400     { color: rgba(255, 255, 255, 0.45) !important; }
-.header-transparent .bg-gray-50        { background: rgba(255, 255, 255, 0.08) !important; }
-.header-transparent .border-gray-200   { border-color: rgba(255, 255, 255, 0.15) !important; }
-.header-transparent .placeholder-gray-400::placeholder { color: rgba(255, 255, 255, 0.35) !important; }
+/* Header her zaman beyaz/solid — transparent state kaldırıldı */

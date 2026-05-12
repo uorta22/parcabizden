@@ -1,13 +1,13 @@
 'use client'
 
 /**
- * Hero — autodoc tarzı: araç seçici primary, VIN/OEM secondary.
+ * Hero — otoparcasan / parcahane tarzı sade beyaz hero.
  *
- * Tasarım kararları:
- *  • Asıl CTA: Marka → Model → Varyant zinciri (autodoc'un kalbi)
- *  • İkincil seçenek: VIN veya OEM ile direkt (alternatif kullanım)
- *  • Tab değişimi snap'li, animasyon yok
- *  • Tek navy gradient zemin, sade grid pattern
+ *  • Beyaz arka plan, dark tema yok
+ *  • Tek bir minimal grid pattern (subtle)
+ *  • Başlık + alt başlık + arama paneli + trust strip
+ *  • 3 sekme: Araç ile bul (default), VIN, OEM
+ *  • Animasyon yok — sadece hover state'ler
  */
 
 import { useState, useCallback } from 'react'
@@ -16,6 +16,8 @@ import { Search, ArrowRight, Car, Hash, FileSearch } from 'lucide-react'
 import VehicleFinder from './VehicleFinder'
 
 type Tab = 'vehicle' | 'vin' | 'oem'
+
+const ACCENT = '#ff7a1a'
 
 export default function Hero() {
   const router = useRouter()
@@ -37,46 +39,27 @@ export default function Hero() {
   }, [oem, router])
 
   return (
-    <section className="relative isolate overflow-hidden bg-[#0b1120] text-white">
-      {/* Decorative: subtle grid + corner glow */}
-      <div
-        aria-hidden
-        className="absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)',
-          backgroundSize: '64px 64px',
-          maskImage: 'radial-gradient(ellipse at center, black 30%, transparent 75%)',
-        }}
-      />
-      <div
-        aria-hidden
-        className="absolute -top-40 -right-40 h-[520px] w-[520px] rounded-full opacity-25 blur-3xl"
-        style={{ background: 'radial-gradient(circle, #f9ac1b 0%, transparent 65%)' }}
-      />
-
-      <div className="relative mx-auto max-w-6xl px-4 pt-28 pb-20 md:pt-36 md:pb-28">
-        {/* Eyebrow */}
-        <p className="mb-6 text-center text-[11px] font-semibold uppercase tracking-[0.3em] text-primary-400">
-          Türkiye&apos;nin Akıllı Parça Platformu
-        </p>
-
-        {/* Headline */}
-        <h1 className="mx-auto max-w-3xl text-center text-4xl font-black leading-[1.05] tracking-tight md:text-6xl">
-          Aracınıza özel parçayı
-          <br />
-          <span className="text-primary-500">saniyeler</span> içinde bulun
-        </h1>
-
-        {/* Subhead */}
-        <p className="mx-auto mt-5 max-w-xl text-center text-base text-white/60 md:text-lg">
-          Marka, model ve varyantınızı seçin — TecDoc kataloğundan birebir uyumlu yedek ve çıkma parçaları listeleyelim.
-        </p>
+    <section className="relative border-b border-gray-200 bg-white">
+      <div className="mx-auto max-w-5xl px-4 pt-12 pb-16 md:pt-16 md:pb-20">
+        {/* Başlık bloğu */}
+        <div className="mb-8 text-center md:mb-10">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: ACCENT }}>
+            Türkiye&apos;nin Akıllı Yedek Parça Platformu
+          </p>
+          <h1 className="mx-auto max-w-2xl text-2xl font-extrabold leading-tight text-gray-900 md:text-4xl">
+            Aracınıza özel yedek parçayı
+            <br className="hidden sm:block" />
+            <span style={{ color: ACCENT }}> saniyeler</span> içinde bulun
+          </h1>
+          <p className="mx-auto mt-3 max-w-lg text-sm text-gray-500 md:text-base">
+            Marka, model ve varyantınızı seçin — TecDoc kataloğundan birebir uyumlu parçaları listeleyelim.
+          </p>
+        </div>
 
         {/* Search panel */}
-        <div className="mx-auto mt-10 max-w-4xl">
-          {/* Tabs */}
-          <div className="flex gap-1 px-1">
+        <div className="mx-auto max-w-3xl">
+          {/* Sekmeler */}
+          <div className="flex gap-1 border-b border-gray-200">
             {([
               ['vehicle', 'Araç ile bul', Car] as const,
               ['vin',     'VIN ile',       FileSearch] as const,
@@ -87,107 +70,93 @@ export default function Hero() {
                 <button
                   key={key}
                   onClick={() => { setTab(key); setErr('') }}
-                  className={`flex items-center gap-2 rounded-t-xl px-5 py-3 text-sm font-semibold transition-all ${
-                    active
-                      ? 'bg-white/[0.04] text-white border-x border-t border-white/10'
-                      : 'text-white/45 hover:text-white/70'
+                  className={`relative -mb-px flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-colors ${
+                    active ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'
                   }`}
                 >
                   <Icon className="h-4 w-4" />
                   {label}
+                  {active && (
+                    <span
+                      className="absolute inset-x-2 -bottom-px h-0.5 rounded-full"
+                      style={{ background: ACCENT }}
+                    />
+                  )}
                 </button>
               )
             })}
           </div>
 
-          {/* Tab body */}
-          {tab === 'vehicle' && <VehicleFinder />}
+          {/* Sekme gövdesi */}
+          <div className="rounded-b-xl rounded-tr-xl border border-t-0 border-gray-200 bg-white p-3 md:p-4">
+            {tab === 'vehicle' && <VehicleFinder />}
 
-          {tab === 'vin' && (
-            <SecondarySearchCard>
-              <div className="flex items-center gap-3 p-3">
-                <Search className="ml-2 h-5 w-5 flex-shrink-0 text-white/40" />
+            {tab === 'vin' && (
+              <div className="flex items-center gap-2">
+                <Search className="ml-2 h-4 w-4 flex-shrink-0 text-gray-400" />
                 <input
                   type="text"
                   value={vin}
                   onChange={e => { setVin(e.target.value.toUpperCase()); setErr('') }}
                   onKeyDown={e => e.key === 'Enter' && submitVin()}
-                  placeholder="WVWZZZ1JZ3W386752"
+                  placeholder="Örn. WVWZZZ1JZ3W386752 (17 karakter)"
                   maxLength={17}
-                  className="flex-1 bg-transparent py-2 font-mono text-sm tracking-widest text-white outline-none placeholder:text-white/25"
+                  className="flex-1 bg-transparent py-2.5 font-mono text-sm tracking-widest text-gray-900 outline-none placeholder:text-gray-400"
                 />
-                <span className="hidden text-[11px] tabular-nums text-white/30 sm:block">{vin.length}/17</span>
-                <SubmitButton onClick={submitVin}>VIN ile Ara</SubmitButton>
+                <span className="hidden text-[11px] tabular-nums text-gray-400 sm:block">{vin.length}/17</span>
+                <button
+                  onClick={submitVin}
+                  className="group inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
+                  style={{ background: ACCENT }}
+                >
+                  Ara <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
               </div>
-              <p className="px-4 pb-3 text-[11px] text-white/30">
-                VIN: ruhsatta, ön cam sol köşesinde veya kapı çerçevesinde bulunur.
-              </p>
-            </SecondarySearchCard>
-          )}
+            )}
 
-          {tab === 'oem' && (
-            <SecondarySearchCard>
-              <div className="flex items-center gap-3 p-3">
-                <Search className="ml-2 h-5 w-5 flex-shrink-0 text-white/40" />
+            {tab === 'oem' && (
+              <div className="flex items-center gap-2">
+                <Search className="ml-2 h-4 w-4 flex-shrink-0 text-gray-400" />
                 <input
                   type="text"
                   value={oem}
                   onChange={e => { setOem(e.target.value); setErr('') }}
                   onKeyDown={e => e.key === 'Enter' && submitOem()}
-                  placeholder="Örn. 8E0407151"
-                  className="flex-1 bg-transparent py-2 text-sm text-white outline-none placeholder:text-white/25"
+                  placeholder="OEM / parça numarası (örn. 8E0407151)"
+                  className="flex-1 bg-transparent py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400"
                 />
-                <SubmitButton onClick={submitOem}>OEM ile Ara</SubmitButton>
+                <button
+                  onClick={submitOem}
+                  className="group inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg px-4 py-2 text-sm font-semibold text-white transition-colors"
+                  style={{ background: ACCENT }}
+                >
+                  Ara <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </button>
               </div>
-              <p className="px-4 pb-3 text-[11px] text-white/30">
-                OEM numarasını parçanın etiketinde veya araç servis kataloğunda bulabilirsiniz.
-              </p>
-            </SecondarySearchCard>
-          )}
+            )}
 
-          {err && <p className="mt-3 text-center text-xs text-red-400">{err}</p>}
+            {err && <p className="mt-2 px-1 text-xs text-red-600">{err}</p>}
+          </div>
         </div>
 
         {/* Trust strip */}
-        <div className="mt-16 flex flex-wrap items-center justify-center gap-x-10 gap-y-3 border-t border-white/10 pt-6 text-xs">
-          {[
-            ['10K+', 'parça çeşidi'],
-            ['50+',  'araç markası'],
-            ['7/24', 'WhatsApp destek'],
-          ].map(([n, l]) => (
-            <div key={l} className="flex items-baseline gap-2">
-              <span className="text-base font-black tabular-nums text-white">{n}</span>
-              <span className="text-white/40">{l}</span>
-            </div>
-          ))}
+        <div className="mx-auto mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-xs text-gray-500 md:mt-12">
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-sm font-bold tabular-nums text-gray-900">10K+</span>
+            <span>parça çeşidi</span>
+          </span>
+          <span className="hidden h-3 w-px bg-gray-200 sm:block" />
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-sm font-bold tabular-nums text-gray-900">50+</span>
+            <span>araç markası</span>
+          </span>
+          <span className="hidden h-3 w-px bg-gray-200 sm:block" />
+          <span className="flex items-baseline gap-1.5">
+            <span className="text-sm font-bold tabular-nums text-gray-900">7/24</span>
+            <span>WhatsApp destek</span>
+          </span>
         </div>
       </div>
     </section>
-  )
-}
-
-// ─────────────────────────────────────────────────────────
-// Helpers — VIN/OEM tab gövdeleri için ortak çerçeve
-// ─────────────────────────────────────────────────────────
-function SecondarySearchCard({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      className="rounded-2xl rounded-tl-none border border-white/10 bg-white/[0.04] backdrop-blur-md"
-      style={{ boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function SubmitButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      onClick={onClick}
-      className="group flex flex-shrink-0 items-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5 text-sm font-bold text-[#0b1120] transition-colors hover:bg-primary-400"
-    >
-      {children}
-      <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-    </button>
   )
 }

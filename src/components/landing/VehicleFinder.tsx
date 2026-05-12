@@ -78,10 +78,7 @@ export default function VehicleFinder() {
   }
 
   return (
-    <div
-      className="rounded-2xl border border-white/10 bg-white/[0.04] p-3 backdrop-blur-md md:p-4"
-      style={{ boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}
-    >
+    <div className="rounded-xl">
       <div className="grid gap-2 md:grid-cols-[1fr_1fr_1fr_auto]">
         {/* Marka */}
         <Select
@@ -125,14 +122,15 @@ export default function VehicleFinder() {
         <button
           onClick={submit}
           disabled={!canSubmit}
-          className="group flex h-12 items-center justify-center gap-2 rounded-xl bg-primary-500 px-6 font-bold text-[#0b1120] transition-all hover:bg-primary-400 disabled:cursor-not-allowed disabled:opacity-40 md:h-auto"
+          className="group flex h-12 items-center justify-center gap-2 rounded-lg px-6 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40 md:h-auto"
+          style={{ background: '#ff7a1a' }}
         >
           Parçaları Listele
           <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </button>
       </div>
 
-      {error && <p className="mt-3 text-center text-xs text-red-400">{error}</p>}
+      {error && <p className="mt-3 text-center text-xs text-red-600">{error}</p>}
     </div>
   )
 }
@@ -158,18 +156,16 @@ function Select({
         onChange={e => onChange(e.target.value)}
         disabled={disabled}
         aria-label={ariaLabel}
-        className={`h-12 w-full appearance-none rounded-xl border border-white/10 bg-white/[0.06] px-4 pr-10 text-sm text-white outline-none transition-all
-          focus:border-primary-500/60 focus:ring-2 focus:ring-primary-500/20
-          disabled:cursor-not-allowed disabled:opacity-50`}
+        className={`h-12 w-full appearance-none rounded-lg border border-gray-300 bg-white px-4 pr-10 text-sm text-gray-900 outline-none transition-all
+          focus:border-[#ff7a1a] focus:ring-2 focus:ring-[#ff7a1a]/20
+          disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-400`}
       >
-        <option value="" className="bg-[#0b1120] text-white">{placeholder}</option>
+        <option value="">{placeholder}</option>
         {options.map(o => (
-          <option key={o.value} value={o.value} className="bg-[#0b1120] text-white">
-            {o.label}
-          </option>
+          <option key={o.value} value={o.value}>{o.label}</option>
         ))}
       </select>
-      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-white/40">
+      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
       </span>
     </div>
