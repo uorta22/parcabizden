@@ -76,14 +76,16 @@ function ChassisBars({ size = 1, interactive = true }: { size?: number; interact
 // ─────────────────────────────────────────────────────────
 export function LogoWordmark({ size = 1, interactive = true, light = false, className = '' }: LogoProps) {
   const fg = light ? '#ffffff' : '#111827'
+  // Türkçe glyph'leri her zaman render etmek için sistem fontuna da fallback veriyoruz
+  const fontFamily = 'var(--font-space-grotesk), "Space Grotesk", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif'
   return (
     <span
-      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] ${className}`}
-      style={{ color: fg, gap: `${14 * size}px`, fontSize: `${56 * size}px` }}
+      className={`inline-flex items-center font-bold leading-none tracking-[-0.04em] ${className}`}
+      style={{ color: fg, gap: `${14 * size}px`, fontSize: `${56 * size}px`, fontFamily }}
     >
       <ChassisBars size={size} interactive={interactive} />
       <span>
-        parça<span style={{ color: ACCENT }}>bizden</span>
+        par&#231;a<span style={{ color: ACCENT }}>bizden</span>
       </span>
     </span>
   )
@@ -95,14 +97,15 @@ export function LogoWordmark({ size = 1, interactive = true, light = false, clas
 // ─────────────────────────────────────────────────────────
 export function LogoMonogram({ size = 1, interactive = true, light = false, className = '' }: LogoProps) {
   const fg = light ? '#ffffff' : '#111827'
+  const fontFamily = 'var(--font-space-grotesk), "Space Grotesk", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif'
   return (
     <span
-      className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] ${className}`}
-      style={{ color: fg, gap: `${10 * size}px`, fontSize: `${28 * size}px` }}
+      className={`inline-flex items-center font-bold leading-none tracking-[-0.04em] ${className}`}
+      style={{ color: fg, gap: `${10 * size}px`, fontSize: `${28 * size}px`, fontFamily }}
     >
       <ChassisBars size={size * 0.5} interactive={interactive} />
       <span>
-        parça<span style={{ color: ACCENT }}>bizden</span>
+        par&#231;a<span style={{ color: ACCENT }}>bizden</span>
       </span>
     </span>
   )
