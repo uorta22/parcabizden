@@ -13,7 +13,7 @@
 import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, ArrowRight, Car, Hash, FileSearch } from 'lucide-react'
-import VehicleFinder from './VehicleFinder'
+import VehiclePickerModal from './VehiclePickerModal'
 
 type Tab = 'vehicle' | 'vin' | 'oem'
 
@@ -25,6 +25,7 @@ export default function Hero() {
   const [vin, setVin] = useState('')
   const [oem, setOem] = useState('')
   const [err, setErr] = useState('')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   const submitVin = useCallback(() => {
     const v = vin.trim().toUpperCase()
@@ -89,7 +90,23 @@ export default function Hero() {
 
           {/* Sekme gövdesi */}
           <div className="rounded-b-xl rounded-tr-xl border border-t-0 border-gray-200 bg-white p-3 md:p-4">
-            {tab === 'vehicle' && <VehicleFinder />}
+            {tab === 'vehicle' && (
+              <button
+                onClick={() => setPickerOpen(true)}
+                className="group flex w-full items-center justify-between gap-3 rounded-lg border-2 border-dashed border-gray-300 bg-white px-4 py-4 text-left transition-all hover:border-[#ff7a1a] hover:bg-[#ff7a1a]/5"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-md" style={{ background: '#ff7a1a15', color: '#ff7a1a' }}>
+                    <Car className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block text-sm font-bold text-gray-900">Aracımı Seç</span>
+                    <span className="block text-xs text-gray-500">Marka, model ve varyantınızı adım adım seçin</span>
+                  </span>
+                </span>
+                <ArrowRight className="h-5 w-5 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-[#ff7a1a]" />
+              </button>
+            )}
 
             {tab === 'vin' && (
               <div className="flex items-center gap-2">
@@ -140,6 +157,9 @@ export default function Hero() {
         </div>
 
       </div>
+
+      {/* Araç seçim modalı (otoparcasan tarzı stepper) */}
+      <VehiclePickerModal open={pickerOpen} onClose={() => setPickerOpen(false)} />
     </section>
   )
 }

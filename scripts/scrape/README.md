@@ -4,6 +4,20 @@
 
 ## Kurulum
 
+### Windows (önerilen — `.bat` ile tek tık)
+
+1. **Python 3.10+** kurulu olduğundan emin ol: https://www.python.org/downloads/windows/
+   Kurulum sırasında **"Add Python to PATH"** kutusu işaretli olsun.
+2. `scripts\scrape` klasörünü Explorer'da aç.
+3. **`setup_windows.bat`** dosyasına çift tıkla. Sanal ortam + paketler + Chromium otomatik kurulur.
+
+```cmd
+cd scripts\scrape
+setup_windows.bat
+```
+
+### macOS / Linux
+
 ```bash
 cd scripts/scrape
 python3 -m venv .venv
@@ -14,22 +28,35 @@ playwright install chromium
 
 ## Kullanım
 
-### İlk çalıştırma
+### Windows
+
+```cmd
+REM Sıfırdan başla:
+run_windows.bat
+
+REM Kaldığın yerden devam:
+run_windows.bat resume
+```
+
+Default ayarlar `run_windows.bat` içinde:
+  - Site: `otoparcasan`
+  - Seed URL'ler: `/yedek-parca`, `/kategori/fren-balatasi`, `/kategori/yag-filtresi`
+  - Jitter: 2-5 saniye rastgele bekleme
+  - Max depth: 4
+
+Değiştirmek için `run_windows.bat`'i Notepad ile aç ve `--start-url` satırlarını düzenle.
+
+### macOS / Linux
 
 ```bash
+# İlk çalıştırma
 python parts_scraper.py \
   --site otoparcasan \
   --start-url https://otoparcasan.com/yedek-parca \
-  --start-url https://otoparcasan.com/kategori/fren-balatasi \
   --jitter 2,5 \
   --max-depth 4
-```
 
-### Kaldığı yerden devam
-
-Crash olursa veya `Ctrl+C` ile durdurursan, state SQLite'a yazılır.
-
-```bash
+# Kaldığı yerden devam
 python parts_scraper.py --site otoparcasan --resume
 ```
 
