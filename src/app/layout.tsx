@@ -16,9 +16,10 @@ const AssistantWidget = dynamic(() => import('@/components/AssistantWidget'), { 
 const BackToTop = dynamic(() => import('@/components/BackToTop'), { ssr: false })
 const CookieConsent = dynamic(() => import('@/components/CookieConsent'), { ssr: false })
 
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' })
-const archivoBlack = Archivo_Black({ subsets: ['latin'], weight: '400', display: 'swap', variable: '--font-archivo-black' })
-const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], display: 'swap', variable: '--font-space-grotesk' })
+// Türkçe karakterler (ç, ı, ş, ğ, ü, ö) için 'latin-ext' subset zorunlu.
+const inter = Inter({ subsets: ['latin', 'latin-ext'], display: 'swap', variable: '--font-inter' })
+const archivoBlack = Archivo_Black({ subsets: ['latin', 'latin-ext'], weight: '400', display: 'swap', variable: '--font-archivo-black' })
+const spaceGrotesk = Space_Grotesk({ subsets: ['latin', 'latin-ext'], display: 'swap', variable: '--font-space-grotesk' })
 
 export const metadata: Metadata = {
   title: {
