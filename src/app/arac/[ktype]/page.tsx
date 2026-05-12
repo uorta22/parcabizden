@@ -28,6 +28,7 @@ import { getTecVehicles, getTecModels, getTecVehicleAttributes, getTecBrands,
          type TecVehicle, type TecModel, type TecBrand, type TecAttributeGroups } from '@/lib/tecdoc'
 import { getWhatsAppUrl } from '@/lib/config'
 import { BrandLogo } from '@/components/BrandLogos'
+import VehiclePartsSection from '@/components/VehiclePartsSection'
 
 type Tab = 'garaj' | 'arac' | 'sasi' | 'aracim'
 
@@ -250,6 +251,9 @@ function VehicleHubInner() {
         </article>
 
         {/* Teknik özellik tabs altında ek bilgi */}
+        {/* Yedek Parçalar — kategori grid (otoparcasan tarzı) */}
+        <VehiclePartsSection vehicleId={ktype} />
+
         {attrs && Object.keys(attrs.groups).length > 0 && (
           <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 md:p-7">
             <h2 className="mb-4 text-base font-bold text-gray-900">Teknik Özellikler</h2>
