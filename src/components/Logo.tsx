@@ -23,6 +23,8 @@ interface LogoProps {
   size?: number
   /** Hover/focus animasyonu açık mı */
   interactive?: boolean
+  /** Açık zemin (varsayılan: false → karanlık metin). Koyu zeminde true → beyaz metin */
+  light?: boolean
   className?: string
 }
 
@@ -72,11 +74,12 @@ function ChassisBars({ size = 1, interactive = true }: { size?: number; interact
 // ─────────────────────────────────────────────────────────
 // Wordmark — chassis-bar + Space Grotesk
 // ─────────────────────────────────────────────────────────
-export function LogoWordmark({ size = 1, interactive = true, className = '' }: LogoProps) {
+export function LogoWordmark({ size = 1, interactive = true, light = false, className = '' }: LogoProps) {
+  const fg = light ? '#ffffff' : '#111827'
   return (
     <span
       className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] ${className}`}
-      style={{ color: 'var(--logo-fg, #111827)', gap: `${14 * size}px`, fontSize: `${56 * size}px` }}
+      style={{ color: fg, gap: `${14 * size}px`, fontSize: `${56 * size}px` }}
     >
       <ChassisBars size={size} interactive={interactive} />
       <span>
@@ -90,11 +93,12 @@ export function LogoWordmark({ size = 1, interactive = true, className = '' }: L
 // Monogram (kompakt) — chassis-bars + 'pb' küçük etiket
 // Mobile header + sticky için
 // ─────────────────────────────────────────────────────────
-export function LogoMonogram({ size = 1, interactive = true, className = '' }: LogoProps) {
+export function LogoMonogram({ size = 1, interactive = true, light = false, className = '' }: LogoProps) {
+  const fg = light ? '#ffffff' : '#111827'
   return (
     <span
       className={`inline-flex items-center font-space-grotesk font-bold leading-none tracking-[-0.04em] ${className}`}
-      style={{ color: 'var(--logo-fg, #111827)', gap: `${10 * size}px`, fontSize: `${28 * size}px` }}
+      style={{ color: fg, gap: `${10 * size}px`, fontSize: `${28 * size}px` }}
     >
       <ChassisBars size={size * 0.5} interactive={interactive} />
       <span>
@@ -123,14 +127,14 @@ export function LogoMark({ size = 1, interactive = false, className = '' }: Logo
 //   Mobile: Monogram (chassis ~14px + küçük yazı)
 //   md+   : Wordmark (chassis 56px + büyük yazı)
 // ─────────────────────────────────────────────────────────
-export default function LogoLink({ size = 1, className = '' }: LogoProps) {
+export default function LogoLink({ size = 1, light = false, className = '' }: LogoProps) {
   return (
     <Link href="/" className={`group inline-flex items-center ${className}`} aria-label="ParçaBizden — Anasayfa">
       <span className="md:hidden">
-        <LogoMonogram size={size * 0.9} />
+        <LogoMonogram size={size * 0.9} light={light} />
       </span>
       <span className="hidden md:inline-flex">
-        <LogoWordmark size={size * 0.55} />
+        <LogoWordmark size={size * 0.55} light={light} />
       </span>
     </Link>
   )

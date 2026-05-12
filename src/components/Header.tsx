@@ -70,8 +70,8 @@ export default function Header() {
         {/* ═══ Top Bar ═══ */}
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 md:h-20 gap-4">
-            {/* Logo — Wordmark (md+), Monogram (mobile) */}
-            <LogoLink size={1} className="flex-shrink-0" />
+            {/* Logo — Wordmark (md+), Monogram (mobile); transparent header üzerinde light */}
+            <LogoLink size={1} light={!scrolled} className="flex-shrink-0" />
 
             {/* Desktop Search Bar — wide */}
             <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-xl mx-6">
