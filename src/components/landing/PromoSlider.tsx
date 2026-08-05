@@ -39,7 +39,7 @@ const PROMOS: Promo[] = [
   },
   {
     id: 2,
-    title: 'Garaja Araç Ekle, Hızlı Eriş',
+    title: 'Garaja Araç Ekle, Hızlı Erişim',
     body: 'Aracınızı garajınıza kaydedin — bir daha marka/model seçmek zorunda kalmayın.',
     badge: 'Üyelik',
     href: '/hesabim/garaj',

@@ -1,9 +1,0 @@
-# Robots.txt for ParcaBizden
-User-agent: *
-Allow: /
-
-# Sitemap
-Sitemap: https://parcabizden.com.tr/sitemap.xml
-
-# Disallow admin or private paths (if any)
-Disallow: /api/

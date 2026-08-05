@@ -245,6 +245,20 @@ function ParcalarV2Inner() {
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* ── Arama terimi bildirimi ──
+            Header'dan gelen terim araç seçilene kadar uygulanamıyor; sessizce
+            yutmak yerine kullanıcıya taşındığını gösteriyoruz. */}
+        {categoryQuery && step !== 'parts' && (
+          <div className="mb-6 flex items-start gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-3">
+            <Search className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-500" />
+            <p className="text-sm text-gray-700">
+              <span className="font-semibold">“{categoryQuery.replace(/-/g, ' ')}”</span> aramanız kaydedildi.
+              Aracınıza birebir uyumlu parçaları listeleyebilmemiz için önce marka, model ve varyantınızı seçin —
+              seçim biter bitmez bu kategoriye götüreceğiz.
+            </p>
+          </div>
+        )}
+
         {/* ── Başlık ── */}
         {step !== 'parts' && (
           <div className="mb-6">

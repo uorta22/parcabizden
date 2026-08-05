@@ -44,6 +44,8 @@ export default function Header() {
     if (isOem) {
       router.push(`/parca/${encodeURIComponent(q)}`)
     } else {
+      // 'q' /parcalar'da araç seçildikten sonra kategori eşleştirmede kullanılıyor;
+      // sayfa arama terimini görünür şekilde taşıyor (bkz. parcalar/page.tsx).
       router.push(`/parcalar?q=${encodeURIComponent(q)}`)
     }
     setSearchQuery('')

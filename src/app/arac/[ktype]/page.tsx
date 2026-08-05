@@ -18,7 +18,7 @@
  */
 
 import { Suspense, useEffect, useMemo, useState } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, Car, Wrench, CalendarClock, Share2, Pencil, Trash2,
@@ -27,6 +27,7 @@ import {
 import { getTecVehicles, getTecModels, getTecVehicleAttributes, getTecBrands,
          type TecVehicle, type TecModel, type TecBrand, type TecAttributeGroups } from '@/lib/tecdoc'
 import { getWhatsAppUrl } from '@/lib/config'
+import { trGroup, trTitle, trValue } from '@/lib/tecdoc-i18n'
 import { BrandLogo } from '@/components/BrandLogos'
 import VehiclePartsSection from '@/components/VehiclePartsSection'
 
@@ -43,7 +44,13 @@ export default function VehicleHubPage() {
 function VehicleHubInner() {
   const params = useParams()
   const router = useRouter()
+  const sp = useSearchParams()
   const ktype = parseInt(String(params.ktype ?? '0'), 10)
+
+  // Araç seçicinin taşıdığı görüntüleme bilgisi (bkz. VehiclePickerModal).
+  const pickedBrand   = sp.get('b') ?? ''
+  const pickedModel   = sp.get('m') ?? ''
+  const pickedVariant = sp.get('v') ?? ''
 
   const [tab, setTab] = useState<Tab>('aracim')
   const [vehicle, setVehicle] = useState<TecVehicle | null>(null)
@@ -82,9 +89,13 @@ function VehicleHubInner() {
     return () => { cancelled = true }
   }, [ktype])
 
-  // Attribute'lardan başlık ve özellikleri türet
-  const headline = useMemo(() => buildHeadline(attrs), [attrs])
-  const specs    = useMemo(() => buildSpecs(attrs),     [attrs])
+  // Başlık: önce seçicinin taşıdığı isim, yoksa attribute'lardan türet
+  const headline = useMemo(
+    () => [pickedBrand, pickedModel, pickedVariant].filter(Boolean).join(' ') || buildHeadline(attrs),
+    [pickedBrand, pickedModel, pickedVariant, attrs]
+  )
+  const specs = useMemo(() => buildSpecs(attrs), [attrs])
+  const conflicting = useMemo(() => hasConflictingData(attrs), [attrs])
 
   if (loading) return <HubSkeleton />
 
@@ -165,7 +176,9 @@ function VehicleHubInner() {
             <div className="grid gap-6 p-5 md:grid-cols-[260px_1fr] md:p-7">
               {/* Sol: silüet/logo */}
               <div className="relative flex items-center justify-center rounded-xl bg-gray-50 p-6">
-                <BrandLogo brand="Skoda" size={120} />
+                {pickedBrand
+                  ? <BrandLogo brand={pickedBrand} size={120} />
+                  : <Car className="h-20 w-20 text-gray-300" />}
                 <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-1">
                   {Array.from({ length: 6 }).map((_, i) => (
                     <span key={i} className={`h-1.5 w-4 rounded-full ${i === 0 ? 'bg-primary-500' : 'bg-gray-300'}`} />
@@ -257,15 +270,24 @@ function VehicleHubInner() {
         {attrs && Object.keys(attrs.groups).length > 0 && (
           <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 md:p-7">
             <h2 className="mb-4 text-base font-bold text-gray-900">Teknik Özellikler</h2>
+
+            {conflicting && (
+              <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                Bu araç için katalogda birden fazla motor verisi kayıtlı ve değerler çelişiyor.
+                Aşağıdaki değerler aracınıza ait olmayabilir — parça siparişinden önce
+                WhatsApp&apos;tan teyit alın.
+              </p>
+            )}
+
             <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
               {Object.entries(attrs.groups).map(([group, items]) => (
                 <div key={group}>
-                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-primary-600">{group}</h3>
+                  <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-primary-600">{trGroup(group)}</h3>
                   <dl className="divide-y divide-gray-100">
                     {items.slice(0, 8).map((it, i) => (
                       <div key={i} className="flex justify-between gap-3 py-1.5 text-xs">
-                        <dt className="text-gray-500">{it.title}</dt>
-                        <dd className="text-right font-semibold text-gray-800">{it.value}</dd>
+                        <dt className="text-gray-500">{trTitle(it.title)}</dt>
+                        <dd className="text-right font-semibold text-gray-800">{trValue(it.value)}</dd>
                       </div>
                     ))}
                   </dl>
@@ -306,25 +328,76 @@ function buildHeadline(attrs: TecAttributeGroups | null): string {
   return out
 }
 
+/**
+ * Attribute başlığını tam eşleşmeyle okur.
+ *
+ * Substring eşleşme kullanılmaz: TecDoc aynı önekle birden çok alan döndürüyor
+ * ("Capacity", "Capacity (tax)", "Capacity (technic)") ve ilk eşleşmeyi almak
+ * yanlış değeri seçiyordu.
+ *
+ * Katalogda bazı araçlara birden fazla motorun verisi karışmış durumda (aynı
+ * başlık, çelişen değerler). Böyle bir durumda hangisinin doğru olduğunu
+ * bilemeyiz; yanlış teknik veri göstermektense hiç göstermiyoruz.
+ */
+type TecAttr = { title: string | null; value: string | null }
+
+/** Verilen başlığa tam eşleşen, boş olmayan farklı değerler. */
+function valuesOf(all: TecAttr[], title: string, unit?: RegExp): string[] {
+  const want = title.trim().toLowerCase()
+  const vals = all
+    .filter(a => (a.title ?? '').trim().toLowerCase() === want)
+    .map(a => (a.value ?? '').trim())
+    .filter(v => v && (!unit || unit.test(v)))
+  return vals.filter((v, i) => vals.indexOf(v) === i)
+}
+
+/**
+ * Başlıkları öncelik sırasıyla dener; tek bir değere indirgenen ilk başlığı döndürür.
+ * Birden fazla farklı değer varsa o başlık atlanır — hangisinin doğru olduğunu bilemeyiz.
+ */
+function pickExact(all: TecAttr[], titles: string[], unit?: RegExp): string | null {
+  for (const t of titles) {
+    const vals = valuesOf(all, t, unit)
+    if (vals.length === 1) return vals[0]
+  }
+  return null
+}
+
+/**
+ * Katalogda bazı KType kayıtlarına birden fazla motorun attribute'ları karışmış
+ * durumda. Bir motor için tek değerli olması gereken alanlar çelişiyorsa,
+ * o araca ait teknik tablonun tamamı şüphelidir.
+ *
+ * Kalıcı çözüm catalog_vehicle_attributes tablosunu kaynağında temizlemek.
+ */
+const SINGLE_VALUED_TITLES = ['Fuel type', 'Engine type', 'Number of cylinders', 'Number of valves']
+
+function hasConflictingData(attrs: TecAttributeGroups | null): boolean {
+  if (!attrs) return false
+  const all = Object.values(attrs.groups).flat()
+  return SINGLE_VALUED_TITLES.some(t => valuesOf(all, t).length > 1)
+}
+
 function buildSpecs(attrs: TecAttributeGroups | null): string[] {
   if (!attrs) return []
   const all = Object.values(attrs.groups).flat()
-  const pick = (keys: string[]) => all.find(a =>
-    keys.some(k => (a.title ?? '').toLowerCase().includes(k.toLowerCase()))
-  )?.value
-  const fuel    = pick(['yakıt', 'fuel'])
-  const cc      = pick(['hacim', 'displacement', 'capacity'])
-  const kw      = pick(['kw', 'kilowatt'])
-  const hp      = pick(['hp', 'beygir', 'power'])
-  const trans   = pick(['şanzıman', 'transmission', 'gearbox'])
-  const year    = pick(['yıl', 'year'])
+
+  // "Capacity" hem ccm hem l olarak gelir; (technic) tek satır ve her zaman ccm.
+  const cc     = pickExact(all, ['Capacity (technic)', 'Capacity', 'Motor hacmi'], /ccm/i)
+  // "Power" birimi değerin içinde taşır ("85 kW", "116 PS") — ayrı ayrı okunur.
+  const kw     = pickExact(all, ['Power', 'Güç'], /kW/i)
+  const ps     = pickExact(all, ['Power', 'Güç'], /\b(PS|HP)\b/i)
+  const fuel   = pickExact(all, ['Fuel type', 'Yakıt tipi'])
+  const engine = pickExact(all, ['Engine code', 'Motor kodu'])
+  const trans  = pickExact(all, ['Transmission type', 'Şanzıman'])
+
+  const power = [kw, ps].filter(Boolean).join(' / ') || null
+  const head = [fuel, cc, power].filter(Boolean)
+
   const out: string[] = []
-  if (fuel || cc || kw || hp) {
-    const parts = [fuel, cc, kw && `${kw} kW`, hp && `${hp} HP`].filter(Boolean)
-    if (parts.length) out.push(parts.join(' - '))
-  }
-  if (trans) out.push(String(trans))
-  if (year)  out.push(String(year))
+  if (head.length) out.push(head.join(' - '))
+  if (engine) out.push(`Motor kodu: ${engine}`)
+  if (trans)  out.push(trans)
   return out
 }
 

@@ -49,7 +49,7 @@ export default function CookieConsent() {
             Bu web sitesi, deneyiminizi iyileştirmek için çerezleri kullanmaktadır.
             Siteyi kullanmaya devam ederek{' '}
             <Link
-              href="/gizlilik-politikasi"
+              href="/gizlilik"
               className="text-primary-600 hover:text-primary-700 underline underline-offset-2 font-medium"
             >
               Gizlilik Politikası
@@ -60,7 +60,7 @@ export default function CookieConsent() {
           {/* Aksiyon butonları */}
           <div className="flex items-center gap-3 flex-shrink-0">
             <Link
-              href="/gizlilik-politikasi"
+              href="/gizlilik"
               className="text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 transition-colors"
             >
               Gizlilik Politikası

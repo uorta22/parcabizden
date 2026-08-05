@@ -110,7 +110,14 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
   const canSubmit = !!vehicle
   const submit = () => {
     if (!vehicle) return
-    router.push(`/arac/${vehicle.id}`)
+    // KType'tan araç adını çözen bir endpoint yok; başlık ve marka logosu için
+    // seçilen bilgiyi URL'de taşıyoruz (yalnızca görüntüleme amaçlı).
+    const q = new URLSearchParams()
+    if (brand?.name)           q.set('b', brand.name)
+    if (model?.name)           q.set('m', model.name)
+    if (vehicle.description)   q.set('v', vehicle.description)
+    const qs = q.toString()
+    router.push(`/arac/${vehicle.id}${qs ? `?${qs}` : ''}`)
     onClose()
   }
 
@@ -137,6 +144,33 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
             <X className="h-5 w-5" />
           </button>
         </header>
+
+        {/* Mobil stepper — masaüstündeki sol panelin yatay karşılığı */}
+        <ol className="flex items-center gap-2 border-b border-gray-200 bg-gray-50 px-4 py-2 md:hidden">
+          {[
+            { n: 1, label: 'Marka',   value: brand?.name,  done: !!brand },
+            { n: 2, label: 'Model',   value: model?.name,  done: !!model },
+            { n: 3, label: 'Varyant', value: vehicle?.description ?? (vehicle ? `KType ${vehicle.id}` : undefined), done: !!vehicle },
+          ].map(s => (
+            <li key={s.n} className="flex min-w-0 flex-1 items-center gap-1.5">
+              <span
+                className={`flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
+                  step === s.n ? 'bg-[#ff7a1a] text-white'
+                    : s.done   ? 'bg-emerald-500 text-white'
+                               : 'bg-gray-200 text-gray-500'
+                }`}
+              >
+                {s.done && step !== s.n ? <Check className="h-3 w-3" /> : s.n}
+              </span>
+              <span className="min-w-0">
+                <span className={`block text-[11px] font-semibold leading-tight ${step === s.n ? 'text-[#ff7a1a]' : 'text-gray-700'}`}>
+                  {s.label}
+                </span>
+                <span className="block truncate text-[10px] leading-tight text-gray-400">{s.value ?? 'Seçilmedi'}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
 
         {/* Body */}
         <div className="flex flex-1 overflow-hidden">

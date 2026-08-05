@@ -219,12 +219,12 @@ export default function AssistantWidget() {
 
   return (
     <>
-      {/* Floating launcher */}
+      {/* Floating launcher — z-40: sayfa modalları z-50'de, launcher onların üstüne binmemeli */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
           aria-label="Yardım Asistanı"
-          className="fixed bottom-4 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[#4f7bd6] text-white shadow-lg ring-4 ring-white transition-transform hover:scale-105 hover:bg-[#3b5fb8] sm:bottom-6 sm:right-6"
+          className="fixed bottom-4 right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#4f7bd6] text-white shadow-lg ring-4 ring-white transition-transform hover:scale-105 hover:bg-[#3b5fb8] sm:bottom-6 sm:right-6"
         >
           <Headphones className="h-6 w-6" />
           <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white shadow">
