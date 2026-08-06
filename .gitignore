@@ -62,6 +62,3 @@ public/data/vehicle_specs_part_*.sql
 scripts/sql_export/
 api/vehicles.db
 api/seed_vehicles.sql
-
-# Rate limit sayaçları (çalışma zamanında oluşur)
-php-backend/tmp/
