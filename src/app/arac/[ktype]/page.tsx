@@ -96,6 +96,10 @@ function VehicleHubInner() {
   )
   const specs = useMemo(() => buildSpecs(attrs), [attrs])
   const conflicting = useMemo(() => hasConflictingData(attrs), [attrs])
+  const shownAttrs = useMemo(() => {
+    if (!attrs) return null
+    return conflicting ? filterConflictingRows(attrs) : { groups: attrs.groups, hiddenCount: 0 }
+  }, [attrs, conflicting])
 
   if (loading) return <HubSkeleton />
 
@@ -267,20 +271,21 @@ function VehicleHubInner() {
         {/* Yedek Parçalar — kategori grid (otoparcasan tarzı) */}
         <VehiclePartsSection vehicleId={ktype} />
 
-        {attrs && Object.keys(attrs.groups).length > 0 && (
+        {shownAttrs && Object.keys(shownAttrs.groups).length > 0 && (
           <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 md:p-7">
             <h2 className="mb-4 text-base font-bold text-gray-900">Teknik Özellikler</h2>
 
             {conflicting && (
               <p className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                Bu araç için katalogda birden fazla motor verisi kayıtlı ve değerler çelişiyor.
-                Aşağıdaki değerler aracınıza ait olmayabilir — parça siparişinden önce
+                Bu araç için katalogda birden fazla motor verisi kayıtlı.
+                {shownAttrs.hiddenCount > 0 && ` Çelişen ${shownAttrs.hiddenCount} değer gizlendi.`}
+                {' '}Aşağıdakiler ortak veriler — yine de parça siparişinden önce
                 WhatsApp&apos;tan teyit alın.
               </p>
             )}
 
             <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-              {Object.entries(attrs.groups).map(([group, items]) => (
+              {Object.entries(shownAttrs.groups).map(([group, items]) => (
                 <div key={group}>
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-primary-600">{trGroup(group)}</h3>
                   <dl className="divide-y divide-gray-100">
@@ -376,6 +381,38 @@ function hasConflictingData(attrs: TecAttributeGroups | null): boolean {
   if (!attrs) return false
   const all = Object.values(attrs.groups).flat()
   return SINGLE_VALUED_TITLES.some(t => valuesOf(all, t).length > 1)
+}
+
+/**
+ * Çelişkili kayda sahip araçlarda, aynı başlık altında farklı değer taşıyan
+ * satırları gizler. Hangisinin doğru olduğunu bilemiyoruz; yedek parça
+ * sitesinde yanlış teknik veri yanlış siparişe dönüşür.
+ *
+ * Yalnızca çelişki tespit edilen araçlarda uygulanır — temiz araçlarda
+ * "Capacity" gibi başlıkların birden çok birimde (ccm + l) gelmesi normaldir.
+ */
+function filterConflictingRows(attrs: TecAttributeGroups): {
+  groups: TecAttributeGroups['groups']
+  hiddenCount: number
+} {
+  const all = Object.values(attrs.groups).flat()
+  const conflicted = new Set(
+    all
+      .map(a => (a.title ?? '').trim().toLowerCase())
+      .filter(t => t && valuesOf(all, t).length > 1)
+  )
+
+  let hiddenCount = 0
+  const groups: TecAttributeGroups['groups'] = {}
+  for (const [group, items] of Object.entries(attrs.groups)) {
+    const kept = items.filter(it => {
+      const drop = conflicted.has((it.title ?? '').trim().toLowerCase())
+      if (drop) hiddenCount++
+      return !drop
+    })
+    if (kept.length) groups[group] = kept
+  }
+  return { groups, hiddenCount }
 }
 
 function buildSpecs(attrs: TecAttributeGroups | null): string[] {

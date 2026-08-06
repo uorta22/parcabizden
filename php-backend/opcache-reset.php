@@ -1,23 +1,24 @@
 <?php
 /**
- * OPcache Reset Utility — token korumalı tek seferlik araç
- * Version: 3 (sabit token + debug output)
+ * OPcache Reset Utility — deploy sonrası bytecode cache'ini temizler.
  *
- * Kullanım (en kolay yol):
- *   https://api.parcabizden.com.tr/opcache-reset.php?token=parcabizden-reset
- *
- * Alternatif (JWT_SECRET ilk 16 karakter):
- *   https://api.parcabizden.com.tr/opcache-reset.php?token=<JWT_SECRET ilk 16>
+ * Kullanım:
+ *   https://api.parcabizden.com.tr/opcache-reset.php?token=<JWT_SECRET ilk 16 karakter>
  *
  * Bu dosya bağımsız çalışır (router'a bağlı değil).
- * GÜVENLİK: Tek seferlik araç; çalıştırdıktan sonra cPanel'den SİL.
+ *
+ * GÜVENLİK NOTU — önceki sürümde şunlar vardı, kaldırıldı:
+ *   - Kod içine gömülü sabit token ('parcabizden-reset'). Repoda ve git
+ *     geçmişinde açık yazılıydı; herkes çalıştırabiliyordu.
+ *   - 403 yanıtı kabul edilen token'ı, JWT_SECRET'ın uzunluğunu ve ilk 3
+ *     karakterini ekrana basıyordu. Yani kilidi açan bilgiyi kapıya yazıyordu.
+ *   - Yanıt, kullanılacak URL'i tam olarak söylüyordu.
+ * Artık yetkisiz istek gövdesiz 403 döner, hiçbir şey sızdırmaz.
+ *
+ * İşin bittiğinde bu dosyayı sunucudan silmek hâlâ en temizi.
  */
 
-header('Content-Type: text/plain; charset=utf-8');
-
-// ── Token doğrulama ──
-const SIMPLE_TOKEN = 'parcabizden-reset';
-
+// ── Token: yalnızca .env'deki JWT_SECRET'tan türetilir ──
 $envFile = __DIR__ . '/.env';
 $jwtSecret = '';
 if (file_exists($envFile)) {
@@ -27,45 +28,27 @@ if (file_exists($envFile)) {
         if (strpos($line, '=') === false) continue;
         [$k, $v] = explode('=', $line, 2);
         if (trim($k) === 'JWT_SECRET') {
-            // Tırnak işaretlerini de soyma
             $jwtSecret = trim(trim($v), '"\'');
             break;
         }
     }
 }
 
-$jwtToken = $jwtSecret ? substr($jwtSecret, 0, 16) : '';
-$providedToken = $_GET['token'] ?? '';
+$expected = $jwtSecret !== '' ? substr($jwtSecret, 0, 16) : '';
+$provided = (string)($_GET['token'] ?? '');
 
-$tokenOk = hash_equals(SIMPLE_TOKEN, $providedToken)
-        || ($jwtToken && hash_equals($jwtToken, $providedToken));
-
-if (!$tokenOk) {
+// JWT_SECRET okunamıyorsa araç tamamen kapalıdır — açık kapı bırakılmaz.
+if ($expected === '' || !hash_equals($expected, $provided)) {
     http_response_code(403);
-    echo "=== Yetkisiz erişim (403) ===\n\n";
-    echo "Gönderdiğin token uzunluğu: " . strlen($providedToken) . "\n";
-    if ($providedToken) {
-        echo "Gönderdiğin token önizleme: " . substr($providedToken, 0, 3) . "...\n";
-    }
-    echo "\n";
-    echo "Kabul edilen token'lar:\n";
-    echo "  1) Sabit: parcabizden-reset\n";
-    if ($jwtSecret) {
-        echo "  2) JWT_SECRET ilk 16 karakter (uzunluk: " . strlen($jwtToken) . ", önizleme: " . substr($jwtToken, 0, 3) . "...)\n";
-    } else {
-        echo "  2) JWT_SECRET .env'de bulunamadı\n";
-    }
-    echo "\nKolay yol: tarayıcıda şu URL'i aç:\n";
-    echo "https://api.parcabizden.com.tr/opcache-reset.php?token=parcabizden-reset\n";
     exit;
 }
 
-// ── OPcache reset ──
+header('Content-Type: text/plain; charset=utf-8');
+
 echo "=== OPcache Reset ===\n";
 
 if (function_exists('opcache_reset')) {
-    $result = opcache_reset();
-    echo $result ? "✓ opcache_reset() başarılı\n" : "✗ opcache_reset() başarısız\n";
+    echo opcache_reset() ? "✓ opcache_reset() başarılı\n" : "✗ opcache_reset() başarısız\n";
 } else {
     echo "✗ opcache_reset fonksiyonu mevcut değil (PHP konfig)\n";
 }
@@ -80,12 +63,3 @@ if (function_exists('opcache_get_status')) {
         echo "Cache'lenmiş dosya: " . ($status['opcache_statistics']['num_cached_scripts'] ?? 0) . "\n";
     }
 }
-
-echo "\n=== Çalıştığı Yer ===\n";
-echo "Script yolu: " . __FILE__ . "\n";
-echo "index.php var mı: " . (file_exists(__DIR__ . '/index.php') ? 'evet (' . filesize(__DIR__ . '/index.php') . ' bytes)' : 'HAYIR') . "\n";
-echo "tecdoc.php var mı: " . (file_exists(__DIR__ . '/tecdoc.php') ? 'evet (' . filesize(__DIR__ . '/tecdoc.php') . ' bytes)' : 'HAYIR') . "\n";
-
-echo "\n=== Sıradaki Adım ===\n";
-echo "1. https://api.parcabizden.com.tr/?action=tecdoc_brands ile test et.\n";
-echo "2. Çalışırsa bu dosyayı (opcache-reset.php) cPanel'den SİL.\n";

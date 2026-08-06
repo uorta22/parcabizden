@@ -13,6 +13,11 @@ function modalPanel(page: Page) {
   return page.locator('main').last()
 }
 
+/** Liste dış API'den async yüklenirken dönen spinner'ın kaybolmasını bekler. */
+async function waitForListLoaded(panel: ReturnType<typeof modalPanel>) {
+  await expect(panel.locator('.animate-spin')).toHaveCount(0)
+}
+
 async function openPicker(page: Page) {
   await page.goto('/')
   await page.getByRole('button', { name: 'Aracımı Seç' }).click()
@@ -24,6 +29,7 @@ test('marka → model → varyant seçip araç sayfasına gidiyor', async ({ pag
   const panel = modalPanel(page)
 
   // ── Adım 1: Marka ──
+  await waitForListLoaded(panel)
   await panel.getByPlaceholder('Filtrele..').fill('BMW')
   const bmwButton = panel.getByRole('button').filter({ has: page.locator('span', { hasText: /^BMW$/ }) })
   await expect(bmwButton).toBeVisible()
@@ -31,6 +37,7 @@ test('marka → model → varyant seçip araç sayfasına gidiyor', async ({ pag
 
   // ── Adım 2: Model ──
   await expect(panel.getByText('BMW — Model Seçiniz')).toBeVisible()
+  await waitForListLoaded(panel)
   await panel.getByPlaceholder('Filtrele..').fill('3 (E46)')
   const modelButton = panel.getByRole('button').filter({ has: page.locator('span', { hasText: /^3 \(E46\)$/ }) })
   await expect(modelButton).toBeVisible()
@@ -38,6 +45,7 @@ test('marka → model → varyant seçip araç sayfasına gidiyor', async ({ pag
 
   // ── Adım 3: Varyant ──
   await expect(panel.getByText('3 (E46) — Varyant Seçiniz')).toBeVisible()
+  await waitForListLoaded(panel)
   const firstVariant = panel.locator('li button').first()
   await expect(firstVariant).toBeVisible()
   await firstVariant.click()

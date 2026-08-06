@@ -13,6 +13,9 @@
  * Sabitler: JWT_SECRET, JWT_EXPIRY (natro-index.php'de define edilmiş)
  */
 
+/** Sifre sifirlama tokeninin omru (sn). Throttle hesabi da bunu kullanir. */
+if (!defined('RESET_TOKEN_TTL')) define('RESET_TOKEN_TTL', 3600);
+
 // ==================== JWT Functions ====================
 
 function base64url_encode($data) {
@@ -272,16 +275,18 @@ function handle_forgot_password($pdo) {
         // Always return success to prevent email enumeration
         if (!$user) { echo json_encode(['success' => true, 'message' => 'Eger bu e-posta kayitliysa sifre sifirlama linki gonderildi.']); return; }
 
-        // Rate limit: 5 min
+        // Rate limit: 5 dk.
+        // Token 3600 sn omurle yaziliyor ama burada 86400 cikariliyordu; sonuc
+        // her zaman 300'den buyuk cikip throttle'i tamamen devre disi birakiyordu.
         if ($user['verify_expires']) {
-            $last_sent = strtotime($user['verify_expires']) - 86400;
+            $last_sent = strtotime($user['verify_expires']) - RESET_TOKEN_TTL;
             if (time() - $last_sent < 300) {
                 http_response_code(429); echo json_encode(['error' => 'Lutfen 5 dakika bekleyip tekrar deneyin.']); return;
             }
         }
 
         $reset_token = bin2hex(random_bytes(32));
-        $reset_expires = date('Y-m-d H:i:s', time() + 3600); // 1 saat
+        $reset_expires = date('Y-m-d H:i:s', time() + RESET_TOKEN_TTL);
         $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
         $stmt->execute([$reset_token, $reset_expires, $user['id']]);
 

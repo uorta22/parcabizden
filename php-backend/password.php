@@ -12,22 +12,26 @@ function handleChangePassword($db, $userId) {
         jsonResponse(['error' => 'Mevcut ve yeni sifre gereklidir'], 400);
     }
 
-    if (strlen($newPassword) < 6) {
-        jsonResponse(['error' => 'Yeni sifre en az 6 karakter olmalidir'], 400);
+    // Politika auth.php'deki kayit/sifirlama ile ayni olmali — aksi halde
+    // kullanici guclu sifreyle kayit olup buradan zayif sifreye dusebiliyordu.
+    if (strlen($newPassword) < 8 || !preg_match('/[A-Z]/', $newPassword)
+        || !preg_match('/[a-z]/', $newPassword) || !preg_match('/[0-9]/', $newPassword)) {
+        jsonResponse(['error' => 'Sifre en az 8 karakter, 1 buyuk harf, 1 kucuk harf ve 1 rakam icermeli'], 400);
     }
 
     // Get current password hash
-    $stmt = $db->prepare('SELECT password FROM users WHERE id = :id');
+    $stmt = $db->prepare('SELECT password_hash FROM users WHERE id = :id');
     $stmt->execute([':id' => $userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user || !password_verify($currentPassword, $user['password'])) {
+    if (!$user || !password_verify($currentPassword, $user['password_hash'])) {
         jsonResponse(['error' => 'Mevcut sifre yanlis'], 400);
     }
 
     // Update password
-    $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
-    $stmt = $db->prepare('UPDATE users SET password = :pw WHERE id = :id');
+    // auth.php ile ayni maliyet — PASSWORD_DEFAULT (cost 10) daha zayifti.
+    $newHash = password_hash($newPassword, PASSWORD_BCRYPT, ['cost' => 12]);
+    $stmt = $db->prepare('UPDATE users SET password_hash = :pw WHERE id = :id');
     $stmt->execute([':pw' => $newHash, ':id' => $userId]);
 
     jsonResponse(['success' => true, 'message' => 'Sifreniz basariyla degistirildi']);
@@ -41,11 +45,11 @@ function handleDeleteAccount($db, $userId) {
     }
 
     // Verify password
-    $stmt = $db->prepare('SELECT password FROM users WHERE id = :id');
+    $stmt = $db->prepare('SELECT password_hash FROM users WHERE id = :id');
     $stmt->execute([':id' => $userId]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$user || !password_verify($password, $user['password'])) {
+    if (!$user || !password_verify($password, $user['password_hash'])) {
         jsonResponse(['error' => 'Sifre yanlis'], 400);
     }
 

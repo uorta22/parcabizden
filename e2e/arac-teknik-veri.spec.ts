@@ -24,7 +24,7 @@ test('doğru motor verisini gösterir, yanlış motor verisini gösterip Kiril k
 
   const specsSection = page.locator('section').filter({ has: specsHeading })
 
-  await expect(page.getByText('1995 ccm')).toBeVisible()
+  await expect(specsSection.getByText('1995 ccm')).toBeVisible()
 
   const specsSectionText = await specsSection.innerText()
   expect(specsSectionText).not.toContain('4511 ccm')

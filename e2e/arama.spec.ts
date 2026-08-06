@@ -10,6 +10,7 @@ import { test, expect } from '@playwright/test'
 test('arama terimi araç seçilmeden önce kullanıcıya bildiriliyor', async ({ page }) => {
   await page.goto(`/parcalar?${new URLSearchParams({ q: 'fren diski' }).toString()}`)
 
-  await expect(page.getByText(/aramanız kaydedildi/)).toBeVisible()
-  await expect(page.getByText('fren diski')).toBeVisible()
+  const notice = page.getByText(/aramanız kaydedildi/)
+  await expect(notice).toBeVisible()
+  await expect(notice).toContainText('fren diski')
 })
