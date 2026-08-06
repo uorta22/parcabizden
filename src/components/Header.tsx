@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Menu, X, LogIn, User, LogOut, Warehouse, Sparkles, UserPlus,
+  Menu, X, LogIn, User, LogOut, Warehouse, UserPlus,
   ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -92,19 +92,6 @@ export default function Header() {
                 <ShoppingBag className="w-4 h-4" />
                 Parçalar
               </Link>
-
-              {/* AI Assistant — sadece giriş yapmış kullanıcılara */}
-              {user && (
-                <Link
-                  href="/ai-asistan"
-                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive('/ai-asistan') ? 'text-purple-700 bg-purple-50' : 'text-purple-600 hover:text-purple-700 hover:bg-purple-50/50'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  AI Asistan
-                </Link>
-              )}
 
               {/* Cart */}
               <CartIcon />
@@ -216,7 +203,6 @@ export default function Header() {
             <nav className="flex flex-col gap-1">
               {[
                 { href: '/parcalar', label: 'Parçalar', icon: Package },
-                ...(user ? [{ href: '/ai-asistan', label: 'AI Asistan', icon: Sparkles }] : []),
                 { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/iletisim', label: 'İletişim' },
               ].map(link => (
