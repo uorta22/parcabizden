@@ -16,8 +16,16 @@ $_allowed_origins = [
     'https://www.parcabizden.com.tr',
 ];
 $_req_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+// Vercel preview URL'leri: parcabizden-<hash>-<takim>.vercel.app veya
+// parcabizden-git-<branch>-<takim>.vercel.app
+//
+// Onceki desen HERHANGI bir *.vercel.app origin'ini kabul ediyordu; yani
+// saldirgan kendi projesini deploy edip API'yi cross-origin okuyabiliyordu.
+// Artik yalnizca bu projenin adiyla baslayan deployment'lar geciyor.
+// Not: baska bir Vercel takimi da projesine 'parcabizden' adini verebilir;
+// tam kapatmak icin desene kendi takim slug'inizi ekleyin.
 if (in_array($_req_origin, $_allowed_origins, true)
-    || (strlen($_req_origin) < 200 && preg_match('/^https:\/\/[a-z0-9-]+\.vercel\.app$/i', $_req_origin))
+    || (strlen($_req_origin) < 200 && preg_match('/^https:\/\/parcabizden(-[a-z0-9-]+)?\.vercel\.app$/i', $_req_origin))
 ) {
     header('Access-Control-Allow-Origin: ' . $_req_origin);
     header('Vary: Origin');
