@@ -15,6 +15,27 @@
 
 /** Sifre sifirlama tokeninin omru (sn). Throttle hesabi da bunu kullanir. */
 if (!defined('RESET_TOKEN_TTL')) define('RESET_TOKEN_TTL', 3600);
+/** E-posta dogrulama tokeninin omru (sn). */
+if (!defined('VERIFY_TOKEN_TTL')) define('VERIFY_TOKEN_TTL', 86400);
+
+/**
+ * E-posta dogrulama ve sifre sifirlama tokenlari ayni `verify_token` sutununu
+ * paylasiyor. Tip onegi olmadan, sizan bir dogrulama linki sifre sifirlama
+ * linkine cevrilip hesap ele gecirilebiliyordu.
+ *
+ * Onek 2 karakter, rastgele kisim 62 karakter (31 bayt = 248 bit) — toplam 64,
+ * yani sutun genisligi ne olursa olsun tasma riski yok.
+ */
+const TOKEN_TYPE_VERIFY = 'v_';
+const TOKEN_TYPE_RESET  = 'r_';
+
+function make_token(string $type): string {
+    return $type . bin2hex(random_bytes(31));
+}
+
+function token_has_type(string $token, string $type): bool {
+    return strncmp($token, $type, strlen($type)) === 0;
+}
 
 // ==================== JWT Functions ====================
 
@@ -56,7 +77,7 @@ function get_auth_user_id() {
  * Kullanicinin admin yetkisini kontrol eder; yetkisiz ise 403 donup cikis yapar.
  */
 function requireAdmin($db, $userId): void {
-    $stmt = $db->prepare('SELECT is_admin FROM users WHERE id = :id');
+    $stmt = $db->prepare('SELECT is_admin FROM users WHERE id = :id AND deleted_at IS NULL');
     $stmt->execute([':id' => $userId]);
     $row = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$row || !$row['is_admin']) {
@@ -130,7 +151,7 @@ function handle_login($pdo) {
 
         if (!$email || !$password) { http_response_code(400); echo json_encode(['error' => 'E-posta ve sifre gerekli']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified, is_admin FROM users WHERE email = ?');
+        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified, is_admin FROM users WHERE email = ? AND deleted_at IS NULL');
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -175,7 +196,7 @@ function handle_profile($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no, is_admin FROM users WHERE id = ?');
+        $stmt = $pdo->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no, is_admin FROM users WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) { http_response_code(404); echo json_encode(['error' => 'Kullanici bulunamadi']); return; }
@@ -202,9 +223,15 @@ function handle_profile($pdo) {
 }
 
 function handle_verify_email($pdo) {
+    if (!check_rate_limit('verify_email', 10, 15)) return;
     try {
         $token = trim($_GET['token'] ?? $_POST['token'] ?? '');
         if (!$token) { http_response_code(400); echo json_encode(['error' => 'Dogrulama tokeni gerekli']); return; }
+        // Sifre sifirlama tokeni buraya getirilirse gecerli sayilmamali — aksi
+        // halde sifirlama linki tuketilip gercek akis sessizce olurdu.
+        if (!token_has_type($token, TOKEN_TYPE_VERIFY)) {
+            http_response_code(400); echo json_encode(['error' => 'Gecersiz dogrulama linki']); return;
+        }
 
         $stmt = $pdo->prepare('SELECT id, email_verified, verify_expires FROM users WHERE verify_token = ?');
         $stmt->execute([$token]);
@@ -228,12 +255,13 @@ function handle_verify_email($pdo) {
 }
 
 function handle_resend_verify($pdo) {
+    if (!check_rate_limit('resend_verify', 3, 15)) return;
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
     try {
         $email = trim($_POST['email'] ?? '');
         if (!$email) { http_response_code(400); echo json_encode(['error' => 'E-posta adresi gerekli']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, name, email_verified, verify_expires FROM users WHERE email = ?');
+        $stmt = $pdo->prepare('SELECT id, name, email_verified, verify_expires FROM users WHERE email = ? AND deleted_at IS NULL');
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -248,8 +276,8 @@ function handle_resend_verify($pdo) {
             }
         }
 
-        $verify_token = bin2hex(random_bytes(32));
-        $verify_expires = date('Y-m-d H:i:s', time() + 86400);
+        $verify_token = make_token(TOKEN_TYPE_VERIFY);
+        $verify_expires = date('Y-m-d H:i:s', time() + VERIFY_TOKEN_TTL);
         $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
         $stmt->execute([$verify_token, $verify_expires, $user['id']]);
 
@@ -263,12 +291,13 @@ function handle_resend_verify($pdo) {
 }
 
 function handle_forgot_password($pdo) {
+    if (!check_rate_limit('forgot_password', 3, 15)) return;
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
     try {
         $email = trim($_POST['email'] ?? '');
         if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(400); echo json_encode(['error' => 'Gecerli bir e-posta adresi giriniz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, name, verify_expires FROM users WHERE email = ?');
+        $stmt = $pdo->prepare('SELECT id, name, verify_expires FROM users WHERE email = ? AND deleted_at IS NULL');
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -285,7 +314,7 @@ function handle_forgot_password($pdo) {
             }
         }
 
-        $reset_token = bin2hex(random_bytes(32));
+        $reset_token = make_token(TOKEN_TYPE_RESET);
         $reset_expires = date('Y-m-d H:i:s', time() + RESET_TOKEN_TTL);
         $stmt = $pdo->prepare('UPDATE users SET verify_token = ?, verify_expires = ? WHERE id = ?');
         $stmt->execute([$reset_token, $reset_expires, $user['id']]);
@@ -300,12 +329,17 @@ function handle_forgot_password($pdo) {
 }
 
 function handle_reset_password($pdo) {
+    if (!check_rate_limit('reset_password', 10, 15)) return;
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo json_encode(['error' => 'POST only']); return; }
     try {
         $token = trim($_POST['token'] ?? '');
         $password = $_POST['password'] ?? '';
 
         if (!$token) { http_response_code(400); echo json_encode(['error' => 'Sifirlama tokeni gerekli']); return; }
+        // Sizan bir e-posta dogrulama linki sifre sifirlamaya cevrilemez.
+        if (!token_has_type($token, TOKEN_TYPE_RESET)) {
+            http_response_code(400); echo json_encode(['error' => 'Gecersiz veya suresi dolmus sifirlama linki']); return;
+        }
         if (strlen($password) < 8 || !preg_match('/[A-Z]/', $password) || !preg_match('/[a-z]/', $password) || !preg_match('/[0-9]/', $password)) {
             http_response_code(400); echo json_encode(['error' => 'Sifre en az 8 karakter, 1 buyuk harf, 1 kucuk harf ve 1 rakam icermeli']); return;
         }
