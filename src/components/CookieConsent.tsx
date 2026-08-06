@@ -30,12 +30,13 @@ export default function CookieConsent() {
   if (!isVisible) return null
 
   return (
-    // Ekranın altına sabit — z-50 ile en üstte
+    // Ekranın altına sabit — z-40: sayfa modalları z-50'de, banner onların
+    // aksiyon butonlarını kapatmamalı (modal kapanınca banner yine görünür).
     <div
       role="dialog"
       aria-label="Çerez bildirimi"
       className={[
-        'fixed bottom-0 left-0 right-0 z-50',
+        'fixed bottom-0 left-0 right-0 z-40',
         'bg-white border-t border-gray-200 shadow-lg',
         // Yukarı kayma animasyonu
         'animate-slide-up',
