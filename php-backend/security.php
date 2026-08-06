@@ -17,16 +17,34 @@ function get_client_ip(): string {
     return $_SERVER['REMOTE_ADDR'] ?? 'unknown';
 }
 
+/**
+ * Sayaclarin tutuldugu dizin.
+ *
+ * Onceden sys_get_temp_dir() kullaniliyordu; paylasimli hostingde bu dizin
+ * istekler arasinda paylasilmadigi icin sayac her seferinde bos okunuyor ve
+ * hicbir limit devreye girmiyordu (canli ortamda 4 ardisik istekle dogrulandi).
+ * Deploy zaten uygulama altinda korumali bir tmp/rate_limits olusturuyor
+ * (bkz. .github/workflows/deploy-php.yml) — dogru yer orasi.
+ */
+function rate_limit_dir(): string {
+    return __DIR__ . '/tmp/rate_limits';
+}
+
 function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
     $ip = get_client_ip();
-    $dir = sys_get_temp_dir() . '/parcabizden_rate';
-    if (!is_dir($dir)) @mkdir($dir, 0700, true);
+    $dir = rate_limit_dir();
+    if (!is_dir($dir) && !@mkdir($dir, 0700, true) && !is_dir($dir)) {
+        // Sayac tutulamiyorsa istegi engellemiyoruz ama sessiz kalmiyoruz:
+        // limitin kapali oldugu fark edilmeden gecmemeli.
+        error_log('Rate limit dizini olusturulamadi: ' . $dir);
+        return true;
+    }
     $file = $dir . '/' . md5($action . '_' . $ip) . '.json';
 
     $now = time();
     $attempts = [];
     if (file_exists($file)) {
-        $data = json_decode(file_get_contents($file), true);
+        $data = json_decode((string)file_get_contents($file), true);
         if (is_array($data)) $attempts = array_filter($data, fn($t) => ($now - $t) < ($window_minutes * 60));
     }
 
@@ -37,7 +55,9 @@ function check_rate_limit($action, $max_attempts = 5, $window_minutes = 15) {
     }
 
     $attempts[] = $now;
-    @file_put_contents($file, json_encode(array_values($attempts)));
+    if (@file_put_contents($file, json_encode(array_values($attempts)), LOCK_EX) === false) {
+        error_log('Rate limit sayaci yazilamadi: ' . $file);
+    }
     return true;
 }
 
