@@ -18,7 +18,7 @@ import {
   Truck,
   Box,
 } from 'lucide-react'
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+/* Lucide ikonlarının prop tipleri sürümler arası değişiyor; ortak üst tip yok. */
 type AnyIcon = React.ComponentType<any>
 
 export const CATEGORY_ICON_MAP: Record<string, AnyIcon> = {

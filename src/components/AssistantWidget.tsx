@@ -426,7 +426,7 @@ function SssTab({ faqs, resetSearch, setTab }: { faqs: typeof FAQS; resetSearch:
               onClick={() => setTab('contact')}
               className="rounded-xl border border-gray-300 px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50"
             >
-              İletişim'e Geç
+              İletişim&apos;e Geç
             </button>
           </div>
         </div>

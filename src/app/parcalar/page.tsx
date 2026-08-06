@@ -611,7 +611,7 @@ function PartsStep({
             {partsRes.parts.length === 0 && (
               <div className="rounded-2xl bg-gray-50 border border-gray-200 p-8 text-center">
                 <p className="font-semibold text-gray-700">Bu kategoride listelenecek parça yok</p>
-                <p className="text-xs text-gray-500 mt-1">Başka bir kategori deneyin veya WhatsApp'tan sorun.</p>
+                <p className="text-xs text-gray-500 mt-1">Başka bir kategori deneyin veya WhatsApp&apos;tan sorun.</p>
               </div>
             )}
 
