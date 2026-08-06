@@ -74,7 +74,7 @@ define('SMTP_FROM_NAME', 'ParcaBizden');
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_set_default_thumbnails', 'admin_order_list', 'admin_order_update_status', 'admin_enrich_part'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_set_default_thumbnails', 'admin_order_list', 'admin_order_update_status', 'admin_enrich_part', 'seller_register', 'seller_me', 'seller_update', 'admin_seller_list', 'admin_seller_decide', 'admin_seller_document'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -115,6 +115,7 @@ $_pb_modules = [
     'password.php',       // handleChangePassword, handleDeleteAccount
     'admin-products.php', // handleAdminProductAdd, handleAdminProductUpdate, handleAdminProductDelete, handleAdminSetDefaultThumbnails, handleAdminEnrichPart
     'admin-orders.php',   // handleAdminOrderList, handleAdminOrderUpdateStatus
+    'sellers.php',        // [PAZARYERI] handle_seller_register/me/update, handle_admin_seller_list/decide/document, handle_geo_cities/districts
 ];
 foreach ($_pb_modules as $_m) {
     $__f = __DIR__ . '/' . $_m;
@@ -260,6 +261,38 @@ switch ($action) {
             'admin_order_list' => handleAdminOrderList($pdo, $uid),
             'admin_order_update_status' => handleAdminOrderUpdateStatus($pdo, $uid),
             'admin_enrich_part' => handleAdminEnrichPart($pdo, $uid),
+        };
+        break;
+
+    // ── Pazaryeri: coğrafya (herkese açık) ──
+    case 'geo_cities':    handle_geo_cities($pdo); break;
+    case 'geo_districts': handle_geo_districts($pdo); break;
+
+    // ── Pazaryeri: satıcı (auth) ──
+    case 'seller_register':
+    case 'seller_me':
+    case 'seller_update':
+        $uid = get_auth_user_id();
+        if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        match ($action) {
+            'seller_register' => handle_seller_register($pdo, $uid),
+            'seller_me'       => handle_seller_me($pdo, $uid),
+            'seller_update'   => handle_seller_update($pdo, $uid),
+        };
+        break;
+
+    // ── Pazaryeri: satıcı onay kuyruğu (admin) ──
+    case 'admin_seller_list':
+    case 'admin_seller_decide':
+    case 'admin_seller_document':
+        $uid = get_auth_user_id();
+        if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        requireAdmin($pdo, $uid);
+        if (!check_rate_limit('admin_seller', 60, 15)) break;
+        match ($action) {
+            'admin_seller_list'     => handle_admin_seller_list($pdo),
+            'admin_seller_decide'   => handle_admin_seller_decide($pdo, $uid),
+            'admin_seller_document' => handle_admin_seller_document($pdo),
         };
         break;
 

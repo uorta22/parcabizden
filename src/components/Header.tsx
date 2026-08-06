@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
-  Menu, X, LogIn, User, LogOut, Warehouse, UserPlus,
+  Menu, X, LogIn, User, LogOut, Warehouse, UserPlus, Store,
   ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -91,6 +91,17 @@ export default function Header() {
               >
                 <ShoppingBag className="w-4 h-4" />
                 Parçalar
+              </Link>
+
+              {/* Satıcı kazanımı — arz tarafı ürünün darboğazı, girişi görünür tut */}
+              <Link
+                href="/magaza-ac"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive('/magaza-ac') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Store className="w-4 h-4" />
+                Mağaza Aç
               </Link>
 
               {/* Cart */}
@@ -203,6 +214,7 @@ export default function Header() {
             <nav className="flex flex-col gap-1">
               {[
                 { href: '/parcalar', label: 'Parçalar', icon: Package },
+                { href: '/magaza-ac', label: 'Mağaza Aç', icon: Store },
                 { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/iletisim', label: 'İletişim' },
               ].map(link => (

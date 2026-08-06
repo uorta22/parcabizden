@@ -25,7 +25,7 @@ jobs:
 
       - name: PHP dosyalarini hazirla
         run: |
-          mkdir -p deploy/tmp/rate_limits
+          mkdir -p deploy/tmp/rate_limits deploy/tmp/seller-docs
 
           # 1) natro-index.php → index.php (ana router)
           cp natro-index.php deploy/index.php
@@ -41,6 +41,9 @@ jobs:
 
           # 3) rate_limits klasörü için .htaccess koru
           echo "Deny from all" > deploy/tmp/rate_limits/.htaccess
+
+          # 4) Satıcı belgeleri (vergi levhası) — web kökünden erişilemez
+          echo "Deny from all" > deploy/tmp/seller-docs/.htaccess
 
           echo ""
           echo "=== Deploy edilecek dosyalar ==="
@@ -63,5 +66,6 @@ jobs:
             **/*.log
             **/*.db
             **/tmp/rate_limits/**
+            **/tmp/seller-docs/**
             **/migration*.sql
             **/catalog_schema.sql

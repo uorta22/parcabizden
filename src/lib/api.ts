@@ -314,6 +314,85 @@ async function actionPost<T>(params: Record<string, string>): Promise<T> {
   return data
 }
 
+/** Oturum gerektiren GET. actionFetch token göndermiyor, o herkese açık uçlar için. */
+async function actionGetAuth<T>(params: Record<string, string>): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}/?${new URLSearchParams(params).toString()}`, { headers })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error((data && data.error) || `API error: ${res.status}`)
+  if (data && data.error) throw new Error(data.error)
+  return data
+}
+
+/**
+ * Dosya içeren POST. Content-Type ELLE SET EDİLMEZ — tarayıcı multipart
+ * boundary'sini kendisi üretir; elle yazılırsa istek bozulur.
+ */
+async function actionPostForm<T>(action: string, form: FormData): Promise<T> {
+  form.set('action', action)
+  const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}/`, { method: 'POST', headers, body: form })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error((data && data.error) || `API error: ${res.status}`)
+  if (data && data.error) throw new Error(data.error)
+  return data
+}
+
+// ==================== Pazaryeri: coğrafya ve satıcı ====================
+
+export interface GeoCity { id: number; name: string; slug: string }
+export interface GeoDistrict { id: number; name: string; slug: string }
+
+export type SellerStatus = 'pending' | 'approved' | 'suspended' | 'rejected'
+
+export interface SellerProfile {
+  id: number
+  name: string
+  slug: string
+  city_id: number
+  district_id: number | null
+  city_name: string
+  district_name: string | null
+  address: string | null
+  whatsapp: string
+  phone: string | null
+  status: SellerStatus
+  rejection_reason: string | null
+  approved_at: string | null
+  created_at: string
+  has_document: boolean
+  median_response_minutes: number | null
+  offer_rate: string | null
+  listing_freshness_rate: string | null
+}
+
+export function fetchCities(): Promise<{ cities: GeoCity[] }> {
+  return actionFetch<{ cities: GeoCity[] }>({ action: 'geo_cities' })
+}
+
+export function fetchDistricts(cityId: number): Promise<{ districts: GeoDistrict[] }> {
+  return actionFetch<{ districts: GeoDistrict[] }>({ action: 'geo_districts', city_id: String(cityId) })
+}
+
+/** Mağazası yoksa seller null döner — hata değil. */
+export function fetchMySeller(): Promise<{ seller: SellerProfile | null }> {
+  return actionGetAuth<{ seller: SellerProfile | null }>({ action: 'seller_me' })
+}
+
+export function registerSeller(form: FormData) {
+  return actionPostForm<{ success: boolean; message: string; seller: { id: number; slug: string; status: SellerStatus } }>(
+    'seller_register', form
+  )
+}
+
 // ── In-memory cache for categories, nodes, brands (5 min TTL) ──
 const CACHE_TTL = 5 * 60 * 1000
 const MAX_CACHE_SIZE = 100
