@@ -35,12 +35,27 @@ function brandLogoKey(name: string): string {
   return BRAND_LOGO_ALIASES[titled] ?? titled
 }
 
+/** Seçim tamamlandığında dışarı verilen bilgi. */
+export interface VehicleSelection {
+  brand: TecBrand
+  model: TecModel
+  vehicle: TecVehicle
+  /** "BMW 3 (E46) 318 d" — gösterim için hazır etiket. */
+  label: string
+}
+
 interface Props {
   open: boolean
   onClose: () => void
+  /**
+   * Verilirse seçim bu callback'e döner ve yönlendirme YAPILMAZ.
+   * Verilmezse eski davranış korunur: /arac/{ktype} sayfasına gidilir.
+   * (İlan verme gibi form akışları sayfadan ayrılamaz.)
+   */
+  onSelect?: (selection: VehicleSelection) => void
 }
 
-export default function VehiclePickerModal({ open, onClose }: Props) {
+export default function VehiclePickerModal({ open, onClose, onSelect }: Props) {
   const router = useRouter()
   const [step, setStep] = useState<Step>(1)
   const [search, setSearch] = useState('')
@@ -110,6 +125,15 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
   const canSubmit = !!vehicle
   const submit = () => {
     if (!vehicle) return
+
+    if (onSelect) {
+      if (!brand || !model) return
+      const label = [brand.name, model.name, vehicle.description].filter(Boolean).join(' ')
+      onSelect({ brand, model, vehicle, label })
+      onClose()
+      return
+    }
+
     // KType'tan araç adını çözen bir endpoint yok; başlık ve marka logosu için
     // seçilen bilgiyi URL'de taşıyoruz (yalnızca görüntüleme amaçlı).
     const q = new URLSearchParams()
@@ -140,7 +164,7 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
             <h2 className="text-lg font-bold text-gray-900">Aracınıza Uyumlu Parçaları Seçin</h2>
             <p className="mt-0.5 text-xs text-gray-500">Aracınıza ait marka, model gibi detayları girerek araç seçin ve uyumlu parçaları bulun.</p>
           </div>
-          <button onClick={onClose} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200" aria-label="Kapat">
+          <button type="button" onClick={onClose} className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200" aria-label="Kapat">
             <X className="h-5 w-5" />
           </button>
         </header>
@@ -233,6 +257,7 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
                   {visibleBrands.map(b => (
                     <li key={b.id}>
                       <button
+                        type="button"
                         onClick={() => { setBrand(b); setModel(null); setVehicle(null); setStep(2) }}
                         className={`group flex w-full items-center gap-3 rounded-lg border bg-white px-3 py-2.5 text-left transition-all hover:border-[#ff7a1a]/50 hover:shadow-sm ${
                           brand?.id === b.id ? 'border-[#ff7a1a] ring-2 ring-[#ff7a1a]/20' : 'border-gray-200'
@@ -255,6 +280,7 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
                   {visibleModels.map(m => (
                     <li key={m.id}>
                       <button
+                        type="button"
                         onClick={() => { setModel(m); setVehicle(null); setStep(3) }}
                         className={`group flex w-full items-baseline justify-between gap-2 rounded-lg border bg-white px-4 py-3 text-left transition-all hover:border-[#ff7a1a]/50 hover:shadow-sm ${
                           model?.id === m.id ? 'border-[#ff7a1a] ring-2 ring-[#ff7a1a]/20' : 'border-gray-200'
@@ -281,6 +307,7 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
                     return (
                       <li key={v.id}>
                         <button
+                          type="button"
                           onClick={() => setVehicle(v)}
                           className={`group flex w-full items-center justify-between gap-3 rounded-lg border bg-white px-4 py-3 text-left transition-all hover:border-[#ff7a1a]/50 hover:shadow-sm ${
                             vehicle?.id === v.id ? 'border-[#ff7a1a] ring-2 ring-[#ff7a1a]/20' : 'border-gray-200'
@@ -321,6 +348,7 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
         {/* Footer */}
         <footer className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-3">
           <button
+            type="button"
             onClick={reset}
             disabled={!brand}
             className="rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-600 disabled:opacity-50"
@@ -328,6 +356,7 @@ export default function VehiclePickerModal({ open, onClose }: Props) {
             Sıfırla
           </button>
           <button
+            type="button"
             onClick={submit}
             disabled={!canSubmit}
             className="inline-flex items-center gap-1.5 rounded-md px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
@@ -358,6 +387,7 @@ function StepperItem({
   const isDone   = status === 'done'
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       className={`flex w-full items-center gap-3 rounded-md p-2 text-left transition-colors ${
