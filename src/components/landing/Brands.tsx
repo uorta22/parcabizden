@@ -66,7 +66,7 @@ export default function Brands() {
               Desteklenen Markalar
             </p>
             <h2 className="text-3xl font-black tracking-tight text-gray-900 md:text-4xl">
-              50+ marka, tek platform
+              Popüler markalar, tek platform
             </h2>
           </div>
           <Link

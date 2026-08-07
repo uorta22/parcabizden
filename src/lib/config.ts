@@ -35,14 +35,6 @@ export const siteConfig = {
     whatsappNote: 'WhatsApp üzerinden 7/24 mesaj bırakabilirsiniz.',
   },
 
-  // İstatistikler
-  stats: {
-    customers: '5.000+',
-    parts: '10.000+',
-    brands: '50+',
-    support: '7/24',
-  },
-
   // Chat widget
   chat: {
     enabled: process.env.NEXT_PUBLIC_CHAT_ENABLED !== 'false',

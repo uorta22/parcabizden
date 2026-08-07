@@ -25,7 +25,7 @@ jobs:
 
       - name: PHP dosyalarini hazirla
         run: |
-          mkdir -p deploy/tmp/rate_limits deploy/tmp/seller-docs
+          mkdir -p deploy/tmp/rate_limits deploy/tmp/seller-docs deploy/uploads/listings
 
           # 1) natro-index.php → index.php (ana router)
           cp natro-index.php deploy/index.php

@@ -94,7 +94,7 @@ export default function OGImage() {
             gap: '16px',
           }}
         >
-          {['50+ Marka', '10.000+ Parca', 'Sase ile Arama', '7/24 WhatsApp'].map(
+          {['Genis Marka Destegi', 'Sase ile Arama', '7/24 WhatsApp'].map(
             (text) => (
               <div
                 key={text}

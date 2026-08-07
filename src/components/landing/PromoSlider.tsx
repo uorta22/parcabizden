@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * PromoSlider — kampanya banner'ları.
+ * PromoSlider — tanıtım banner'ları.
  *
- * Şimdilik statik veri (kod içinde) — ileride Supabase'den çekilecek
- * (campaigns tablosu ekleneceğinde supabase.from('campaigns').select()).
+ * Statik veri (kod içinde). İçerik doğrulanabilir olmalı: karşılığı olmayan
+ * kampanya/komisyon/kargo vaadi yazılmaz.
  *
  * Davranış: otomatik 5sn'de bir sıradakine geç + manuel ok/dot.
  * Tıklanabilir — her slide'ın href'i var.
@@ -26,13 +26,12 @@ type Promo = {
   bgTo: string    // tailwind gradient to class
 }
 
-// TODO: Supabase 'campaigns' tablosundan dinamik gelecek
 const PROMOS: Promo[] = [
   {
     id: 1,
-    title: '%0 Komisyon ve Ücretsiz Kargo',
-    body: '5000₺ üzeri tüm siparişlerde ücretsiz kargo, 7500₺ üzeri 2 taksitte %0 komisyon.',
-    badge: 'Kampanya',
+    title: 'Doğrulanmış Satıcılardan Teklif Alın',
+    body: 'Aradığınız çıkma veya yedek parçayı tarif edin; vergi levhası onaylanmış satıcılar talebinize dönsün.',
+    badge: 'Pazaryeri',
     href: '/parcalar',
     bgFrom: 'from-orange-500',
     bgTo: 'to-amber-600',
@@ -48,9 +47,9 @@ const PROMOS: Promo[] = [
   },
   {
     id: 3,
-    title: 'TecDoc Onaylı Parça Garantisi',
-    body: 'Her parça TecDoc kataloğu üzerinden aracınıza birebir uyumluluk testinden geçirilir.',
-    badge: 'Kalite',
+    title: 'Şase veya OEM Numarası ile Arayın',
+    body: 'Aracınızı şase, marka/model veya OEM numarası ile tanımlayın; katalogdaki uyumlu parçaları listeleyin.',
+    badge: 'Katalog',
     href: '/parcalar',
     bgFrom: 'from-emerald-500',
     bgTo: 'to-teal-600',

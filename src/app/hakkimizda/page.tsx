@@ -32,13 +32,15 @@ const values = [
   }
 ]
 
+// Doğrulanabilir olmayan sayısal iddialar (müşteri/parça adedi) bilerek yok:
+// platform henüz yeni ve bu rakamların ölçüm dayanağı bulunmuyor.
 const highlights = [
-  '5000+ mutlu müşteri',
-  '10.000+ parça çeşidi',
-  '50+ marka desteği',
+  'Vergi levhası doğrulanmış satıcılar',
+  '32 marka için parça kataloğu',
+  'Şase (VIN) ve OEM numarası ile arama',
+  'Talebinize satıcılardan teklif',
   'Türkiye genelinde kargo',
-  '7/24 WhatsApp destek',
-  'Tecrübeli teknik ekip'
+  'WhatsApp üzerinden hızlı iletişim'
 ]
 
 export default function HakkimizdaPage() {
