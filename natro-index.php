@@ -74,7 +74,7 @@ define('SMTP_FROM_NAME', 'ParcaBizden');
 
 header('Content-Type: application/json; charset=utf-8');
 $action_check = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
-$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_set_default_thumbnails', 'admin_order_list', 'admin_order_update_status', 'admin_enrich_part', 'seller_register', 'seller_me', 'seller_update', 'admin_seller_list', 'admin_seller_decide', 'admin_seller_document', 'listing_create', 'listing_mine', 'listing_set_status', 'listing_confirm'];
+$auth_actions = ['register', 'login', 'profile', 'verify_email', 'resend_verify', 'forgot_password', 'reset_password', 'garage_list', 'garage_add', 'garage_remove', 'garage_update', 'maintenance_list', 'maintenance_add', 'maintenance_update', 'maintenance_remove', 'profile_update', 'address_list', 'address_add', 'address_update', 'address_remove', 'order_list', 'order_detail', 'order_create', 'favorite_list', 'favorite_add', 'favorite_remove', 'change_password', 'delete_account', 'admin_product_add', 'admin_product_update', 'admin_product_delete', 'admin_set_default_thumbnails', 'admin_order_list', 'admin_order_update_status', 'admin_enrich_part', 'seller_register', 'seller_me', 'seller_update', 'admin_seller_list', 'admin_seller_decide', 'admin_seller_document', 'listing_create', 'listing_mine', 'listing_set_status', 'listing_confirm', 'request_mine', 'seller_requests', 'offer_create', 'offer_withdraw', 'offer_mine'];
 if (in_array($action_check, $auth_actions)) {
     header('Cache-Control: no-store, no-cache, must-revalidate');
 } else {
@@ -117,6 +117,8 @@ $_pb_modules = [
     'admin-orders.php',   // handleAdminOrderList, handleAdminOrderUpdateStatus
     'sellers.php',        // [PAZARYERI] handle_seller_register/me/update, handle_admin_seller_list/decide/document, handle_geo_cities/districts
     'listings.php',       // [PAZARYERI] handle_listing_create/mine/detail/search/set_status/confirm
+    'requests.php',       // [PAZARYERI] handle_request_create/detail/mine/close, handle_seller_requests
+    'offers.php',         // [PAZARYERI] handle_offer_create/withdraw/mine/decide
 ];
 foreach ($_pb_modules as $_m) {
     $__f = __DIR__ . '/' . $_m;
@@ -298,6 +300,29 @@ switch ($action) {
             'listing_mine'       => handle_listing_mine($pdo, $uid),
             'listing_set_status' => handle_listing_set_status($pdo, $uid),
             'listing_confirm'    => handle_listing_confirm($pdo, $uid),
+        };
+        break;
+
+    // ── Pazaryeri: talep (misafir açabilir; erişim anahtarı ile okunur) ──
+    case 'request_create': handle_request_create($pdo); break;
+    case 'request_detail': handle_request_detail($pdo); break;
+    case 'request_close':  handle_request_close($pdo); break;
+    case 'offer_decide':   handle_offer_decide($pdo); break;
+
+    // ── Pazaryeri: talep/teklif (giriş gerekli) ──
+    case 'request_mine':
+    case 'seller_requests':
+    case 'offer_create':
+    case 'offer_withdraw':
+    case 'offer_mine':
+        $uid = get_auth_user_id();
+        if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
+        match ($action) {
+            'request_mine'    => handle_request_mine($pdo, $uid),
+            'seller_requests' => handle_seller_requests($pdo, $uid),
+            'offer_create'    => handle_offer_create($pdo, $uid),
+            'offer_withdraw'  => handle_offer_withdraw($pdo, $uid),
+            'offer_mine'      => handle_offer_mine($pdo, $uid),
         };
         break;
 
