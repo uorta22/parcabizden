@@ -828,3 +828,73 @@ export async function reviewHelpful(reviewId: number): Promise<{ status: string 
   })
   return res.json()
 }
+
+// ==================== Admin: Satıcı Onay Kuyruğu ====================
+
+export type AdminSellerStatus = SellerStatus | 'all'
+
+export interface AdminSellerListItem {
+  id: number
+  name: string
+  slug: string
+  status: SellerStatus
+  tax_number: string | null
+  whatsapp: string
+  phone: string | null
+  address: string | null
+  created_at: string
+  approved_at: string | null
+  rejection_reason: string | null
+  city_name: string
+  district_name: string | null
+  owner_email: string
+  owner_name: string
+  has_document: boolean
+}
+
+/** Admin auth gerektiren GET; actionGetAuth'tan farklı olarak X-Requested-With de taşır. */
+async function actionGetAdmin<T>(params: Record<string, string>): Promise<T> {
+  const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}/?${new URLSearchParams(params).toString()}`, { headers })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new Error((data && data.error) || `API error: ${res.status}`)
+  if (data && data.error) throw new Error(data.error)
+  return data
+}
+
+export function adminSellerList(status: AdminSellerStatus = 'pending'): Promise<{ sellers: AdminSellerListItem[] }> {
+  return actionGetAdmin<{ sellers: AdminSellerListItem[] }>({ action: 'admin_seller_list', status })
+}
+
+export function adminSellerDecide(
+  sellerId: number,
+  decision: 'approved' | 'rejected' | 'suspended',
+  reason?: string
+): Promise<{ success: boolean; message: string; status: string }> {
+  const params: Record<string, string> = { action: 'admin_seller_decide', seller_id: String(sellerId), decision }
+  if (reason) params.reason = reason
+  return actionPost<{ success: boolean; message: string; status: string }>(params)
+}
+
+/**
+ * Vergi levhası binary (PDF/JPG/PNG) döner, JSON değil.
+ * Authorization header gerektirdiği için <img>/<a> ile doğrudan açılamaz;
+ * blob olarak indirilip URL.createObjectURL ile gösterilmeli.
+ */
+export async function adminSellerDocument(sellerId: number): Promise<Blob> {
+  const headers: Record<string, string> = { 'X-Requested-With': 'XMLHttpRequest' }
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token')
+    if (token) headers['Authorization'] = `Bearer ${token}`
+  }
+  const res = await fetch(`${API_BASE}/?${new URLSearchParams({ action: 'admin_seller_document', seller_id: String(sellerId) }).toString()}`, { headers })
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new Error((data && data.error) || `API error: ${res.status}`)
+  }
+  return res.blob()
+}
