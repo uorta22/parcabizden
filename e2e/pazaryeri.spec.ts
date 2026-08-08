@@ -51,3 +51,33 @@ test('satıcı endpointi oturumsuz istekte 401 döndürüyor', async ({ request 
   const response = await request.get('https://api.parcabizden.com.tr/?action=seller_me')
   expect(response.status()).toBe(401)
 })
+
+/**
+ * Talep açma üyelik istemiyor — ürünün bilinçli farkı.
+ * Referans platform (otodevi) talep göndermeden önce üyelik, adres ve
+ * TC Kimlik istiyor; huni orada tıkanıyor. Bu test o kararı kilitliyor:
+ * giriş yapmamış ziyaretçi forma ULAŞABİLMELİ, girişe yönlendirilmemeli.
+ */
+test('/talep-ac giriş yapmamış ziyaretçiye formu gösteriyor, girişe yönlendirmiyor', async ({ page }) => {
+  await page.goto('/talep-ac')
+
+  await expect(page).toHaveURL(/\/talep-ac/)
+  expect(page.url()).not.toContain('/giris')
+
+  // Telefon ve en az bir parça satırı görünür olmalı.
+  await expect(page.getByLabel(/telefon/i).first()).toBeVisible()
+  expect(await page.title()).toContain('Talep')
+})
+
+test('talep oluşturma endpointi yalnızca POST kabul ediyor', async ({ request }) => {
+  const response = await request.get('https://api.parcabizden.com.tr/?action=request_create')
+  const body = await response.json()
+  expect(body.error).toContain('POST')
+})
+
+test('talep detayı erişim anahtarı olmadan açılmıyor', async ({ request }) => {
+  // Anahtarsız istek, talep var olsa bile bulunamadı dönmeli — id denemeyle
+  // başkasının talebi ve telefonu okunabilmemeli.
+  const response = await request.get('https://api.parcabizden.com.tr/?action=request_detail&id=1')
+  expect([400, 404]).toContain(response.status())
+})
