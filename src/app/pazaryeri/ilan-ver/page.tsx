@@ -304,7 +304,10 @@ function ListingForm() {
         oem_number: oemNumber.trim() || undefined,
         images: images.map(i => i.file),
       })
-      router.push(`/ilan/${listing.slug}`)
+      // Herkese açık ilan sayfası (/ilan/[slug]) alıcı sitesinde ve HENÜZ YOK.
+      // Oraya yönlendirmek satıcıyı 404'e düşürüyordu; kendi ilan listesine
+      // gönderiyoruz. Sayfa yapıldığında oraya bağlanacak.
+      router.push('/ilanlarim')
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'İlan gönderilemedi')
     } finally {
