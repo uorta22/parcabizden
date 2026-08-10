@@ -2,8 +2,6 @@ import type { Metadata } from 'next'
 import { Inter, Archivo_Black, Space_Grotesk } from 'next/font/google'
 import dynamic from 'next/dynamic'
 import './globals.css'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
 import SchemaOrg from '@/components/SchemaOrg'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { CartProvider } from '@/contexts/CartContext'
@@ -73,13 +71,9 @@ export default function RootLayout({
         <ToastProvider>
           <AuthProvider>
             <CartProvider>
-              <Header />
-              <main className="min-h-screen">
-                {children}
-              </main>
-              <Footer />
-              <AssistantWidget />
-              <BackToTop />
+              {/* Header/Footer/yardım widget'ı alıcı kabuğunda — (site)/layout.tsx.
+                  Buraya konursa satıcı paneli ve talep yüzeyi de onları alır. */}
+              {children}
               <CookieConsent />
               <SpeedInsights />
             </CartProvider>

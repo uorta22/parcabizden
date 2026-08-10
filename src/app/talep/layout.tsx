@@ -8,7 +8,7 @@ import type { Metadata } from 'next'
  */
 export const metadata: Metadata = {
   title: {
-    default: 'Yedek Parça Talebi | ParcaBizden',
+    default: 'Yedek Parça Talebi',
     template: '%s | ParcaBizden Talep',
   },
   description: 'Aradığınız yedek parçayı tarif edin, doğrulanmış satıcılardan teklif alın. Üyelik gerekmez.',

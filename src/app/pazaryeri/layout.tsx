@@ -11,7 +11,7 @@ import PanelShell from './_components/PanelShell'
  */
 export const metadata: Metadata = {
   title: {
-    default: 'Pazaryeri | ParcaBizden',
+    default: 'Pazaryeri',
     template: '%s | ParcaBizden Pazaryeri',
   },
   description: 'ParcaBizden satıcı paneli — mağazanızı, ilanlarınızı ve gelen talepleri yönetin.',

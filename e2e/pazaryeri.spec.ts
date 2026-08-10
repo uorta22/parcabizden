@@ -69,8 +69,21 @@ test('talep yüzeyi giriş yapmamış ziyaretçiye açık, girişe yönlendirmiy
 
   await expect(page).toHaveURL(/talep\.localhost/)
   expect(page.url()).not.toContain('/giris')
-  expect(await page.title()).toContain('Talep')
+  expect(await page.title()).toContain('Talebi')
 })
+
+/**
+ * Kök layout '%s | ParcaBizden' şablonu uyguluyor; yüzey layout'ları
+ * başlığa site adını TEKRAR eklememeli. Bu hata daha önce /parcalar ve
+ * /arac'ta çıkmıştı, iki yeni yüzeyde de aynen tekrarlandı.
+ */
+for (const [name, url] of [['satıcı paneli', SELLER], ['talep yüzeyi', REQUEST]] as const) {
+  test(`${name} başlığında site adı tekrarlanmıyor`, async ({ page }) => {
+    await page.goto(url)
+    const title = await page.title()
+    expect(title.split('ParcaBizden').length - 1).toBe(1)
+  })
+}
 
 test('talep formu üyeliksiz erişilebilir', async ({ page }) => {
   await page.goto(`${REQUEST}/olustur`)
