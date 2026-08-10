@@ -27,11 +27,15 @@ const SURFACE_PREFIXES = Object.values(SURFACE_BY_SUBDOMAIN)
 function subdomainOf(host: string): string | null {
   const clean = host.split(':')[0].toLowerCase()
 
-  // Yerel geliştirme: pazaryeri.localhost:3000 gibi
-  const parts = clean.endsWith('.localhost')
-    ? clean.slice(0, -'.localhost'.length).split('.')
-    : clean.split('.')
+  // Yerel geliştirme: pazaryeri.localhost:3000 → "pazaryeri"
+  // Ek atıldıktan sonra geriye TEK parça kalır; buraya genel parça sayısı
+  // kontrolü uygulanmaz (uygulanırsa alt alan adı hiç görülmez).
+  if (clean.endsWith('.localhost')) {
+    const sub = clean.slice(0, -'.localhost'.length)
+    return sub && sub !== 'www' ? sub : null
+  }
 
+  const parts = clean.split('.')
   if (parts.length < 2) return null
   const first = parts[0]
   return first === 'www' ? null : first

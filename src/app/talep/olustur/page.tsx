@@ -17,16 +17,18 @@
  * alternatifi vardır.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  Send, Plus, Trash2, Car, Loader2, AlertCircle, ShieldCheck, Users, Wallet,
+  Send, Plus, Trash2, Car, Loader2, AlertCircle, ShieldCheck, Users, Wallet, Wand2,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchCities, type GeoCity } from '@/lib/api'
 import { createRequest } from '@/lib/requests'
 import VehiclePickerModal, { type VehicleSelection } from '@/components/landing/VehiclePickerModal'
+import { parseInput, decodeVinVehicle, resolveVehicleIds, type VehicleGuess } from '@/lib/part-parser'
+import ParsedChips from '../_components/ParsedChips'
 
 const MAX_ITEMS = 10
 
@@ -69,8 +71,17 @@ function parseDecimal(v: string): number | null {
 }
 
 export default function TalepAcPage() {
+  return (
+    <Suspense fallback={null}>
+      <TalepAcForm />
+    </Suspense>
+  )
+}
+
+function TalepAcForm() {
   const { user, isLoading: authLoading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   // ── İletişim ──
   const [phone, setPhone] = useState('')
@@ -101,10 +112,41 @@ export default function TalepAcPage() {
   const [engineNumber, setEngineNumber] = useState('')
 
   const openPicker = () => { setManualMode(false); setPickerOpen(true) }
-  const handleVehicleSelect = (sel: VehicleSelection) => setSelection(sel)
-  const removeVehicle = () => setSelection(null)
+  const handleVehicleSelect = (sel: VehicleSelection) => { setSelection(sel); setSmartManufacturerId(null); setSmartModelId(null) }
+  const removeVehicle = () => { setSelection(null); setSmartManufacturerId(null); setSmartModelId(null) }
   const startManual = () => { setSelection(null); setManualMode(true) }
-  const cancelManual = () => { setManualMode(false); setVehicleLabelManual('') }
+  const cancelManual = () => { setManualMode(false); setVehicleLabelManual(''); setSmartManufacturerId(null); setSmartModelId(null) }
+
+  // ── Akıllı giriş: yaz → yapı çıkar → tek dokunuşla onayla ──
+  // Ana sayfadan gelen ?q= ile önceden doldurulur; boşsa kullanıcı burada da yazabilir.
+  const [smartQuery, setSmartQuery] = useState(() => searchParams.get('q') ?? '')
+  const [removedPartKeys, setRemovedPartKeys] = useState<string[]>([])
+  const [vinVehicle, setVinVehicle] = useState<VehicleGuess | null>(null)
+  const [vinLoading, setVinLoading] = useState(false)
+  const [smartManufacturerId, setSmartManufacturerId] = useState<number | null>(null)
+  const [smartModelId, setSmartModelId] = useState<number | null>(null)
+  const [appliedForQuery, setAppliedForQuery] = useState<string | null>(null)
+
+  const parsedSmart = useMemo(() => parseInput(smartQuery), [smartQuery])
+  const activeSmartParts = useMemo(
+    () => parsedSmart.parts.filter(p => !removedPartKeys.includes(p.key)),
+    [parsedSmart.parts, removedPartKeys],
+  )
+
+  useEffect(() => {
+    if (parsedSmart.kind !== 'vin' || !parsedSmart.vin) { setVinVehicle(null); return }
+    let active = true
+    setVinLoading(true)
+    decodeVinVehicle(parsedSmart.vin)
+      .then(v => { if (active) setVinVehicle(v) })
+      .finally(() => { if (active) setVinLoading(false) })
+    return () => { active = false }
+  }, [parsedSmart.kind, parsedSmart.vin])
+
+  const changeSmartQuery = (v: string) => {
+    setSmartQuery(v)
+    setRemovedPartKeys([])
+  }
 
   // ── Bütçe ──
   const [budgetMax, setBudgetMax] = useState('')
@@ -116,6 +158,44 @@ export default function TalepAcPage() {
   const removeItem = (id: string) => setItems(prev => (prev.length <= 1 ? prev : prev.filter(i => i.id !== id)))
   const updateItem = (id: string, patch: Partial<PartItemState>) =>
     setItems(prev => prev.map(i => (i.id === id ? { ...i, ...patch } : i)))
+
+  const effectiveSmartVehicle = parsedSmart.kind === 'vin' ? vinVehicle : parsedSmart.vehicle
+
+  /** Chip önizlemesini forma işler — tek dokunuşla onay. */
+  const applySmartParse = () => {
+    if (effectiveSmartVehicle) {
+      setSelection(null)
+      setManualMode(true)
+      setVehicleLabelManual(effectiveSmartVehicle.label)
+      setSmartManufacturerId(null)
+      setSmartModelId(null)
+      if (parsedSmart.kind === 'vin' && parsedSmart.vin) setVin(parsedSmart.vin)
+      resolveVehicleIds(effectiveSmartVehicle).then(resolved => {
+        if (resolved) { setSmartManufacturerId(resolved.manufacturerId); setSmartModelId(resolved.modelId) }
+      })
+    }
+
+    if (activeSmartParts.length > 0 || parsedSmart.oemNumber) {
+      setItems(prev => {
+        const list = [...prev]
+        let cursor = 0
+        const putInto = (patch: Partial<PartItemState>) => {
+          const empty = cursor < list.length && !list[cursor].partLabel.trim() && !list[cursor].oemNumber.trim()
+          if (empty) list[cursor] = { ...list[cursor], ...patch }
+          else if (list.length < MAX_ITEMS) list.push({ ...newItem(), ...patch })
+          cursor++
+        }
+        if (activeSmartParts.length > 0) {
+          activeSmartParts.forEach(p => putInto({ partLabel: p.label }))
+        } else if (parsedSmart.oemNumber) {
+          putInto({ oemNumber: parsedSmart.oemNumber })
+        }
+        return list
+      })
+    }
+
+    setAppliedForQuery(smartQuery)
+  }
 
   // ── Gönderim ──
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
@@ -179,8 +259,8 @@ export default function TalepAcPage() {
       const created = await createRequest({
         contact_phone: normalizePhoneDigits(phone),
         city_id: cityId ? Number(cityId) : undefined,
-        manufacturer_id: selection?.brand.id,
-        model_id: selection?.model.id,
+        manufacturer_id: selection?.brand.id ?? smartManufacturerId ?? undefined,
+        model_id: selection?.model.id ?? smartModelId ?? undefined,
         vehicle_id: selection?.vehicle.id,
         vehicle_label: vehicleLabel,
         vin: vin.trim() ? vin.trim().toUpperCase() : undefined,
@@ -193,7 +273,8 @@ export default function TalepAcPage() {
           note: item.note.trim() || undefined,
         })),
       })
-      router.push(`/talep/${created.id}?t=${created.access_token}`)
+      // Yüzey kökü '/' — surface talep.parcabizden.com.tr'de bu /{id} olarak açılır.
+      router.push(`/${created.id}?t=${created.access_token}`)
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Talep gönderilemedi')
     } finally {
@@ -241,6 +322,41 @@ export default function TalepAcPage() {
             {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
+
+        {/* ── Akıllı giriş: araç + parçayı tek satırda yaz ── */}
+        <div className="rounded-xl border border-dashed border-primary-300 bg-primary-50/30 p-4">
+          <span className="mb-1.5 flex items-center gap-1.5 text-sm font-semibold text-gray-800">
+            <Wand2 className="h-4 w-4 text-primary-500" /> Aracını ve parçayı yaz, biz ayıralım
+          </span>
+          <p className="mb-2 text-xs text-gray-500">
+            Örn. &quot;e60 530d turbo hortumu&quot;, şase numarası ya da OEM kodu — yazdıkça altta önizleme çıkar.
+          </p>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={smartQuery} onChange={e => changeSmartQuery(e.target.value)}
+              placeholder="Örn. e60 530d turbo hortumu" className={`${INPUT} flex-1`}
+            />
+            <button
+              type="button" onClick={applySmartParse}
+              disabled={!smartQuery.trim() || appliedForQuery === smartQuery}
+              className="flex-shrink-0 rounded-lg bg-primary-500 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-primary-400 disabled:cursor-not-allowed disabled:bg-gray-200 disabled:text-gray-400"
+            >
+              {appliedForQuery === smartQuery && smartQuery.trim() ? 'Eklendi ✓' : 'Uygula'}
+            </button>
+          </div>
+          {smartQuery.trim() && (
+            <div className="mt-3">
+              <ParsedChips
+                vehicle={effectiveSmartVehicle}
+                vehicleLoading={parsedSmart.kind === 'vin' && vinLoading}
+                parts={activeSmartParts}
+                oemNumber={parsedSmart.oemNumber}
+                vin={parsedSmart.vin}
+                onRemovePart={key => setRemovedPartKeys(prev => [...prev, key])}
+              />
+            </div>
+          )}
+        </div>
 
         {/* ── Araç bilgisi (opsiyonel) ── */}
         <div className="rounded-xl border border-gray-200 p-4">

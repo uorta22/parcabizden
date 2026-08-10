@@ -1,35 +1,88 @@
 import { test, expect } from '@playwright/test'
 
 /**
- * Pazaryeri yüzeyi: satıcı ve ilan sayfalarının giriş kapıları + arama API'si.
+ * Üç yüzeyin ayrımı ve herkese açık API sözleşmeleri.
+ *
+ *   localhost:3000            → alıcı sitesi
+ *   pazaryeri.localhost:3000  → satıcı paneli
+ *   talep.localhost:3000      → talep yüzeyi
+ *
+ * Alt alan adları yerelde middleware üzerinden çözülüyor; üretimdeki
+ * pazaryeri./talep. ile aynı kod yolunu kullanır.
  *
  * Buradaki testler oturum AÇMADAN çalışır — hesap oluşturmak ve şifre girmek
- * bu ortamda yapılamıyor. Dolayısıyla kapsanan şey, giriş yapmamış bir
- * ziyaretçinin gördüğü davranış: sayfalar açılıyor mu, doğru yönlendirme
- * yapılıyor mu, herkese açık API sözleşmesi bozulmuş mu.
- *
- * Giriş gerektiren akışlar (mağaza başvurusu, ilan oluşturma) elle test
- * edilmeli — burada kasıtlı olarak kapsanmıyor, sahte güvence vermesin.
+ * bu ortamda yapılamıyor. Giriş gerektiren akışlar (başvuru, ilan verme,
+ * teklif) elle test edilmeli; sahte güvence vermesin diye kapsanmıyor.
  */
 
-test('/magaza-ac açılıyor ve giriş yapmamış ziyaretçiye giriş kapısı gösteriyor', async ({ page }) => {
-  await page.goto('/magaza-ac')
+const BUYER = 'http://localhost:3000'
+const SELLER = 'http://pazaryeri.localhost:3000'
+const REQUEST = 'http://talep.localhost:3000'
+const API = 'https://api.parcabizden.com.tr'
 
-  await expect(page.getByRole('heading', { name: /giriş yapın/i })).toBeVisible()
-  await expect(page.getByRole('link', { name: 'Giriş Yap' }).first()).toBeVisible()
+// ── Yüzey izolasyonu ──────────────────────────────────────────
+// Panel yolları ana alan adından açılmamalı. Bu bir UX sınırı;
+// gerçek yetkilendirme PHP tarafında.
 
-  // Kendi başlığı olmalı — anasayfanınkine düşmemeli.
-  expect(await page.title()).toContain('Mağaza Aç')
+for (const path of ['/pazaryeri', '/pazaryeri/ilanlarim', '/talep', '/talep/olustur']) {
+  test(`ana alan adından ${path} açılmıyor`, async ({ request }) => {
+    const response = await request.get(`${BUYER}${path}`)
+    expect(response.status()).toBe(404)
+  })
+}
+
+test('alıcı sitesi kendi kökünde çalışıyor', async ({ page }) => {
+  await page.goto(BUYER)
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Aracınıza özel yedek parçayı')
 })
 
-test('/ilan-ver giriş yapmamış ziyaretçiyi girişe yönlendiriyor', async ({ page }) => {
-  await page.goto('/ilan-ver')
-  await page.waitForURL(/\/giris/)
+// ── Satıcı paneli ─────────────────────────────────────────────
+
+test('satıcı paneli giriş yapmamış ziyaretçiye karşılama kapısı gösteriyor', async ({ page }) => {
+  await page.goto(SELLER)
+
+  await expect(page.getByRole('heading', { name: /Satıcı Paneline/i })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Giriş Yap' })).toBeVisible()
+  expect(await page.title()).toContain('Pazaryeri')
+})
+
+test('satıcı girişi kendi yüzeyinde, alıcı girişinden ayrı', async ({ page }) => {
+  await page.goto(`${SELLER}/giris`)
+  await expect(page).toHaveURL(/pazaryeri\.localhost/)
   expect(page.url()).toContain('/giris')
 })
 
-test('ilan arama API sözleşmesi: sayfalama alanlarıyla birlikte dönüyor', async ({ request }) => {
-  const response = await request.get('https://api.parcabizden.com.tr/?action=listing_search')
+test('mağaza başvurusu satıcı yüzeyinde açılıyor', async ({ page }) => {
+  await page.goto(`${SELLER}/basvuru`)
+  expect(page.url()).toContain('/basvuru')
+})
+
+// ── Talep yüzeyi ──────────────────────────────────────────────
+
+/**
+ * Talep açmak üyelik istemiyor — ürünün bilinçli farkı.
+ * Referans platform (otodevi) talepten önce üyelik, adres ve TC Kimlik
+ * istiyor; huni orada tıkanıyor. Bu test o kararı kilitliyor.
+ */
+test('talep yüzeyi giriş yapmamış ziyaretçiye açık, girişe yönlendirmiyor', async ({ page }) => {
+  await page.goto(REQUEST)
+
+  await expect(page).toHaveURL(/talep\.localhost/)
+  expect(page.url()).not.toContain('/giris')
+  expect(await page.title()).toContain('Talep')
+})
+
+test('talep formu üyeliksiz erişilebilir', async ({ page }) => {
+  await page.goto(`${REQUEST}/olustur`)
+
+  expect(page.url()).not.toContain('/giris')
+  await expect(page.getByLabel(/telefon/i).first()).toBeVisible()
+})
+
+// ── Herkese açık API sözleşmeleri ─────────────────────────────
+
+test('ilan arama API sözleşmesi: sayfalama alanlarıyla dönüyor', async ({ request }) => {
+  const response = await request.get(`${API}/?action=listing_search`)
   expect(response.status()).toBe(200)
 
   const body = await response.json()
@@ -39,38 +92,22 @@ test('ilan arama API sözleşmesi: sayfalama alanlarıyla birlikte dönüyor', a
   expect(typeof body.per_page).toBe('number')
 })
 
-test('geo_cities API sözleşmesi: cities dizisi dönüyor', async ({ request }) => {
-  const response = await request.get('https://api.parcabizden.com.tr/?action=geo_cities')
+test('geo_cities 81 ili döndürüyor', async ({ request }) => {
+  const response = await request.get(`${API}/?action=geo_cities`)
   expect(response.status()).toBe(200)
 
   const body = await response.json()
   expect(Array.isArray(body.cities)).toBe(true)
+  expect(body.cities.length).toBe(81)
 })
 
 test('satıcı endpointi oturumsuz istekte 401 döndürüyor', async ({ request }) => {
-  const response = await request.get('https://api.parcabizden.com.tr/?action=seller_me')
+  const response = await request.get(`${API}/?action=seller_me`)
   expect(response.status()).toBe(401)
 })
 
-/**
- * Talep açma üyelik istemiyor — ürünün bilinçli farkı.
- * Referans platform (otodevi) talep göndermeden önce üyelik, adres ve
- * TC Kimlik istiyor; huni orada tıkanıyor. Bu test o kararı kilitliyor:
- * giriş yapmamış ziyaretçi forma ULAŞABİLMELİ, girişe yönlendirilmemeli.
- */
-test('/talep-ac giriş yapmamış ziyaretçiye formu gösteriyor, girişe yönlendirmiyor', async ({ page }) => {
-  await page.goto('/talep-ac')
-
-  await expect(page).toHaveURL(/\/talep-ac/)
-  expect(page.url()).not.toContain('/giris')
-
-  // Telefon ve en az bir parça satırı görünür olmalı.
-  await expect(page.getByLabel(/telefon/i).first()).toBeVisible()
-  expect(await page.title()).toContain('Talep')
-})
-
 test('talep oluşturma endpointi yalnızca POST kabul ediyor', async ({ request }) => {
-  const response = await request.get('https://api.parcabizden.com.tr/?action=request_create')
+  const response = await request.get(`${API}/?action=request_create`)
   const body = await response.json()
   expect(body.error).toContain('POST')
 })
@@ -78,6 +115,6 @@ test('talep oluşturma endpointi yalnızca POST kabul ediyor', async ({ request 
 test('talep detayı erişim anahtarı olmadan açılmıyor', async ({ request }) => {
   // Anahtarsız istek, talep var olsa bile bulunamadı dönmeli — id denemeyle
   // başkasının talebi ve telefonu okunabilmemeli.
-  const response = await request.get('https://api.parcabizden.com.tr/?action=request_detail&id=1')
+  const response = await request.get(`${API}/?action=request_detail&id=1`)
   expect([400, 404]).toContain(response.status())
 })

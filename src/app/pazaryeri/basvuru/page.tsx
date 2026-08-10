@@ -306,7 +306,7 @@ function StatusCard({ seller }: { seller: SellerProfile }) {
 
       {seller.status === 'approved' && (
         <Link
-          href="/magazam/ilan-ver"
+          href="/ilan-ver"
           className="mt-6 block rounded-xl bg-primary-500 py-4 text-center font-black uppercase tracking-wider text-white hover:bg-primary-400"
         >
           İlk İlanını Ver

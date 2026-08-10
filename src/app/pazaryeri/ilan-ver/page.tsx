@@ -107,7 +107,7 @@ function SellerGate({ seller }: { seller: SellerProfile | null }) {
       <h1 className="text-2xl font-black text-gray-900">{view.title}</h1>
       <p className="mt-2 text-gray-500">{view.body}</p>
       <div className="mt-6 flex justify-center">
-        <Link href="/magaza-ac" className="rounded-xl bg-primary-500 px-6 py-3 font-bold text-white hover:bg-primary-400">
+        <Link href="/basvuru" className="rounded-xl bg-primary-500 px-6 py-3 font-bold text-white hover:bg-primary-400">
           {seller ? 'Başvuru Durumunu Gör' : 'Mağaza Aç'}
         </Link>
       </div>
