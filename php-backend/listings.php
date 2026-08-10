@@ -58,8 +58,22 @@ function listing_unique_slug($pdo, string $base): string {
     return $base . '-' . bin2hex(random_bytes(3));
 }
 
-/** Giriş yapan kullanıcının onaylı satıcı kaydını döndürür, yoksa 403. */
+/**
+ * Giriş yapan kullanıcının onaylı satıcı kaydını döndürür, yoksa 403.
+ *
+ * Hesap tipi de burada doğrulanır — üç ayrı alan adı bir güvenlik sınırı
+ * değil; API doğrudan çağrılabilir. Tip token'dan değil her istekte DB'den
+ * okunur, böylece rol geri alındığında oturum beklemeden erişim kapanır.
+ */
 function listing_require_seller($pdo, int $userId): array {
+    $acc = $pdo->prepare('SELECT account_type FROM users WHERE id = ? AND deleted_at IS NULL');
+    $acc->execute([$userId]);
+    $accountType = $acc->fetchColumn();
+    if ($accountType === false) jsonResponse(['error' => 'Oturum gecersiz'], 401);
+    if ($accountType !== 'seller') {
+        jsonResponse(['error' => 'Bu islem satici hesabi gerektirir', 'code' => 'not_seller'], 403);
+    }
+
     $stmt = $pdo->prepare('SELECT id, status FROM sellers WHERE user_id = ?');
     $stmt->execute([$userId]);
     $seller = $stmt->fetch(PDO::FETCH_ASSOC);

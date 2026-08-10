@@ -109,11 +109,14 @@ function handle_register($pdo) {
         $stmt->execute([$email]);
         if ($stmt->fetch()) { http_response_code(409); echo json_encode(['error' => 'Bu e-posta adresi zaten kayitli']); return; }
 
+        $accountType = trim($_POST['account_type'] ?? 'buyer');
+        if (!in_array($accountType, ['buyer', 'seller'], true)) $accountType = 'buyer';
+
         // Create user — email_verified = 1 (e-posta servisi aktif olunca 0 yapilacak)
         $password_hash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
 
-        $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified) VALUES (?, ?, ?, ?, 1)');
-        $stmt->execute([$email, $password_hash, $name, $phone ?: null]);
+        $stmt = $pdo->prepare('INSERT INTO users (email, password_hash, name, phone, email_verified, account_type) VALUES (?, ?, ?, ?, 1, ?)');
+        $stmt->execute([$email, $password_hash, $name, $phone ?: null, $accountType]);
         $user_id = (int)$pdo->lastInsertId();
 
         $token = jwt_encode(['user_id' => $user_id]);
@@ -151,7 +154,7 @@ function handle_login($pdo) {
 
         if (!$email || !$password) { http_response_code(400); echo json_encode(['error' => 'E-posta ve sifre gerekli']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified, is_admin FROM users WHERE email = ? AND deleted_at IS NULL');
+        $stmt = $pdo->prepare('SELECT id, email, password_hash, name, phone, email_verified, is_admin, account_type FROM users WHERE email = ? AND deleted_at IS NULL');
         $stmt->execute([$email]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -172,6 +175,19 @@ function handle_login($pdo) {
             http_response_code(401); echo json_encode(['error' => 'E-posta veya sifre hatali']); return;
         }
 
+        // Hesap tipi ayrimi: satici paneline alici hesabiyla girilemez, tersi de.
+        // Kontrol SUNUCUDA — uc ayri alan adi bir guvenlik siniri degildir,
+        // API dogrudan cagrilabilir. Tip token'dan degil DB'den okunuyor.
+        $wantType = trim($_POST['account_type'] ?? '');
+        if ($wantType !== '' && in_array($wantType, ['buyer', 'seller'], true)) {
+            if (($user['account_type'] ?? 'buyer') !== $wantType) {
+                record_failed_login($ip, $email);
+                http_response_code(403);
+                echo json_encode(['error' => 'Bu hesap bu panele ait degil']);
+                return;
+            }
+        }
+
         // Basarili giris — sayaci sifirla
         clear_failed_logins($ip);
 
@@ -182,7 +198,7 @@ function handle_login($pdo) {
         echo json_encode([
             'message' => 'Giris basarili',
             'token' => $token,
-            'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone'], 'is_admin' => (bool)($user['is_admin'] ?? false)]
+            'user' => ['id' => (int)$user['id'], 'email' => $user['email'], 'name' => $user['name'], 'phone' => $user['phone'], 'is_admin' => (bool)($user['is_admin'] ?? false), 'account_type' => $user['account_type'] ?? 'buyer']
         ]);
     } catch (Exception $e) {
         http_response_code(500);
@@ -196,7 +212,7 @@ function handle_profile($pdo) {
         $user_id = get_auth_user_id();
         if (!$user_id) { http_response_code(401); echo json_encode(['error' => 'Oturum gecersiz']); return; }
 
-        $stmt = $pdo->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no, is_admin FROM users WHERE id = ? AND deleted_at IS NULL');
+        $stmt = $pdo->prepare('SELECT id, email, name, phone, gsm, address_line1, address_line2, city, district, postal_code, tc_no, is_admin, account_type FROM users WHERE id = ? AND deleted_at IS NULL');
         $stmt->execute([$user_id]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$user) { http_response_code(404); echo json_encode(['error' => 'Kullanici bulunamadi']); return; }
@@ -214,6 +230,7 @@ function handle_profile($pdo) {
             'postal_code' => $user['postal_code'] ?? null,
             'tc_no' => ($user['tc_no'] ?? null) ? ('***' . substr($user['tc_no'], -4)) : null,
             'is_admin' => (bool)($user['is_admin'] ?? false),
+            'account_type' => $user['account_type'] ?? 'buyer',
         ]]);
     } catch (Exception $e) {
         http_response_code(500);
