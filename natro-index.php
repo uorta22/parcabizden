@@ -11,9 +11,14 @@ set_exception_handler(function($e) {
     exit;
 });
 
+// Üç yüzey, üç alan adı — tek tek yazılıyor.
+// WILDCARD KULLANILMIYOR (*.parcabizden.com.tr gibi): atıl bir alt alan adı
+// ele geçirilirse (dangling DNS) doğrudan API'ye erişim kazanırdı.
 $_allowed_origins = [
     'https://parcabizden.com.tr',
     'https://www.parcabizden.com.tr',
+    'https://pazaryeri.parcabizden.com.tr',
+    'https://talep.parcabizden.com.tr',
 ];
 $_req_origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 // Vercel preview URL'leri: parcabizden-<hash>-<takim>.vercel.app veya
