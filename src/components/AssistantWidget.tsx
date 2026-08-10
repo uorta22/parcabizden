@@ -61,7 +61,6 @@ const TREE: Record<number, Node> = {
   1: {
     title: 'Siparişleriniz hakkında ne öğrenmek istersiniz?',
     choices: [
-      { id: 11, label: 'Sipariş geçmişim',  href: '/hesabim/siparisler' },
       { id: 12, label: 'Kargo durumu',      goto: 17 },
       { id: 13, label: 'İade işlemleri',    goto: 13 },
       { id: 0,  label: 'Ana menüye dön',    goto: 0, back: true },

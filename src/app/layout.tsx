@@ -4,7 +4,6 @@ import dynamic from 'next/dynamic'
 import './globals.css'
 import SchemaOrg from '@/components/SchemaOrg'
 import { AuthProvider } from '@/contexts/AuthContext'
-import { CartProvider } from '@/contexts/CartContext'
 import { ToastProvider } from '@/contexts/ToastContext'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { siteConfig } from '@/lib/config'
@@ -70,13 +69,11 @@ export default function RootLayout({
         <SchemaOrg />
         <ToastProvider>
           <AuthProvider>
-            <CartProvider>
               {/* Header/Footer/yardım widget'ı alıcı kabuğunda — (site)/layout.tsx.
                   Buraya konursa satıcı paneli ve talep yüzeyi de onları alır. */}
               {children}
               <CookieConsent />
               <SpeedInsights />
-            </CartProvider>
           </AuthProvider>
         </ToastProvider>
       </body>

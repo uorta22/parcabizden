@@ -8,7 +8,6 @@ import {
   ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import CartIcon from '@/components/CartIcon'
 import LogoLink from '@/components/Logo'
 
 // BrandBar kaldırıldı (Faz 3.1) — landing'de Brands grid'i var, header'da gerek yok
@@ -105,7 +104,6 @@ export default function Header() {
               </Link>
 
               {/* Cart */}
-              <CartIcon />
 
               {/* Account */}
               {user ? (
@@ -129,15 +127,6 @@ export default function Header() {
                       </div>
                       <Link href="/hesabim/garaj" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                         <Warehouse className="w-4 h-4 text-gray-400" /> Garajım
-                      </Link>
-                      <Link href="/hesabim/siparisler" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <Package className="w-4 h-4 text-gray-400" /> Siparişlerim
-                      </Link>
-                      <Link href="/hesabim/favoriler" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <Heart className="w-4 h-4 text-gray-400" /> Favorilerim
-                      </Link>
-                      <Link href="/hesabim/adresler" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
-                        <MapPin className="w-4 h-4 text-gray-400" /> Adreslerim
                       </Link>
                       <Link href="/hesabim/profil" onClick={() => setIsAccountOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                         <User className="w-4 h-4 text-gray-400" /> Profil
@@ -177,7 +166,6 @@ export default function Header() {
 
             {/* Mobile: Cart + Menu */}
             <div className="flex items-center gap-1 lg:hidden">
-              <CartIcon />
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
                 className="p-2 text-gray-600 hover:text-gray-900"
@@ -236,12 +224,6 @@ export default function Header() {
                   <div className="h-px bg-gray-100 mx-2 my-1" />
                   <Link href="/hesabim/garaj" className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50" onClick={() => setIsMenuOpen(false)}>
                     <Warehouse className="w-4 h-4" /> Garajım
-                  </Link>
-                  <Link href="/hesabim/siparisler" className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50" onClick={() => setIsMenuOpen(false)}>
-                    <Package className="w-4 h-4" /> Siparişlerim
-                  </Link>
-                  <Link href="/hesabim/favoriler" className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50" onClick={() => setIsMenuOpen(false)}>
-                    <Heart className="w-4 h-4" /> Favorilerim
                   </Link>
                   <Link href="/hesabim/profil" className="flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50" onClick={() => setIsMenuOpen(false)}>
                     <User className="w-4 h-4" /> Profil

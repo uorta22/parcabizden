@@ -17,10 +17,7 @@ import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_ITEMS = [
   { href: '/hesabim/garaj', label: 'Garajım', icon: Car },
-  { href: '/hesabim/siparisler', label: 'Siparişlerim', icon: Package },
-  { href: '/hesabim/adresler', label: 'Adreslerim', icon: MapPin },
   { href: '/hesabim/profil', label: 'Profil Bilgilerim', icon: User },
-  { href: '/hesabim/favoriler', label: 'Favori Ürünlerim', icon: Heart },
   { href: '/hesabim/ayarlar', label: 'Ayarlar', icon: Settings },
 ]
 

@@ -48,44 +48,6 @@ export function SkeletonCircle({ size = 40, className }: SkeletonCircleProps) {
   );
 }
 
-/**
- * ProductCard bileşeninin iskelet yükleyicisi.
- * Görsel alanı, kategori satırı, başlık satırları ve fiyat alanını taklit eder.
- */
-export function ProductCardSkeleton({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn(
-        "bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm",
-        className
-      )}
-      aria-hidden="true"
-    >
-      {/* Ürün görseli alanı — 4:3 oran */}
-      <div className="aspect-[4/3] w-full">
-        <Skeleton className="w-full h-full rounded-none" />
-      </div>
-
-      {/* Kart içeriği */}
-      <div className="p-4 space-y-3">
-        {/* Kategori / marka satırı */}
-        <Skeleton className="h-3 w-1/3" />
-
-        {/* Başlık satırları */}
-        <div className="space-y-2">
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-4/5" />
-        </div>
-
-        {/* Fiyat ve buton alanı */}
-        <div className="flex items-center justify-between pt-1">
-          <Skeleton className="h-6 w-1/3" />
-          <Skeleton className="h-9 w-24 rounded-xl" />
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /**
  * GenerationCard bileşeninin iskelet yükleyicisi.

@@ -19,7 +19,6 @@ import type {
   AutodataGeneration,
   SlugMatch,
 } from '@/types/api'
-import type { ShopProduct } from '@/types/shop'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
@@ -461,11 +460,6 @@ export async function fetchGenerations(brand: string): Promise<GenerationsData> 
   return data
 }
 
-export function searchOemParts(query: string) {
-  return actionFetch<{ results: OemSearchResult[]; query: string }>({
-    action: 'search_oem', q: query,
-  })
-}
 
 // ==================== Vehicle Specs (Autodata) ====================
 
@@ -664,47 +658,11 @@ export async function orderCreate(data: {
   })
 }
 
-// ==================== Favorites ====================
 
-export async function favoriteList(): Promise<{ favorites: FavoriteProduct[]; products: ShopProduct[] }> {
-  return actionPost<{ favorites: FavoriteProduct[]; products: ShopProduct[] }>({ action: 'favorite_list' })
-}
 
-export async function favoriteAdd(productId: string | number): Promise<{ success: boolean }> {
-  return actionPost<{ success: boolean }>({ action: 'favorite_add', product_id: String(productId) })
-}
 
-export async function favoriteRemove(productId: string | number): Promise<{ success: boolean }> {
-  return actionPost<{ success: boolean }>({ action: 'favorite_remove', product_id: String(productId) })
-}
 
-// ==================== Products (API-driven) ====================
 
-export async function productList(params?: {
-  category?: string
-  search?: string
-  brand?: string
-  vehicle_id?: number
-  page?: number
-  per_page?: number
-}): Promise<{ products: ShopProduct[]; total: number; page: number; per_page: number }> {
-  const p: Record<string, string> = { action: 'product_list' }
-  if (params?.category) p.category = params.category
-  if (params?.search) p.search = params.search
-  if (params?.brand) p.brand = params.brand
-  if (params?.vehicle_id) p.vehicle_id = String(params.vehicle_id)
-  if (params?.page) p.page = String(params.page)
-  if (params?.per_page) p.per_page = String(params.per_page)
-  return actionPost<{ products: ShopProduct[]; total: number; page: number; per_page: number }>(p)
-}
-
-export async function productDetail(slug: string): Promise<{ product: ShopProduct }> {
-  return actionPost<{ product: ShopProduct }>({ action: 'product_detail', slug })
-}
-
-export async function productSearch(query: string): Promise<{ products: ShopProduct[] }> {
-  return actionPost<{ products: ShopProduct[] }>({ action: 'product_search', q: query })
-}
 
 // ==================== Password Change ====================
 
@@ -720,49 +678,11 @@ export async function deleteAccount(password: string): Promise<{ success: boolea
   return actionPost<{ success: boolean }>({ action: 'delete_account', password })
 }
 
-// ==================== Admin ====================
 
-export async function adminProductAdd(data: Record<string, string>): Promise<{ product: ShopProduct }> {
-  return actionPost<{ product: ShopProduct }>({ action: 'admin_product_add', ...data })
-}
 
-export async function adminProductUpdate(id: number, data: Record<string, string>): Promise<{ product: ShopProduct }> {
-  return actionPost<{ product: ShopProduct }>({ action: 'admin_product_update', id: String(id), ...data })
-}
 
-export async function adminProductDelete(id: number): Promise<{ success: boolean }> {
-  return actionPost<{ success: boolean }>({ action: 'admin_product_delete', id: String(id) })
-}
 
-export async function adminOrderList(page?: number, status?: string): Promise<{ orders: Order[]; total: number }> {
-  const params: Record<string, string> = { action: 'admin_order_list' }
-  if (page) params.page = String(page)
-  if (status) params.status = status
-  return actionPost<{ orders: Order[]; total: number }>(params)
-}
 
-export async function adminOrderUpdateStatus(id: number, status: string): Promise<{ success: boolean }> {
-  return actionPost<{ success: boolean }>({ action: 'admin_order_update_status', id: String(id), status })
-}
-
-export async function adminEnrichPart(data: {
-  oem_number: string
-  price?: string
-  discount_price?: string
-  category?: string
-  thumbnail?: string
-  name?: string
-  in_stock?: string
-}): Promise<{ product: ShopProduct; action: 'created' | 'updated' }> {
-  const params: Record<string, string> = { action: 'admin_enrich_part', oem_number: data.oem_number }
-  if (data.price !== undefined) params.price = data.price
-  if (data.discount_price !== undefined) params.discount_price = data.discount_price
-  if (data.category !== undefined) params.category = data.category
-  if (data.thumbnail !== undefined) params.thumbnail = data.thumbnail
-  if (data.name !== undefined) params.name = data.name
-  if (data.in_stock !== undefined) params.in_stock = data.in_stock
-  return actionPost<{ product: ShopProduct; action: 'created' | 'updated' }>(params)
-}
 
 // ==================== Reviews ====================
 

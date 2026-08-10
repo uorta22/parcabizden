@@ -36,6 +36,32 @@ test('alıcı sitesi kendi kökünde çalışıyor', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toContainText('Aracınıza özel yedek parçayı')
 })
 
+// ── Alıcı tarafında pazaryeri ────────────────────────────────
+
+test('ilan arama sayfası açılıyor ve filtreler URL\'de taşınıyor', async ({ page }) => {
+  await page.goto(`${BUYER}/ilanlar?condition_type=cikma&sort=price_asc`)
+
+  await expect(page).toHaveURL(/condition_type=cikma/)
+  await expect(page).toHaveURL(/sort=price_asc/)
+  // Paylaşılabilir arama: URL'deki filtre sayfa yüklenince kaybolmamalı.
+  expect(page.url()).toContain('/ilanlar')
+})
+
+/**
+ * Tek satıcılı e-ticaret yüzeyi kaldırıldı — pazaryerinde sepet, sipariş,
+ * kargo adresi ve merkezi ürün yönetimi karşılığı yok. Geri sızmasın.
+ */
+for (const path of [
+  '/sepet', '/urunler',
+  '/hesabim/siparisler', '/hesabim/adresler', '/hesabim/favoriler',
+  '/admin/urunler', '/admin/siparisler',
+]) {
+  test(`kaldırılan e-ticaret yolu ${path} geri gelmedi`, async ({ request }) => {
+    const response = await request.get(`${BUYER}${path}`)
+    expect(response.status()).toBe(404)
+  })
+}
+
 // ── Satıcı paneli ─────────────────────────────────────────────
 
 test('satıcı paneli giriş yapmamış ziyaretçiye karşılama kapısı gösteriyor', async ({ page }) => {

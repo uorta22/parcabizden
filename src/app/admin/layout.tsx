@@ -3,15 +3,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { Package, ShoppingCart, LayoutDashboard, ArrowLeft, Menu, X, Sparkles, Store } from 'lucide-react'
+import { LayoutDashboard, ArrowLeft, Menu, X, Store } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 const NAV_ITEMS = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, exact: true },
   { href: '/admin/saticilar', label: 'Satıcılar', icon: Store },
-  { href: '/admin/urunler', label: 'Ürünler', icon: Package },
-  { href: '/admin/urunler/zenginlestir', label: 'Zenginleştir', icon: Sparkles },
-  { href: '/admin/siparisler', label: 'Siparişler', icon: ShoppingCart },
 ]
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000 // 30 dakika

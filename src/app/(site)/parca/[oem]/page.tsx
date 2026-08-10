@@ -21,7 +21,6 @@ import {
 } from 'lucide-react'
 import { searchTecParts, getTecPartDetail, type TecPartDetail } from '@/lib/tecdoc'
 import { getWhatsAppUrl, siteConfig } from '@/lib/config'
-import { useCart } from '@/contexts/CartContext'
 import { useToast } from '@/contexts/ToastContext'
 
 type TabKey = 'specs' | 'reviews' | 'vehicles' | 'faq' | 'cross' | 'installments'
@@ -135,26 +134,12 @@ function PartDetailView({
       : `${first.manufacturer_name} ${first.model_name} uyumlu`
   }, [detail])
 
-  // Fiyat TecDoc'ta yok — talep üzerine. Sepet, toplu talebi WhatsApp'a taşıyan kutu.
+  // Bu sayfa TecDoc katalog kaydı — envanter değil, fiyatı da yok.
+  // Pazaryerine iki çıkış var: bu OEM için yayındaki ilanlar, ya da talep açmak.
   const [qty, setQty] = useState(1)
   const productTitle = `${detail.supplier_name ?? 'Parça'} ${detail.part_number}`
-  const cartMessage = `Merhaba, ${productTitle} ürününden ${qty} adet almak istiyorum. Fiyat ve stok bilgisi alabilir miyim?`
-
-  const { addItem } = useCart()
-  const { toast } = useToast()
-
-  const addToCart = () => {
-    addItem({
-      product_id:    detail.part_number,
-      product_name:  productTitle,
-      product_slug:  detail.part_number,
-      product_image: cover ?? undefined,
-      quantity:      qty,
-      unit_price:    0,      // TecDoc fiyat taşımıyor
-      has_price:     false,  // sepet sayfası "fiyat talep üzerine" gösterir
-    })
-    toast(`${productTitle} sepete eklendi`, 'success')
-  }
+  const askMessage = `Merhaba, ${productTitle} ürününden ${qty} adet arıyorum. Fiyat ve stok bilgisi alabilir miyim?`
+  const listingsHref = `/ilanlar?q=${encodeURIComponent(detail.part_number)}`
 
   return (
     <main className="min-h-screen bg-white">
@@ -267,18 +252,18 @@ function PartDetailView({
               </span>
             </div>
 
-            {/* SEPETE EKLE (gerçekten sepete ekler; sepet sayfası talebi toplu WhatsApp'a taşır) */}
+            {/* Katalogdan pazaryerine iki çıkış: yayındaki ilanlar, ya da talep aç. */}
             <div className="mt-4 flex gap-2">
-              <button
-                onClick={addToCart}
+              <Link
+                href={listingsHref}
                 className="group flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#22c55e] py-4 text-base font-black uppercase tracking-wider text-white transition-all hover:bg-[#16a34a] hover:shadow-lg"
               >
                 <ShoppingCart className="h-5 w-5" />
-                Sepete Ekle
-              </button>
-              {/* Tek ürün için doğrudan WhatsApp — sepete girmeden sormak isteyenler için */}
+                Bu Parçanın İlanları
+              </Link>
+              {/* Doğrudan sormak isteyenler için */}
               <a
-                href={getWhatsAppUrl(cartMessage)}
+                href={getWhatsAppUrl(askMessage)}
                 target="_blank" rel="noopener noreferrer"
                 className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary-500 text-white transition-colors hover:bg-primary-400"
                 aria-label="WhatsApp ile sor"

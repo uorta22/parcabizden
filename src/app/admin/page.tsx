@@ -1,134 +1,72 @@
 'use client'
 
+/**
+ * Yönetim panosu — pazaryeri odaklı.
+ *
+ * Önceki sürüm ürün ve sipariş sayısı gösteriyordu; ikisi de tek satıcılı
+ * e-ticaret modelinin kalıntısıydı ve pazaryerinde karşılıkları yok.
+ * Burada yalnızca gerçekten ölçebildiğimiz şey var: onay bekleyen başvurular.
+ */
+
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Package, ShoppingCart, TrendingUp, AlertCircle } from 'lucide-react'
-import * as api from '@/lib/api'
-import type { Order } from '@/types/api'
-import type { ShopProduct } from '@/types/shop'
+import { Store, Clock, ArrowRight } from 'lucide-react'
+import { adminSellerList } from '@/lib/api'
 
 export default function AdminDashboard() {
-  const [productCount, setProductCount] = useState(0)
-  const [orderCount, setOrderCount] = useState(0)
-  const [pendingOrders, setPendingOrders] = useState(0)
-  const [recentOrders, setRecentOrders] = useState<Order[]>([])
-  const [loading, setLoading] = useState(true)
+  const [pendingCount, setPendingCount] = useState<number | null>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    async function load() {
-      try {
-        const [prodRes, orderRes] = await Promise.all([
-          api.productList({ per_page: 1 }),
-          api.adminOrderList(1),
-        ])
-        setProductCount(prodRes.total)
-        setOrderCount(orderRes.total)
-        setRecentOrders(orderRes.orders.slice(0, 5))
-        setPendingOrders(orderRes.orders.filter(o => o.status === 'pending').length)
-      } catch {
-        // ignore
-      } finally {
-        setLoading(false)
-      }
-    }
-    load()
+    adminSellerList('pending')
+      .then(res => setPendingCount(res.sellers.length))
+      .catch(() => setError('Başvurular yüklenemedi'))
   }, [])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
-
-  const STATUS_LABELS: Record<string, string> = {
-    pending: 'Beklemede',
-    confirmed: 'Onaylandı',
-    shipped: 'Kargoda',
-    delivered: 'Teslim Edildi',
-    cancelled: 'İptal',
-  }
-
-  const STATUS_COLORS: Record<string, string> = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    confirmed: 'bg-blue-100 text-blue-800',
-    shipped: 'bg-purple-100 text-purple-800',
-    delivered: 'bg-green-100 text-green-800',
-    cancelled: 'bg-red-100 text-red-800',
-  }
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+      <h1 className="mb-6 text-2xl font-bold text-gray-900">Dashboard</h1>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Link href="/admin/urunler" className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+      {error && (
+        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <Link
+          href="/admin/saticilar"
+          className="rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
-              <Package className="w-5 h-5 text-primary-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50">
+              <Clock className="h-5 w-5 text-amber-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{productCount}</p>
-              <p className="text-sm text-gray-500">Toplam Ürün</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {pendingCount === null
+                  ? <span className="inline-block h-7 w-8 animate-pulse rounded bg-gray-100" />
+                  : pendingCount}
+              </p>
+              <p className="text-sm text-gray-500">Onay Bekleyen Başvuru</p>
             </div>
           </div>
         </Link>
 
-        <Link href="/admin/siparisler" className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+        <Link
+          href="/admin/saticilar"
+          className="rounded-xl border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md"
+        >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-50">
+              <Store className="h-5 w-5 text-primary-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">{orderCount}</p>
-              <p className="text-sm text-gray-500">Toplam Sipariş</p>
+              <p className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                Satıcıları Yönet <ArrowRight className="h-3.5 w-3.5" />
+              </p>
+              <p className="text-sm text-gray-500">Onayla, reddet, askıya al</p>
             </div>
           </div>
         </Link>
-
-        <Link href="/admin/siparisler?status=pending" className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-yellow-50 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5 text-yellow-600" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-gray-900">{pendingOrders}</p>
-              <p className="text-sm text-gray-500">Bekleyen Sipariş</p>
-            </div>
-          </div>
-        </Link>
-      </div>
-
-      {/* Recent orders */}
-      <div className="bg-white rounded-xl border border-gray-200">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h2 className="font-semibold text-gray-900">Son Siparişler</h2>
-          <Link href="/admin/siparisler" className="text-sm text-primary-600 hover:underline">Tümünü Gör</Link>
-        </div>
-        {recentOrders.length === 0 ? (
-          <p className="px-5 py-8 text-center text-gray-500 text-sm">Henüz sipariş yok</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {recentOrders.map(order => (
-              <div key={order.id} className="flex items-center justify-between px-5 py-3">
-                <div>
-                  <p className="font-medium text-sm text-gray-900">{order.order_no}</p>
-                  <p className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString('tr-TR')}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-gray-900">
-                    {order.total_price > 0 ? `${order.total_price.toLocaleString('tr-TR')} ₺` : 'Fiyat Sorunuz'}
-                  </span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[order.status] || ''}`}>
-                    {STATUS_LABELS[order.status] || order.status}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   )
