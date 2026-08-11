@@ -1,46 +1,45 @@
 -- ParcaBizden — Row Level Security
 --
--- Kural: her tabloda RLS açık, politika yoksa erişim yok. PHP'de
--- yetkilendirme her endpoint'in ilk satırlarındaki elle yazılmış
--- kontrollerdeydi; biri unutulduğunda tablo sessizce herkese açılıyordu.
--- Burada tersi: yazmayı unutursan kimse göremez.
+-- Kural: her tabloda RLS açık, politika yoksa erişim yok.
+--
+-- PHP'de yetkilendirme her endpoint'in ilk satırlarındaki elle yazılmış
+-- kontrollerdeydi; birini yazmayı unutmak tabloyu sessizce herkese
+-- açıyordu. Burada tersi: unutursan kimse göremez.
 
-alter table profiles             enable row level security;
-alter table cities               enable row level security;
-alter table districts            enable row level security;
+alter table cities                enable row level security;
+alter table districts             enable row level security;
 alter table vehicle_manufacturers enable row level security;
-alter table vehicle_models       enable row level security;
-alter table vehicles             enable row level security;
-alter table vehicle_attributes   enable row level security;
-alter table sellers              enable row level security;
-alter table listings             enable row level security;
-alter table listing_images       enable row level security;
-alter table requests             enable row level security;
-alter table request_items        enable row level security;
-alter table request_item_images  enable row level security;
-alter table request_dispatches   enable row level security;
-alter table offers               enable row level security;
-alter table seller_reviews       enable row level security;
-alter table garage               enable row level security;
-alter table vehicle_maintenance  enable row level security;
+alter table vehicle_models        enable row level security;
+alter table vehicles              enable row level security;
+alter table vehicle_attributes    enable row level security;
+alter table sellers               enable row level security;
+alter table listings              enable row level security;
+alter table listing_images        enable row level security;
+alter table requests              enable row level security;
+alter table request_items         enable row level security;
+alter table request_item_images   enable row level security;
+alter table request_dispatches    enable row level security;
+alter table offers                enable row level security;
+alter table seller_reviews        enable row level security;
 
 -- ── Yardımcılar ───────────────────────────────────────────────
 
-create function is_admin() returns boolean
+create or replace function is_admin() returns boolean
 language sql stable security definer set search_path = public as $$
     select coalesce((select is_admin from profiles where id = auth.uid()), false);
 $$;
 
--- Oturumdaki kullanıcının onaylı satıcı kaydı. Onaysız satıcı ilan
--- veremez; bu kontrol PHP'de her ilan endpoint'inde tekrar ediyordu.
-create function current_seller_id() returns uuid
+-- Oturumdaki kullanıcının ONAYLI satıcı kaydı. Onaysız satıcı ilan
+-- veremez, teklif veremez; PHP'de bu kontrol her satıcı endpoint'inde
+-- ayrı ayrı tekrar ediyordu.
+create or replace function current_seller_id() returns uuid
 language sql stable security definer set search_path = public as $$
     select id from sellers where user_id = auth.uid() and status = 'approved';
 $$;
 
--- ── Referans veri: herkese açık okuma, yazma yok ───────────────
--- Katalog ve coğrafya servis rolüyle yükleniyor; servis rolü RLS'i
--- zaten atlıyor, o yüzden yazma politikası bilerek tanımlanmadı.
+-- ── Referans veri: herkese açık okuma ─────────────────────────
+-- Yazma politikası bilerek yok. Katalog ve coğrafya servis rolüyle
+-- yükleniyor, servis rolü RLS'i zaten atlıyor.
 
 create policy "herkes okur" on cities                for select using (true);
 create policy "herkes okur" on districts             for select using (true);
@@ -48,21 +47,6 @@ create policy "herkes okur" on vehicle_manufacturers for select using (true);
 create policy "herkes okur" on vehicle_models        for select using (true);
 create policy "herkes okur" on vehicles              for select using (true);
 create policy "herkes okur" on vehicle_attributes    for select using (true);
-
--- ── Profil ────────────────────────────────────────────────────
-
-create policy "kendi profilini okur" on profiles
-    for select using (id = auth.uid() or is_admin());
-
-create policy "kendi profilini günceller" on profiles
-    for update using (id = auth.uid())
-    -- is_admin ve account_type'ı kullanıcı kendi değiştiremesin:
-    -- biri yönetici olmanın, diğeri onay beklemeden satıcı olmanın yolu.
-    with check (
-        id = auth.uid()
-        and is_admin     = (select p.is_admin     from profiles p where p.id = auth.uid())
-        and account_type = (select p.account_type from profiles p where p.id = auth.uid())
-    );
 
 -- ── Satıcılar ─────────────────────────────────────────────────
 
@@ -72,9 +56,10 @@ create policy "onaylı mağaza herkese görünür" on sellers
 create policy "kendi başvurusunu oluşturur" on sellers
     for insert with check (user_id = auth.uid());
 
+-- Statüyü satıcı kendi değiştiremez; onay admin işi. WITH CHECK
+-- olmadan satıcı kendini 'approved' yapıp onay sırasını atlardı.
 create policy "kendi mağazasını günceller" on sellers
     for update using (user_id = auth.uid())
-    -- Statüyü satıcı kendi değiştiremez; onay admin işi.
     with check (
         user_id = auth.uid()
         and status = (select s.status from sellers s where s.user_id = auth.uid())
@@ -112,11 +97,6 @@ create policy "satıcı kendi ilanının görselini yönetir" on listing_images
     ));
 
 -- ── Talepler ──────────────────────────────────────────────────
---
--- Misafir talebi access_token ile okunur. Token'ı RLS politikasına
--- gömmek mümkün değil (anon rolde kimlik yok), o yüzden okuma aşağıdaki
--- security definer fonksiyondan geçiyor: id tahmin ederek başkasının
--- telefonuna ulaşmak engellensin.
 
 create policy "kendi talebini okur" on requests
     for select using (user_id = auth.uid() or is_admin());
@@ -127,15 +107,18 @@ create policy "talep açmak üyelik istemez" on requests
 create policy "kendi talebini kapatır" on requests
     for update using (user_id = auth.uid()) with check (user_id = auth.uid());
 
--- Satıcı yalnızca kendisine yönlendirilen talebin kalemlerini görür.
+-- Satıcı yalnızca KENDİSİNE yönlendirilmiş talebin kalemlerini görür.
 create policy "talep kalemi sahibine ve yönlendirilen satıcıya" on request_items
     for select using (
         exists (
             select 1 from requests r
             where r.id = request_id
-              and (r.user_id = auth.uid() or is_admin()
-                   or exists (select 1 from request_dispatches d
-                              where d.request_id = r.id and d.seller_id = current_seller_id()))
+              and (
+                r.user_id = auth.uid()
+                or is_admin()
+                or exists (select 1 from request_dispatches d
+                           where d.request_id = r.id and d.seller_id = current_seller_id())
+              )
         )
     );
 
@@ -164,8 +147,9 @@ create policy "teklifi veren satıcı ve talebi açan görür" on offers
         )
     );
 
--- Satıcı yalnızca kendisine yönlendirilmiş talebe teklif verebilir —
--- yoksa id deneyerek tüm taleplere teklif yağdırılabilir.
+-- Satıcı yalnızca kendisine yönlendirilmiş ve hâlâ açık olan kaleme
+-- teklif verebilir. Bu kontrol olmazsa id deneyerek tüm taleplere
+-- teklif yağdırılabilir.
 create policy "yönlendirilen satıcı teklif verir" on offers
     for insert with check (
         seller_id = current_seller_id()
@@ -185,6 +169,7 @@ create policy "satıcı kendi teklifini geri çeker" on offers
 create policy "satıcı puanı herkese açık" on seller_reviews
     for select using (true);
 
+-- Puanı yalnızca teklifi kabul eden alıcı verebilir.
 create policy "teklifi kabul eden puan verir" on seller_reviews
     for insert with check (
         author_id = auth.uid()
@@ -196,28 +181,24 @@ create policy "teklifi kabul eden puan verir" on seller_reviews
         )
     );
 
--- ── Garaj ─────────────────────────────────────────────────────
-
-create policy "kendi garajı" on garage
-    for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-
-create policy "kendi bakım kaydı" on vehicle_maintenance
-    for all using (exists (
-        select 1 from garage g where g.id = garage_id and g.user_id = auth.uid()
-    ));
-
 -- ══════════════════════════════════════════════════════════════
 --  Misafir talep erişimi
 -- ══════════════════════════════════════════════════════════════
 --
--- Talep detayı yalnızca access_token ile açılır. Fonksiyon token'ı
--- eşleşmezse boş döner; "bulunamadı" ile "yetkisiz" ayrımı yapılmıyor,
--- yoksa id taramasıyla hangi taleplerin var olduğu öğrenilebilirdi.
+-- Talep detayı access_token ile açılır. Token eşleşmezse fonksiyon boş
+-- döner; "bulunamadı" ile "yetkisiz" ayrımı YAPILMIYOR, yoksa id
+-- taranarak hangi taleplerin var olduğu öğrenilebilirdi.
 
-create function request_by_token(p_token text)
+create or replace function request_by_token(p_token text)
 returns table (
-    id uuid, status request_status, vehicle_label text, vin text,
-    contact_name text, contact_phone text, created_at timestamptz, expires_at timestamptz
+    request_id    uuid,
+    status        request_status,
+    vehicle_label text,
+    vin           text,
+    contact_name  text,
+    contact_phone text,
+    created_at    timestamptz,
+    expires_at    timestamptz
 )
 language sql stable security definer set search_path = public as $$
     select r.id, r.status, r.vehicle_label, r.vin,

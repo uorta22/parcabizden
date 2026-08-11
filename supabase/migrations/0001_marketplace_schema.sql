@@ -1,51 +1,40 @@
--- ParcaBizden — Supabase/Postgres şeması
+-- ParcaBizden — pazaryeri şeması
 --
--- PHP + MySQL'in yerini alıyor. Üç yüzey aynı veritabanını kullanıyor:
---   parcabizden.com.tr           alıcı
---   pazaryeri.parcabizden.com.tr satıcı
---   talep.parcabizden.com.tr     talep
+-- Proje daha önce tek satıcılı e-ticaret için kurulmuştu. O yüzey
+-- kaldırıldı; sepet/sipariş/adres/favori tabloları burada düşüyor
+-- (hepsi 0 satır). profiles, garage, vehicle_maintenance ve
+-- chat_messages korunuyor — frontend tipleri (src/types/api.ts) zaten
+-- bu kolonlara göre yazılmış.
 --
--- Yetkilendirme RLS'te. MySQL'de her endpoint'in başında elle yazılan
--- "bu kullanıcı bu satırın sahibi mi" kontrolü vardı; biri unutulduğunda
--- sessizce açık kalıyordu. Burada varsayılan kapalı.
---
--- Auth: Supabase Auth (auth.users). MySQL'deki users tablosu, bcrypt
--- hash'leri ve elle yazılmış JWT kodu taşınmıyor — 3 kullanıcı var,
--- yeniden kaydolmaları taşımaktan ucuz.
+-- Eklenen: araç kataloğu, coğrafya ve pazaryeri (satıcı, ilan, talep,
+-- teklif). Bunlar MySQL'den geliyor; parça katalogları gelmiyor.
 
 -- ══════════════════════════════════════════════════════════════
---  1. Kullanıcı profili
+--  1. Storefront kalıntıları
 -- ══════════════════════════════════════════════════════════════
+
+drop table if exists order_items;
+drop table if exists orders;
+drop table if exists addresses;
+drop table if exists favorites;
+drop table if exists reviews;
+drop type  if exists order_status;
+
+-- ══════════════════════════════════════════════════════════════
+--  2. Profil — alıcı/satıcı ayrımı
+-- ══════════════════════════════════════════════════════════════
+--
+-- Üç yüzey ayrı alan adlarında ama tek veritabanı kullanıyor. Hesabın
+-- hangi yüzeye ait olduğu burada duruyor; satıcı yetkisi ayrıca
+-- sellers.status = 'approved' istiyor, bu kolon tek başına yetki vermez.
 
 create type account_type as enum ('buyer', 'seller');
 
-create table profiles (
-    id           uuid primary key references auth.users(id) on delete cascade,
-    account_type account_type not null default 'buyer',
-    full_name    text,
-    phone        text,
-    is_admin     boolean not null default false,
-    created_at   timestamptz not null default now()
-);
-
--- auth.users'a kayıt düşünce profil otomatik açılsın; uygulama kodunun
--- iki adımı da atmasını beklemek, ikincisi patlayınca profilsiz kullanıcı
--- bırakır.
-create function handle_new_user() returns trigger
-language plpgsql security definer set search_path = public as $$
-begin
-    insert into profiles (id, full_name, phone)
-    values (new.id, new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'phone');
-    return new;
-end;
-$$;
-
-create trigger on_auth_user_created
-    after insert on auth.users
-    for each row execute function handle_new_user();
+alter table profiles
+    add column if not exists account_type account_type not null default 'buyer';
 
 -- ══════════════════════════════════════════════════════════════
---  2. Coğrafya
+--  3. Coğrafya
 -- ══════════════════════════════════════════════════════════════
 
 create table cities (
@@ -63,17 +52,16 @@ create table districts (
 create index districts_city_idx on districts (city_id);
 
 -- ══════════════════════════════════════════════════════════════
---  3. Araç kataloğu  (TecDoc'tan taşınan tek parça)
+--  4. Araç kataloğu
 -- ══════════════════════════════════════════════════════════════
 --
--- Parça katalogları taşınmıyor: 8,4M parça ve 82M parça-araç eşleşmesi
--- pazaryerinde hiçbir işe yaramıyordu — arz satıcı ilanlarından geliyor.
--- Araç kimliği kalıyor, çünkü aracı belli olmayan talep ya da ilan
--- işlenemez.
+-- MySQL'den taşınan tek katalog. Parça tarafı (8,4M parça, 82M
+-- parça-araç eşleşmesi) gelmiyor: pazaryerinde arz satıcı ilanlarından
+-- geliyor, katalogdan değil. Araç kimliği kalıyor çünkü aracı belirsiz
+-- bir talep ya da ilan işlenemez.
 --
--- MySQL'de motor kodu ayrı iki tabloydu (catalog_engines +
--- catalog_vehicle_engines, ~86k satır) ama tek kullanımı kodları
--- birleştirip göstermekti. Diziye indirildi.
+-- id'ler TecDoc'tan geliyor ve MySQL'deki değerlerle aynı kalıyor —
+-- ilan/talep satırları bu id'lere referans veriyor.
 
 create table vehicle_manufacturers (
     id        integer primary key,
@@ -90,25 +78,28 @@ create table vehicle_models (
 );
 create index vehicle_models_manufacturer_idx on vehicle_models (manufacturer_id, name);
 
+-- MySQL'de motor kodu için iki tablo daha vardı (catalog_engines +
+-- catalog_vehicle_engines, ~86k satır). Taşınmadılar: dışa aktarımda
+-- 22.276 aracın HEPSİNDE join boş döndü, yani o tablolar pratikte
+-- kopuktu. Motor kodu vehicle_attributes'tan geliyor ve 21.804 araçta
+-- dolu.
 create table vehicles (
-    id           integer primary key,          -- TecDoc KType
-    model_id     integer not null references vehicle_models(id),
-    description  text,
-    full_name    text,
-    year_from    smallint,
-    year_to      smallint,
-    engine_codes text[] not null default '{}'
+    id          integer primary key,          -- TecDoc KType
+    model_id    integer not null references vehicle_models(id),
+    description text,
+    full_name   text,
+    year_from   smallint,
+    year_to     smallint
 );
 create index vehicles_model_idx on vehicles (model_id, year_from desc);
 
--- Teknik özellikler. MySQL'de 1,72M satırdı; yalnızca UI'ın okuduğu
--- başlıklar taşınıyor (~180k satır): motor hacmi, güç, yakıt tipi,
--- motor kodu, şanzıman.
+-- Yalnızca UI'ın okuduğu başlıklar taşındı: 201.542 satır, 1,72M değil.
 --
 -- (vehicle_id, group, title) BENZERSİZ DEĞİL — bilerek. Aynı araçta
--- "Power" iki kez geçiyor (biri kW biri PS), "Capacity" de öyle (ccm ve
--- litre). UI ikisini ayrı ayrı okuyup birleştiriyor, o yüzden bu tabloda
--- doğal anahtar yok.
+-- "Power" iki kez geçiyor (kW ve PS), "Capacity" de öyle (ccm ve litre);
+-- UI ikisini ayrı okuyup birleştiriyor. Ayrıca katalogda bazı KType'lara
+-- iki motorun verisi karışmış durumda ve arayüz bunu kullanıcıya uyarı
+-- olarak gösteriyor — tekilleştirmek o uyarıyı imkânsız kılardı.
 create table vehicle_attributes (
     id              bigint generated always as identity primary key,
     vehicle_id      integer not null references vehicles(id) on delete cascade,
@@ -118,38 +109,43 @@ create table vehicle_attributes (
 );
 create index vehicle_attributes_vehicle_idx on vehicle_attributes (vehicle_id);
 
+-- Garaj kaydı artık kataloğa bağlanabilir.
+alter table garage
+    add constraint garage_vehicle_fkey
+    foreign key (vehicle_id_ktype) references vehicles(id) on delete set null;
+
 -- ══════════════════════════════════════════════════════════════
---  4. Satıcılar
+--  5. Satıcılar
 -- ══════════════════════════════════════════════════════════════
 
 create type seller_status as enum ('pending_review', 'approved', 'rejected', 'suspended');
 
 create table sellers (
-    id             uuid primary key default gen_random_uuid(),
-    user_id        uuid not null unique references auth.users(id) on delete cascade,
-    store_name     text not null,
-    slug           text not null unique,
-    status         seller_status not null default 'pending_review',
-    city_id        smallint references cities(id),
-    district_id    integer references districts(id),
-    phone          text,
-    tax_number     text,
-    tax_document   text,          -- Storage yolu; herkese açık bucket DEĞİL
-    about          text,
-    rejected_note  text,
-    created_at     timestamptz not null default now(),
-    approved_at    timestamptz
+    id            uuid primary key default gen_random_uuid(),
+    user_id       uuid not null unique references auth.users(id) on delete cascade,
+    store_name    text not null,
+    slug          text not null unique,
+    status        seller_status not null default 'pending_review',
+    city_id       smallint references cities(id),
+    district_id   integer references districts(id),
+    phone         text,
+    tax_number    text,
+    tax_document  text,     -- Storage yolu; bucket herkese açık OLMAMALI
+    about         text,
+    rejected_note text,
+    created_at    timestamptz not null default now(),
+    approved_at   timestamptz
 );
 create index sellers_status_idx on sellers (status, city_id);
 
 -- ══════════════════════════════════════════════════════════════
---  5. İlanlar
+--  6. İlanlar
 -- ══════════════════════════════════════════════════════════════
 
-create type listing_status    as enum ('draft', 'pending_review', 'active', 'paused', 'sold', 'expired', 'rejected');
-create type condition_type    as enum ('cikma', 'sifir', 'yenilenmis');
-create type shipping_payer    as enum ('buyer', 'seller', 'negotiable');
-create type fitment_source    as enum ('seller_declared', 'catalog_verified', 'vin_verified');
+create type listing_status as enum ('draft', 'pending_review', 'active', 'paused', 'sold', 'expired', 'rejected');
+create type condition_type as enum ('cikma', 'sifir', 'yenilenmis');
+create type shipping_payer as enum ('buyer', 'seller', 'negotiable');
+create type fitment_source as enum ('seller_declared', 'catalog_verified', 'vin_verified');
 
 create table listings (
     id                uuid primary key default gen_random_uuid(),
@@ -165,9 +161,9 @@ create table listings (
     year_from         smallint,
     year_to           smallint,
 
-    -- Sabit taksonomi (src/lib/part-categories.ts). MySQL'de TecDoc
-    -- kategori tablosuna FK'ydı ve o listeyi süzmek 7,9 GiB'lık tabloyu
-    -- okumayı gerektiriyordu.
+    -- Sabit taksonomi: src/lib/part-categories.ts.
+    -- MySQL'de bu bir TecDoc kategori tablosuna FK'ydı ve listeyi araca
+    -- göre süzmek 7,9 GiB'lık parça-araç tablosunu okumayı gerektiriyordu.
     category_slug     text,
     part_label        text,
     oem_number        text,
@@ -186,13 +182,15 @@ create table listings (
     expires_at        timestamptz,
     created_at        timestamptz not null default now(),
 
-    -- Kesin fiyat ya da aralık; ikisi de boş ilan aramada sıralanamaz.
+    -- Kesin fiyat ya da aralık: ikisi de boşsa ilan fiyata göre sıralanamaz.
     constraint listings_price_present
         check (price is not null or (price_min is not null and price_max is not null))
 );
 create index listings_browse_idx on listings (status, expires_at, manufacturer_id, model_id, category_slug);
 create index listings_seller_idx on listings (seller_id, status);
-create index listings_search_idx on listings using gin (to_tsvector('simple', coalesce(title,'') || ' ' || coalesce(part_label,'') || ' ' || coalesce(oem_number,'')));
+create index listings_search_idx on listings
+    using gin (to_tsvector('simple',
+        coalesce(title,'') || ' ' || coalesce(part_label,'') || ' ' || coalesce(oem_number,'')));
 
 create table listing_images (
     id         uuid primary key default gen_random_uuid(),
@@ -203,12 +201,13 @@ create table listing_images (
 create index listing_images_listing_idx on listing_images (listing_id, sort_order);
 
 -- ══════════════════════════════════════════════════════════════
---  6. Talepler
+--  7. Talepler
 -- ══════════════════════════════════════════════════════════════
 --
 -- Talep açmak üyelik istemiyor — ürünün bilinçli farkı. Misafir talebi
--- access_token ile okunuyor; o yüzden requests üzerinde anon SELECT
--- politikası YOK, erişim 8. bölümdeki security definer fonksiyondan.
+-- access_token ile okunuyor; token RLS politikasına gömülemediği için
+-- (anon rolde kimlik yok) okuma 0002'deki security definer fonksiyondan
+-- geçiyor.
 
 create type request_status      as enum ('open', 'partially_closed', 'closed', 'expired');
 create type request_item_status as enum ('open', 'fulfilled', 'cancelled');
@@ -263,7 +262,7 @@ create table request_dispatches (
 );
 
 -- ══════════════════════════════════════════════════════════════
---  7. Teklifler
+--  8. Teklifler
 -- ══════════════════════════════════════════════════════════════
 
 create type offer_status as enum ('pending', 'accepted', 'rejected', 'withdrawn');
@@ -279,7 +278,7 @@ create table offers (
     status          offer_status not null default 'pending',
     created_at      timestamptz not null default now(),
 
-    -- Bir satıcı aynı talep kalemine ikinci teklif veremesin.
+    -- Bir satıcı aynı talep kalemine ikinci teklifi veremesin.
     unique (request_item_id, seller_id)
 );
 create index offers_seller_idx on offers (seller_id, status);
@@ -294,29 +293,3 @@ create table seller_reviews (
     created_at timestamptz not null default now()
 );
 create index seller_reviews_seller_idx on seller_reviews (seller_id);
-
--- ══════════════════════════════════════════════════════════════
---  8. Garaj
--- ══════════════════════════════════════════════════════════════
-
-create table garage (
-    id           uuid primary key default gen_random_uuid(),
-    user_id      uuid not null references auth.users(id) on delete cascade,
-    vehicle_id   integer references vehicles(id),
-    label        text,
-    plate        text,
-    vin          text,
-    created_at   timestamptz not null default now()
-);
-create index garage_user_idx on garage (user_id);
-
-create table vehicle_maintenance (
-    id         uuid primary key default gen_random_uuid(),
-    garage_id  uuid not null references garage(id) on delete cascade,
-    title      text not null,
-    done_at    date,
-    odometer   integer,
-    note       text,
-    created_at timestamptz not null default now()
-);
-create index vehicle_maintenance_garage_idx on vehicle_maintenance (garage_id);
