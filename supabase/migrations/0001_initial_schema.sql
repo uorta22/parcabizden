@@ -101,16 +101,22 @@ create table vehicles (
 );
 create index vehicles_model_idx on vehicles (model_id, year_from desc);
 
--- Teknik özellikler. MySQL'de 1,72M satırdı; UI özette yalnızca altı
--- başlık okuyor (motor hacmi, güç, yakıt, motor kodu, şanzıman, gövde).
--- Hangi alt kümenin taşınacağı 0002'de veriyle birlikte belirleniyor.
+-- Teknik özellikler. MySQL'de 1,72M satırdı; yalnızca UI'ın okuduğu
+-- başlıklar taşınıyor (~180k satır): motor hacmi, güç, yakıt tipi,
+-- motor kodu, şanzıman.
+--
+-- (vehicle_id, group, title) BENZERSİZ DEĞİL — bilerek. Aynı araçta
+-- "Power" iki kez geçiyor (biri kW biri PS), "Capacity" de öyle (ccm ve
+-- litre). UI ikisini ayrı ayrı okuyup birleştiriyor, o yüzden bu tabloda
+-- doğal anahtar yok.
 create table vehicle_attributes (
+    id              bigint generated always as identity primary key,
     vehicle_id      integer not null references vehicles(id) on delete cascade,
     attribute_group text not null,
     display_title   text not null,
-    display_value   text,
-    primary key (vehicle_id, attribute_group, display_title)
+    display_value   text
 );
+create index vehicle_attributes_vehicle_idx on vehicle_attributes (vehicle_id);
 
 -- ══════════════════════════════════════════════════════════════
 --  4. Satıcılar
