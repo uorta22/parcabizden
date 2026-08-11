@@ -15,7 +15,7 @@ interface GarageCardProps {
 
 function GarageCard({ vehicle, vehicleImage, onRemove }: GarageCardProps) {
   const [imgError, setImgError] = useState(false)
-  const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
+  const partsHref = `/ilanlar?q=${encodeURIComponent(`${vehicle.brand_name} ${vehicle.generation_name}`)}`
   const detailHref = `/hesabim/garaj/${vehicle.id}`
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracim icin yardim istiyorum.`
 

@@ -24,7 +24,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import { fetchMySeller, type SellerProfile } from '@/lib/api'
 import { createListing, type ConditionType, type ShippingPayer } from '@/lib/listings'
-import { getTecVehicleCategories, type TecCategoriesResponse } from '@/lib/tecdoc'
+import { PART_CATEGORY_GROUPS } from '@/lib/part-categories'
 import VehiclePickerModal, { type VehicleSelection } from '@/components/landing/VehiclePickerModal'
 
 const MAX_IMAGES = 8
@@ -140,9 +140,7 @@ function ListingForm() {
   const [yearFrom, setYearFrom] = useState('')
   const [yearTo, setYearTo] = useState('')
 
-  const [categories, setCategories] = useState<TecCategoriesResponse['flat']>([])
-  const [categoriesLoading, setCategoriesLoading] = useState(false)
-  const [categoryId, setCategoryId] = useState('')
+  const [categorySlug, setCategorySlug] = useState('')
 
   // ── Fotoğraflar ──
   const [images, setImages] = useState<ImageItem[]>([])
@@ -159,14 +157,9 @@ function ListingForm() {
   // Unmount olduğunda tüm blob URL'lerini temizle.
   useEffect(() => () => { imagesRef.current.forEach(img => URL.revokeObjectURL(img.url)) }, [])
 
-  // Seçilen araca göre kategori listesi + yıl otomatik doldurma.
+  // Araç seçilince uyumlu yıl aralığını öner.
   useEffect(() => {
-    if (!selection) { setCategories([]); setCategoryId(''); return }
-    setCategoriesLoading(true)
-    getTecVehicleCategories(selection.vehicle.id)
-      .then(r => setCategories(r.flat))
-      .catch(() => setCategories([]))
-      .finally(() => setCategoriesLoading(false))
+    if (!selection) return
     if (selection.vehicle.year_from) setYearFrom(String(selection.vehicle.year_from))
     if (selection.vehicle.year_to) setYearTo(String(selection.vehicle.year_to))
   }, [selection])
@@ -300,7 +293,7 @@ function ListingForm() {
         vehicle_label: selection?.label,
         year_from: yearFrom.trim() ? Number(yearFrom) : undefined,
         year_to: yearTo.trim() ? Number(yearTo) : undefined,
-        category_id: categoryId ? Number(categoryId) : undefined,
+        category_slug: categorySlug || undefined,
         oem_number: oemNumber.trim() || undefined,
         images: images.map(i => i.file),
       })
@@ -403,19 +396,20 @@ function ListingForm() {
                   </button>
                 </div>
               </div>
-
-              {categories.length > 0 && (
-                <select value={categoryId} onChange={e => setCategoryId(e.target.value)} disabled={categoriesLoading} className={INPUT}>
-                  <option value="">{categoriesLoading ? 'Yükleniyor…' : 'Kategori seçin (opsiyonel)'}</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {[c.assembly_group_tr, c.description_tr ?? c.description_en].filter(Boolean).join(' · ')}
-                    </option>
-                  ))}
-                </select>
-              )}
             </div>
           )}
+
+          <label className="mt-4 block">
+            <span className="mb-1 block text-xs text-gray-500">Kategori</span>
+            <select value={categorySlug} onChange={e => setCategorySlug(e.target.value)} className={INPUT}>
+              <option value="">Kategori seçin (opsiyonel)</option>
+              {PART_CATEGORY_GROUPS.map(g => (
+                <optgroup key={g.slug} label={g.title}>
+                  {g.items.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </label>
 
           {(selection || vehicleSkipped) && (
             <div className="mt-4 grid gap-3 sm:grid-cols-2">

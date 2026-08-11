@@ -21,10 +21,10 @@ test('/sitemap.xml 200 döner', async ({ request }) => {
   expect(response.status()).toBe(200)
 })
 
-test('/parcalar ve /arac/18465 title\'ında "| ParcaBizden" sadece bir kez geçer', async ({ page }) => {
-  await page.goto('/parcalar')
-  const parcalarTitle = await page.title()
-  expect(countOccurrences(parcalarTitle, '| ParcaBizden')).toBe(1)
+test('/ilanlar ve /arac/18465 title\'ında "| ParcaBizden" sadece bir kez geçer', async ({ page }) => {
+  await page.goto('/ilanlar')
+  const ilanlarTitle = await page.title()
+  expect(countOccurrences(ilanlarTitle, '| ParcaBizden')).toBe(1)
 
   await page.goto('/arac/18465')
   const aracTitle = await page.title()

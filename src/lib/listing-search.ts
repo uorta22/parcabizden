@@ -21,7 +21,7 @@ export interface ListingSearchParams {
   manufacturer_id?: number
   model_id?: number
   vehicle_id?: number
-  category_id?: number
+  category?: string
   city_id?: number
   condition_type?: ListingConditionType
   price_min?: number
@@ -81,7 +81,7 @@ export async function searchListings(params: ListingSearchParams = {}): Promise<
   if (params.manufacturer_id) search.set('manufacturer_id', String(params.manufacturer_id))
   if (params.model_id) search.set('model_id', String(params.model_id))
   if (params.vehicle_id) search.set('vehicle_id', String(params.vehicle_id))
-  if (params.category_id) search.set('category_id', String(params.category_id))
+  if (params.category) search.set('category', params.category)
   if (params.city_id) search.set('city_id', String(params.city_id))
   if (params.condition_type) search.set('condition_type', params.condition_type)
   if (params.price_min !== undefined) search.set('price_min', String(params.price_min))

@@ -26,7 +26,7 @@ const KURUMSAL = [
 
 const HIZLI_ERISIM = [
   { label: 'Anlaşmalı Servisler',    href: '/iletisim' },
-  { label: 'Ürün Kataloğu',          href: '/parcalar' },
+  { label: 'Ürün Kataloğu',          href: '/ilanlar' },
   { label: 'Bakım Robotu',           href: '/hesabim/garaj' },
   { label: 'Garajım',                href: '/hesabim/garaj' },
   { label: 'Şasi Sorgulama',         href: '/' },
@@ -102,37 +102,37 @@ export default function Footer() {
           <Column title="Hızlı Erişim" items={HIZLI_ERISIM} />
 
           <ListCol title="Popüler Markalar">
-            <li><Link href="/parcalar" className={linkCls}>Tüm Markalar</Link></li>
+            <li><Link href="/ilanlar" className={linkCls}>Tüm Markalar</Link></li>
             {MARKALAR.map(m => (
               <li key={m}>
-                <Link href={`/parcalar?q=${slugify(m)}`} className={linkCls}>{m} Yedek Parça</Link>
+                <Link href={`/ilanlar?q=${encodeURIComponent(m)}`} className={linkCls}>{m} Yedek Parça</Link>
               </li>
             ))}
           </ListCol>
 
           <ListCol title="Popüler Araçlar">
-            <li><Link href="/parcalar" className={linkCls}>Tüm Araçlar</Link></li>
+            <li><Link href="/ilanlar" className={linkCls}>Tüm Araçlar</Link></li>
             {ARACLAR.map(([name, brandId]) => (
               <li key={name}>
-                <Link href={`/parcalar?brand=${brandId}`} className={linkCls}>{name} Yedek Parça</Link>
+                <Link href={`/ilanlar?manufacturer_id=${brandId}`} className={linkCls}>{name} Yedek Parça</Link>
               </li>
             ))}
           </ListCol>
 
           <ListCol title="Popüler Modeller">
-            <li><Link href="/parcalar" className={linkCls}>Tüm Modeller</Link></li>
+            <li><Link href="/ilanlar" className={linkCls}>Tüm Modeller</Link></li>
             {MODELLER.map(m => (
               <li key={m}>
-                <Link href={`/parcalar?q=${slugify(m)}`} className={linkCls}>{m} Yedek Parça</Link>
+                <Link href={`/ilanlar?q=${encodeURIComponent(m)}`} className={linkCls}>{m} Yedek Parça</Link>
               </li>
             ))}
           </ListCol>
 
           <ListCol title="Popüler Kategoriler">
-            <li><Link href="/parcalar" className={linkCls}>Tüm Kategoriler</Link></li>
+            <li><Link href="/ilanlar" className={linkCls}>Tüm Kategoriler</Link></li>
             {KATEGORILER.map(k => (
               <li key={k}>
-                <Link href={`/parcalar?q=${slugify(k)}`} className={linkCls}>{k}</Link>
+                <Link href={`/ilanlar?q=${encodeURIComponent(k)}`} className={linkCls}>{k}</Link>
               </li>
             ))}
           </ListCol>

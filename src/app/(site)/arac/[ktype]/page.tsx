@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * Vehicle Hub — VIN ya da VehicleFinder sonrası araç kartı sayfası.
+ * Vehicle Hub — VIN ya da araç seçici sonrası araç kartı sayfası.
  *
  * URL: /arac/[ktype]  (ktype = catalog_vehicles.id)
  *
@@ -29,7 +29,6 @@ import { getTecVehicles, getTecModels, getTecVehicleAttributes, getTecBrands,
 import { getWhatsAppUrl } from '@/lib/config'
 import { trGroup, trTitle, trValue } from '@/lib/tecdoc-i18n'
 import { BrandLogo } from '@/components/BrandLogos'
-import VehiclePartsSection from '@/components/VehiclePartsSection'
 
 type Tab = 'garaj' | 'arac' | 'sasi' | 'aracim'
 
@@ -210,7 +209,7 @@ function VehicleHubInner() {
                 {/* Aksiyon link'leri */}
                 <div className="mt-auto flex flex-wrap items-center gap-x-1 gap-y-2 pt-6">
                   <ActionLink
-                    href={`/parcalar?vehicle=${ktype}`}
+                    href={`/ilanlar?q=${encodeURIComponent(headline || '')}`}
                     icon={<Wrench className="h-4 w-4" />}
                   >
                     Yedek Parçalar
@@ -266,10 +265,6 @@ function VehicleHubInner() {
             </div>
           )}
         </article>
-
-        {/* Teknik özellik tabs altında ek bilgi */}
-        {/* Yedek Parçalar — kategori grid (otoparcasan tarzı) */}
-        <VehiclePartsSection vehicleId={ktype} />
 
         {shownAttrs && Object.keys(shownAttrs.groups).length > 0 && (
           <section className="mt-6 rounded-2xl border border-gray-200 bg-white p-5 md:p-7">

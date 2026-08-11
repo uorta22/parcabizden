@@ -51,7 +51,7 @@ function request_parse_items(): array {
             'part_label'  => $label,
             'quantity'    => max(1, (int)($row['quantity'] ?? 1)),
             'oem_number'  => (trim((string)($row['oem_number'] ?? '')) ?: null),
-            'category_id' => (($v = trim((string)($row['category_id'] ?? ''))) === '' ? null : (int)$v),
+            'category_slug' => (($v = strtolower(trim((string)($row['category_slug'] ?? '')))) !== '' && preg_match('/^[a-z0-9-]{1,48}$/', $v) ? $v : null),
             'note'        => (mb_substr(trim((string)($row['note'] ?? '')), 0, 500) ?: null),
         ];
     }
@@ -76,17 +76,17 @@ function request_normalize_phone(string $raw): string {
  * Sıra: (1) aynı marka/kategoride aktif ilanı olan satıcılar,
  *       (2) aynı şehirdeki satıcılar, (3) hiçbiri yoksa tüm onaylı satıcılar.
  */
-function request_dispatch($pdo, int $requestId, ?int $manufacturerId, ?int $cityId, array $categoryIds): int {
+function request_dispatch($pdo, int $requestId, ?int $manufacturerId, ?int $cityId, array $categorySlugs): int {
     $sellerIds = [];
 
     // (1) İlgili ilanı olan satıcılar — en isabetli eşleşme.
-    if ($manufacturerId !== null || $categoryIds) {
+    if ($manufacturerId !== null || $categorySlugs) {
         $cond = [];
         $params = [];
         if ($manufacturerId !== null) { $cond[] = 'l.manufacturer_id = ?'; $params[] = $manufacturerId; }
-        if ($categoryIds) {
-            $cond[] = 'l.category_id IN (' . implode(',', array_fill(0, count($categoryIds), '?')) . ')';
-            $params = array_merge($params, $categoryIds);
+        if ($categorySlugs) {
+            $cond[] = 'l.category_slug IN (' . implode(',', array_fill(0, count($categorySlugs), '?')) . ')';
+            $params = array_merge($params, $categorySlugs);
         }
         $sql = "SELECT DISTINCT l.seller_id
                 FROM listings l JOIN sellers s ON s.id = l.seller_id
@@ -164,13 +164,13 @@ function handle_request_create($pdo): void {
         $requestId = (int)$pdo->lastInsertId();
 
         $ins = $pdo->prepare(
-            'INSERT INTO request_items (request_id, category_id, part_label, oem_number, quantity, note)
+            'INSERT INTO request_items (request_id, category_slug, part_label, oem_number, quantity, note)
              VALUES (?,?,?,?,?,?)'
         );
-        $categoryIds = [];
+        $categorySlugs = [];
         foreach ($items as $it) {
-            $ins->execute([$requestId, $it['category_id'], $it['part_label'], $it['oem_number'], $it['quantity'], $it['note']]);
-            if ($it['category_id']) $categoryIds[] = $it['category_id'];
+            $ins->execute([$requestId, $it['category_slug'], $it['part_label'], $it['oem_number'], $it['quantity'], $it['note']]);
+            if ($it['category_slug']) $categorySlugs[] = $it['category_slug'];
         }
 
         $pdo->commit();
@@ -181,7 +181,7 @@ function handle_request_create($pdo): void {
     }
 
     // Dağıtım transaction dışında: başarısız olsa bile talep kaybolmamalı.
-    $dispatched = request_dispatch($pdo, $requestId, $manufacturerId, $cityId, array_unique($categoryIds));
+    $dispatched = request_dispatch($pdo, $requestId, $manufacturerId, $cityId, array_unique($categorySlugs));
 
     jsonResponse([
         'success' => true,

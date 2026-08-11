@@ -26,7 +26,7 @@ export interface CreateListingInput {
   vehicle_label?: string
   year_from?: number
   year_to?: number
-  category_id?: number
+  category_slug?: string
   oem_number?: string
   images: File[]
 }
@@ -54,7 +54,7 @@ export async function createListing(input: CreateListingInput): Promise<CreatedL
   if (input.vehicle_label) form.set('vehicle_label', input.vehicle_label)
   if (input.year_from) form.set('year_from', String(input.year_from))
   if (input.year_to) form.set('year_to', String(input.year_to))
-  if (input.category_id) form.set('category_id', String(input.category_id))
+  if (input.category_slug) form.set('category_slug', String(input.category_slug))
   if (input.oem_number) form.set('oem_number', input.oem_number)
   for (const file of input.images) form.append('images[]', file)
 

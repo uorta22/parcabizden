@@ -60,6 +60,10 @@ for (const path of [
   '/sepet', '/urunler',
   '/hesabim/siparisler', '/hesabim/adresler', '/hesabim/favoriler',
   '/admin/urunler', '/admin/siparisler',
+  // Parça kataloğu: 21 GiB'lık iki katalog tablosuyla birlikte kaldırıldı.
+  // Pazaryerinde arz ilanlardan gelir, TecDoc parça listesinden değil.
+  '/parcalar', '/parca/1234567', '/parcalar/fren/fren-diski',
+  '/api/brands', '/api/generations',
 ]) {
   test(`kaldırılan e-ticaret yolu ${path} geri gelmedi`, async ({ request }) => {
     const response = await request.get(`${BUYER}${path}`)

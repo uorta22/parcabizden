@@ -182,68 +182,7 @@ export async function getTecVehicleAttributes(vehicleId: number): Promise<TecAtt
   return await tdFetch<TecAttributeGroups>('tecdoc_vehicle_attributes', { vehicle_id: vehicleId })
 }
 
-/** Araca uyan parça kategorileri (assembly_group altında nest). */
-export async function getTecVehicleCategories(vehicleId: number): Promise<TecCategoriesResponse> {
-  const data = await tdFetch<any>('tecdoc_vehicle_categories', { vehicle_id: vehicleId })
-  return {
-    vehicle_id: toInt(data.vehicle_id),
-    tree: Object.fromEntries(
-      Object.entries(data.tree || {}).map(([group, nodes]: [string, any]) => [
-        group,
-        (nodes as any[]).map(n => ({
-          id: toInt(n.id),
-          description_tr: n.description_tr ?? null,
-          description_en: n.description_en ?? null,
-          part_count: toInt(n.part_count),
-        })),
-      ])
-    ),
-    flat: (data.flat || []).map((c: any) => ({
-      id: toInt(c.id),
-      assembly_group_tr: c.assembly_group_tr ?? null,
-      assembly_group_en: c.assembly_group_en ?? null,
-      description_tr: c.description_tr ?? null,
-      description_en: c.description_en ?? null,
-      part_count: toInt(c.part_count),
-    })),
-  }
-}
 
-/** Araca + kategoriye uyan parçalar (sayfalı). */
-export async function getTecVehicleParts(
-  vehicleId: number,
-  categoryId: number,
-  page = 1,
-  limit = 50
-): Promise<TecPartsResponse> {
-  const data = await tdFetch<any>('tecdoc_vehicle_parts', {
-    vehicle_id: vehicleId,
-    category_id: categoryId,
-    page,
-    limit,
-  })
-  return {
-    vehicle_id: toInt(data.vehicle_id),
-    category_id: toInt(data.category_id),
-    page: toInt(data.page),
-    limit: toInt(data.limit),
-    total: toInt(data.total),
-    has_more: !!data.has_more,
-    parts: (data.parts || []).map((p: any) => ({
-      id: toInt(p.id),
-      supplier_id: toInt(p.supplier_id),
-      part_number: p.part_number,
-      supplier_name: p.supplier_name ?? null,
-      supplier_matchcode: p.supplier_matchcode ?? null,
-      images: Array.isArray(p.images) ? p.images.map((i: any) => ({
-        url: i.url ? absoluteImageUrl(i.url) : null,
-        name: i.name ?? null,
-        type: i.type ?? 'Picture',
-      })) : [],
-      cover_url: p.cover_url ? absoluteImageUrl(p.cover_url) : null,
-    })),
-  }
-}
 
 /** Backend göreceli (/uploads/...) yol döndürürse, mutlaka API_BASE'i ön eke ekle. */
 function absoluteImageUrl(p: string): string {
@@ -251,55 +190,7 @@ function absoluteImageUrl(p: string): string {
   return `${API_BASE}${p.startsWith('/') ? '' : '/'}${p}`
 }
 
-/** OEM/parça numarası ile arama. */
-export async function searchTecParts(q: string): Promise<TecPart[]> {
-  if (q.trim().length < 3) return []
-  const data = await tdFetch<{ results: any[] }>('tecdoc_search', { q: q.trim() })
-  return (data.results || []).map(r => ({
-    id: toInt(r.id),
-    supplier_id: toInt(r.supplier_id),
-    part_number: r.part_number,
-    supplier_name: r.supplier_name ?? null,
-  }))
-}
 
-/** Parça detayı: cross-ref + uyumlu araçlar + görseller. */
-export async function getTecPartDetail(partId: number): Promise<TecPartDetail> {
-  const data = await tdFetch<{ part: any }>('tecdoc_part_detail', { part_id: partId })
-  const p = data.part
-  return {
-    id: toInt(p.id),
-    supplier_id: toInt(p.supplier_id),
-    part_number: p.part_number,
-    supplier_name: p.supplier_name ?? null,
-    supplier_matchcode: p.supplier_matchcode ?? null,
-    images: Array.isArray(p.images) ? p.images.map((i: any) => ({ name: i.picture_name ?? i.name, type: i.doc_type ?? i.type })) : [],
-    cross_references: (p.cross_references || []).map((c: any) => ({
-      ref_supplier_id: toInt(c.ref_supplier_id),
-      ref_part_number: c.ref_part_number,
-      ref_supplier_name: c.ref_supplier_name ?? null,
-      ref_type: c.ref_type,
-    })),
-    compatible_vehicles: (p.compatible_vehicles || []).map((v: any) => ({
-      id: toInt(v.id),
-      description: v.description ?? null,
-      year_from: toIntOrNull(v.year_from),
-      year_to: toIntOrNull(v.year_to),
-      model_name: v.model_name,
-      manufacturer_name: v.manufacturer_name,
-    })),
-  }
-}
 
 // ==================== TecDoc Görsel URL'i ====================
 
-/**
- * Natro'da /api.parcabizden.com.tr/uploads/ altında görseller var.
- * picture_name → doğrudan URL eşlemesi.
- */
-export function tecPartImageUrl(pictureName: string): string {
-  // Backend tarafında resolved path'i frontend'de tahmin etmek yerine
-  // doğrudan kullan. Eğer Natro'da farklı bir alt yol varsa bu fonksiyonu güncelle.
-  const base = process.env.NEXT_PUBLIC_TECDOC_IMAGES_URL || `${API_BASE}/uploads`
-  return `${base}/${pictureName}`
-}

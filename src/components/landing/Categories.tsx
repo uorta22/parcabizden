@@ -1,70 +1,29 @@
 /**
- * Categories — 5 ana grup, her grup görsel ikon + accent tonu.
+ * Categories — parça kategorileri grid'i.
  *
- * Otoparcasan tarzı görsel kategori grid'i:
- *  • Sol üst: turuncu ikon kutusu
- *  • Sağ: başlık + alt kategori chip'leri
- *  • Hover: kart hafif lift + accent border
- *
- * Alt chip tıklayınca /parcalar?cat=<id>'a gider (Faz 4.3'te
- * gerçek catalog_categories.id eşlemesi yapılacak).
+ * Liste @/lib/part-categories'ten geliyor: satıcının ilan verirken seçtiği
+ * kategoriyle buradaki chip'ler aynı slug'ı kullansın diye. Chip /ilanlar'a
+ * kategori filtresiyle gider.
  */
 
 import Link from 'next/link'
 import {
-  Disc3, Cog, Wrench, Zap, Car as CarIcon,
+  Disc3, Cog, Wrench, Zap, Car as CarIcon, Settings2, Armchair,
 } from 'lucide-react'
+import { PART_CATEGORY_GROUPS } from '@/lib/part-categories'
 
 const ACCENT = '#ff7a1a'
 
-type Group = {
-  icon: typeof Disc3
-  title: string
-  items: { label: string }[]
+const GROUP_ICONS: Record<string, typeof Disc3> = {
+  'fren-debriyaj': Disc3,
+  'motor-yakit': Cog,
+  'suspansiyon-direksiyon': Wrench,
+  'elektrik-aydinlatma': Zap,
+  'kaporta-trim': CarIcon,
+  'sanziman-aktarma': Settings2,
+  'ic-donanim': Armchair,
 }
 
-const GROUPS: Group[] = [
-  {
-    icon: Disc3,
-    title: 'Fren ve Debriyaj',
-    items: [
-      { label: 'Fren Diski' }, { label: 'Fren Balatası' }, { label: 'Fren Kaliperi' },
-      { label: 'Fren Hortumları' }, { label: 'Debriyaj Seti' }, { label: 'Debriyaj Pompası' },
-    ],
-  },
-  {
-    icon: Cog,
-    title: 'Motor ve Yakıt',
-    items: [
-      { label: 'Triger Kayışı' }, { label: 'Conta Setleri' }, { label: 'Yağ Filtresi' },
-      { label: 'Yakıt Filtresi' }, { label: 'Hava Filtresi' }, { label: 'Buji ve Bobin' },
-    ],
-  },
-  {
-    icon: Wrench,
-    title: 'Süspansiyon ve Direksiyon',
-    items: [
-      { label: 'Amortisör' }, { label: 'Yay (Helezon)' }, { label: 'Salıncak Takımı' },
-      { label: 'Rotil ve Rot' }, { label: 'Tekerlek Yatağı' }, { label: 'Direksiyon Mili' },
-    ],
-  },
-  {
-    icon: Zap,
-    title: 'Elektrik ve Aydınlatma',
-    items: [
-      { label: 'Akü' }, { label: 'Marş Motoru' }, { label: 'Alternatör' },
-      { label: 'Far ve Sis' }, { label: 'Ampul ve LED' }, { label: 'ABS / ESP Sensörleri' },
-    ],
-  },
-  {
-    icon: CarIcon,
-    title: 'Kaporta ve Trim',
-    items: [
-      { label: 'Tampon ve Izgara' }, { label: 'Çamurluk' }, { label: 'Kaput' },
-      { label: 'Ayna ve Cam' }, { label: 'Silecek Sistemi' }, { label: 'Diğer Donanım' },
-    ],
-  },
-]
 
 export default function Categories() {
   return (
@@ -87,7 +46,9 @@ export default function Categories() {
         </header>
 
         <ul className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {GROUPS.map(({ icon: Icon, title, items }) => (
+          {PART_CATEGORY_GROUPS.map(({ slug: groupSlug, title, items }) => {
+            const Icon = GROUP_ICONS[groupSlug] ?? Cog
+            return (
             <li key={title}>
               <article className="h-full rounded-xl border border-gray-200 bg-white p-5 transition-all hover:-translate-y-0.5 hover:border-[#ff7a1a]/40 hover:shadow-md">
                 <header className="mb-4 flex items-center gap-3">
@@ -101,9 +62,9 @@ export default function Categories() {
                 </header>
                 <ul className="flex flex-wrap gap-1.5">
                   {items.map(it => (
-                    <li key={it.label}>
+                    <li key={it.slug}>
                       <Link
-                        href={`/ilanlar?q=${encodeURIComponent(it.label)}`}
+                        href={`/ilanlar?category=${it.slug}`}
                         className="inline-block rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700 transition-colors hover:border-[#ff7a1a]/50 hover:text-[#ff7a1a]"
                       >
                         {it.label}
@@ -113,7 +74,8 @@ export default function Categories() {
                 </ul>
               </article>
             </li>
-          ))}
+            )
+          })}
         </ul>
       </div>
     </section>

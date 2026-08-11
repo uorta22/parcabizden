@@ -12,5 +12,5 @@ import { redirect } from 'next/navigation'
  * Eski uygulama: git show <commit>:src/app/ai-asistan/page.tsx
  */
 export default function AiAsistanPage() {
-  redirect('/parcalar')
+  redirect('/ilanlar')
 }

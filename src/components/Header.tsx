@@ -38,16 +38,8 @@ export default function Header() {
     const q = searchQuery.trim()
     if (!q) return
 
-    // OEM numarası tespiti: harf+rakam karışımı, 6-20 karakter, boşluk yok
-    const isOem = /^[A-Za-z0-9.\-/]{6,20}$/.test(q) && /\d/.test(q) && /[A-Za-z]/.test(q)
-
-    if (isOem) {
-      router.push(`/parca/${encodeURIComponent(q)}`)
-    } else {
-      // 'q' /parcalar'da araç seçildikten sonra kategori eşleştirmede kullanılıyor;
-      // sayfa arama terimini görünür şekilde taşıyor (bkz. parcalar/page.tsx).
-      router.push(`/parcalar?q=${encodeURIComponent(q)}`)
-    }
+    // Tek arama kutusu: OEM de parça adı da ilan aramasına gider.
+    router.push(`/ilanlar?q=${encodeURIComponent(q)}`)
     setSearchQuery('')
     setIsMenuOpen(false)
   }
@@ -93,16 +85,6 @@ export default function Header() {
                 İlanlar
               </Link>
 
-              {/* Katalog — araç seçerek uyumlu parçaya inme */}
-              <Link
-                href="/parcalar"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive('/parcalar') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <ShoppingBag className="w-4 h-4" />
-                Katalog
-              </Link>
 
               {/* Satıcı kazanımı — arz tarafı ürünün darboğazı, girişi görünür tut.
                   Ayrı origin: <Link> değil <a> olmalı. */}
@@ -213,7 +195,7 @@ export default function Header() {
             <nav className="flex flex-col gap-1">
               {[
                 { href: '/ilanlar', label: 'İlanlar', icon: Tag },
-                { href: '/parcalar', label: 'Katalog', icon: Package },
+                { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/iletisim', label: 'İletişim' },
               ].map(link => (

@@ -62,32 +62,11 @@ async function fetchApi<T>(endpoint: string, options?: RequestInit): Promise<T> 
 
 // ==================== Brands ====================
 
-export async function getBrands(popular?: boolean): Promise<Brand[]> {
-  const params = popular ? '?popular=1' : ''
-  const res = await fetchApi<ApiResponse<Brand[]>>(`/brands${params}`)
-  return res.data
-}
-
 // ==================== Models ====================
-
-export async function getModels(brandId: number): Promise<Model[]> {
-  const res = await fetchApi<ApiResponse<Model[]>>(`/models?brand_id=${brandId}`)
-  return res.data
-}
 
 // ==================== Segments ====================
 
-export async function getSegments(modelId: number): Promise<Segment[]> {
-  const res = await fetchApi<ApiResponse<Segment[]>>(`/segments?model_id=${modelId}`)
-  return res.data
-}
-
 // ==================== Years ====================
-
-export async function getYears(segmentId: number): Promise<number[]> {
-  const res = await fetchApi<ApiResponse<number[]>>(`/years?segment_id=${segmentId}`)
-  return res.data
-}
 
 // ==================== Auth (action-based) ====================
 
@@ -409,133 +388,15 @@ function cacheSet<K, V>(map: Map<K, CacheEntry<V>>, key: K, value: V): void {
 
 const categoriesCache = new Map<string, CacheEntry<{ categories: VehicleCategory[]; total_parts: number }>>()
 const nodesCache = new Map<string, CacheEntry<{ nodes: VehicleNode[] }>>()
-const brandsCache: { data: { brands: AutodataBrand[] } | null; timestamp: number } = { data: null, timestamp: 0 }
-
-export async function fetchVehicleCategories(brand: string, gen: string) {
-  const key = `${brand}_${gen}`
-  const cached = categoriesCache.get(key)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
-
-  const data = await actionFetch<{ categories: VehicleCategory[]; total_parts: number }>({
-    action: 'categories', brand, gen,
-  })
-  cacheSet(categoriesCache, key, data)
-  return data
-}
-
-export async function fetchVehicleNodes(brand: string, gen: string, cat: string) {
-  const key = `${brand}_${gen}_${cat}`
-  const cached = nodesCache.get(key)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
-
-  const data = await actionFetch<{ nodes: VehicleNode[] }>({ action: 'nodes', brand, gen, cat })
-  cacheSet(nodesCache, key, data)
-  return data
-}
-
-export function fetchVehicleParts(brand: string, gen: string, node: string) {
-  return actionFetch<{ parts: VehiclePart[] }>({ action: 'parts', brand, gen, node })
-}
 
 // ── In-memory generations cache (10 min TTL) ──
 type GenerationsData = { generations: Array<{ generation_slug: string; generation_name: string; part_count: number }> }
 const generationsCache = new Map<string, { data: GenerationsData; timestamp: number }>()
 const GEN_CACHE_TTL = 10 * 60 * 1000 // 10 minutes
 
-export async function fetchGenerations(brand: string): Promise<GenerationsData> {
-  const cached = generationsCache.get(brand)
-  if (cached && Date.now() - cached.timestamp < GEN_CACHE_TTL) {
-    return cached.data
-  }
-
-  // Use our ISR-cached proxy route instead of hitting external API directly
-  const res = await fetch(`/api/generations?brand=${encodeURIComponent(brand)}`)
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  const data: GenerationsData = await res.json()
-  if ((data as unknown as { error?: string }).error) {
-    throw new Error((data as unknown as { error: string }).error)
-  }
-
-  cacheSet(generationsCache, brand, data)
-  return data
-}
-
-
 // ==================== Vehicle Specs (Autodata) ====================
 
 // ==================== Autodata Endpoints ====================
-
-/**
- * Türkiye pazarında yeterli verisi olan, UI'da gösterilen markalar.
- * PHP backend de bu listeye göre filtreler; bu liste ek güvenlik katmanıdır.
- * Scraping ile veri tamamlandıkça buraya eklenir.
- */
-export const ALLOWED_BRAND_SLUGS = new Set([
-  'volkswagen', 'audi', 'toyota', 'bmw', 'ford', 'skoda', 'porsche',
-  'hyundai', 'seat', 'nissan', 'fiat', 'kia', 'lexus', 'renault',
-  'honda', 'alfa-romeo', 'subaru', 'mini', 'mazda', 'cupra',
-  'citroen', 'volvo', 'genesis', 'peugeot', 'dacia', 'mitsubishi',
-  'suzuki', 'jeep', 'land-rover', 'ds', 'tesla',
-])
-
-/**
- * Gizlenen kusurlu markalar — veri eksikliği veya Türkiye dışı.
- * Scraping tamamlandıktan sonra ALLOWED_BRAND_SLUGS'a taşınacak.
- */
-export const HIDDEN_BRANDS_REASON: Record<string, string> = {
-  'mercedes-benz': 'Katalog verisi yok (0 parça) — scraping bekleniyor',
-  'gmc':           'Türkiye dışı Amerikan markası',
-  'cadillac':      'Türkiye dışı Amerikan markası',
-  'chevrolet':     'Türkiye dışı Amerikan markası',
-  'dodge':         'Türkiye dışı Amerikan markası',
-  'buick':         'Türkiye dışı Amerikan markası',
-  'pontiac':       'Türkiye dışı Amerikan markası (üretim durduruldu)',
-  'oldsmobile':    'Türkiye dışı Amerikan markası (üretim durduruldu)',
-  'chrysler':      'Türkiye dışı Amerikan markası',
-  'lancia':        'Türkiye pazarı yok',
-  'rolls-royce':   'Türkiye pazarı çok sınırlı',
-  'ssangyong':     'Yeterli veri yok',
-  'saab':          'Türkiye pazarı yok (üretim durduruldu)',
-  'saturn':        'Türkiye dışı Amerikan markası (üretim durduruldu)',
-  'eagle':         'Türkiye dışı Amerikan markası (üretim durduruldu)',
-  'abarth':        'Türkiye pazarı çok sınırlı + veri yetersiz',
-  'daewoo':        'Türkiye pazarı yok (üretim durduruldu)',
-  'plymouth':      'Türkiye dışı Amerikan markası (üretim durduruldu)',
-  'hummer':        'Türkiye pazarı yok + veri yetersiz',
-  'opel':          'Veri çok seyrek (3 nesil, 19K parça) — scraping bekleniyor',
-}
-
-export async function fetchAutodataBrands() {
-  if (brandsCache.data && Date.now() - brandsCache.timestamp < CACHE_TTL) return brandsCache.data
-  const data = await actionFetch<{ brands: AutodataBrand[] }>({ action: 'autodata_brands' })
-  // İkinci güvenlik katmanı: PHP'nin filtrelemediği durumlar için
-  if (data?.brands) {
-    data.brands = data.brands.filter(b => ALLOWED_BRAND_SLUGS.has(b.slug))
-  }
-  brandsCache.data = data
-  brandsCache.timestamp = Date.now()
-  return data
-}
-
-const modelsCache = new Map<string, CacheEntry<{ models: AutodataModel[]; brand: string }>>()
-
-export async function fetchAutodataModels(brandSlug: string) {
-  const cached = modelsCache.get(brandSlug)
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) return cached.data
-  const data = await actionFetch<{ models: AutodataModel[]; brand: string }>({ action: 'autodata_models', brand: brandSlug })
-  cacheSet(modelsCache, brandSlug, data)
-  return data
-}
-
-export function fetchAutodataGenerations(brandSlug: string, model: string) {
-  return actionFetch<{ generations: AutodataGeneration[] }>({ action: 'autodata_generations', brand: brandSlug, model })
-}
-
-export function resolveAutodataSlug(brandSlug: string, model: string, generation: string, year?: number) {
-  const params: Record<string, string> = { action: 'autodata_resolve_slug', brand: brandSlug, model, generation }
-  if (year) params.year = String(year)
-  return actionFetch<{ matches: SlugMatch[]; auto_selected: string | null }>(params)
-}
 
 // ==================== Vehicle Specs (Autodata) ====================
 
@@ -597,72 +458,7 @@ export async function getProfileFull(): Promise<UserProfile> {
 
 // ==================== Addresses ====================
 
-export async function addressList(): Promise<{ addresses: UserAddress[] }> {
-  return actionPost<{ addresses: UserAddress[] }>({ action: 'address_list' })
-}
-
-export async function addressAdd(data: Omit<UserAddress, 'id'>): Promise<{ address: UserAddress }> {
-  const params: Record<string, string> = {
-    action: 'address_add',
-    title: data.title,
-    full_name: data.full_name,
-    phone: data.phone,
-    address_line1: data.address_line1,
-    city: data.city,
-    district: data.district,
-    postal_code: data.postal_code,
-    is_default: data.is_default ? '1' : '0',
-  }
-  if (data.address_line2) params.address_line2 = data.address_line2
-  return actionPost<{ address: UserAddress }>(params)
-}
-
-export async function addressUpdate(id: number, data: Partial<Omit<UserAddress, 'id'>>): Promise<{ address: UserAddress }> {
-  const params: Record<string, string> = { action: 'address_update', id: String(id) }
-  if (data.title !== undefined) params.title = data.title
-  if (data.full_name !== undefined) params.full_name = data.full_name
-  if (data.phone !== undefined) params.phone = data.phone
-  if (data.address_line1 !== undefined) params.address_line1 = data.address_line1
-  if (data.address_line2 !== undefined) params.address_line2 = data.address_line2
-  if (data.city !== undefined) params.city = data.city
-  if (data.district !== undefined) params.district = data.district
-  if (data.postal_code !== undefined) params.postal_code = data.postal_code
-  if (data.is_default !== undefined) params.is_default = data.is_default ? '1' : '0'
-  return actionPost<{ address: UserAddress }>(params)
-}
-
-export async function addressRemove(id: number): Promise<{ success: boolean }> {
-  return actionPost<{ success: boolean }>({ action: 'address_remove', id: String(id) })
-}
-
 // ==================== Orders ====================
-
-export async function orderList(): Promise<{ orders: Order[] }> {
-  return actionPost<{ orders: Order[] }>({ action: 'order_list' })
-}
-
-export async function orderDetail(id: number): Promise<{ order: Order }> {
-  return actionPost<{ order: Order }>({ action: 'order_detail', id: String(id) })
-}
-
-export async function orderCreate(data: {
-  items: { product_id: string | number; quantity: number; unit_price: number; has_price: boolean }[]
-  address_id: number
-  notes?: string
-}): Promise<{ order: Order }> {
-  return actionPost<{ order: Order }>({
-    action: 'order_create',
-    items: JSON.stringify(data.items),
-    address_id: String(data.address_id),
-    ...(data.notes ? { notes: data.notes } : {}),
-  })
-}
-
-
-
-
-
-
 
 // ==================== Password Change ====================
 
@@ -677,12 +473,6 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export async function deleteAccount(password: string): Promise<{ success: boolean }> {
   return actionPost<{ success: boolean }>({ action: 'delete_account', password })
 }
-
-
-
-
-
-
 
 // ==================== Reviews ====================
 
@@ -704,49 +494,6 @@ export interface ReviewSummary {
   total: number
   average: number
   distribution: Record<number, number>
-}
-
-export async function reviewList(oemNumber: string, page = 1, sort = 'newest'): Promise<{
-  reviews: Review[]
-  total: number
-  page: number
-  pages: number
-}> {
-  const params = new URLSearchParams({ action: 'list', oem_number: oemNumber, page: String(page), sort })
-  const res = await fetch(`${REVIEWS_API}?${params}`)
-  return res.json()
-}
-
-export async function reviewSummary(oemNumber: string): Promise<ReviewSummary> {
-  const params = new URLSearchParams({ action: 'summary', oem_number: oemNumber })
-  const res = await fetch(`${REVIEWS_API}?${params}`)
-  return res.json()
-}
-
-export async function reviewAdd(data: {
-  oem_number: string
-  author_name: string
-  rating: number
-  title?: string
-  comment: string
-}): Promise<{ status: string; review_id: number; message: string }> {
-  const res = await fetch(`${REVIEWS_API}?action=add`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-  const json = await res.json()
-  if (!res.ok) throw new Error(json.error || 'Yorum eklenemedi')
-  return json
-}
-
-export async function reviewHelpful(reviewId: number): Promise<{ status: string }> {
-  const res = await fetch(`${REVIEWS_API}?action=helpful`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ review_id: reviewId }),
-  })
-  return res.json()
 }
 
 // ==================== Admin: Satıcı Onay Kuyruğu ====================

@@ -264,7 +264,7 @@ export default function GarageDetailPage() {
 
   if (!vehicle) return null
 
-  const partsHref = `/parcalar?brand=${encodeURIComponent(vehicle.brand_slug)}&gen=${encodeURIComponent(vehicle.generation_slug)}&marka=${encodeURIComponent(vehicle.brand_name)}&model_name=${encodeURIComponent(vehicle.generation_name)}`
+  const partsHref = `/ilanlar?q=${encodeURIComponent(`${vehicle.brand_name} ${vehicle.generation_name}`)}`
   const whatsappMsg = `Merhaba, ${vehicle.brand_name} ${vehicle.generation_name} aracım için yardım istiyorum.`
 
   return (

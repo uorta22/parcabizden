@@ -57,9 +57,10 @@ function handleDeleteAccount($db, $userId) {
     $stmt = $db->prepare('UPDATE users SET deleted_at = NOW() WHERE id = :id');
     $stmt->execute([':id' => $userId]);
 
-    // Clean up user data
-    $db->prepare('DELETE FROM favorites WHERE user_id = :uid')->execute([':uid' => $userId]);
-    $db->prepare('DELETE FROM addresses WHERE user_id = :uid')->execute([':uid' => $userId]);
+    // Kullanıcıya bağlı veriler. favorites/addresses tabloları storefront ile
+    // birlikte kaldırıldı; garaj kayıtları kullanıcıya özel, onlar siliniyor.
+    $db->prepare('DELETE FROM vehicle_maintenance WHERE vehicle_id IN (SELECT id FROM garage WHERE user_id = :uid)')->execute([':uid' => $userId]);
+    $db->prepare('DELETE FROM garage WHERE user_id = :uid')->execute([':uid' => $userId]);
 
     jsonResponse(['success' => true]);
 }

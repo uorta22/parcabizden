@@ -73,7 +73,7 @@ export default function SchemaOrg({ type = 'localBusiness', breadcrumbs, showFaq
     inLanguage: 'tr-TR',
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${siteConfig.url}/parcalar?search={search_term_string}`,
+      target: `${siteConfig.url}/ilanlar?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   }

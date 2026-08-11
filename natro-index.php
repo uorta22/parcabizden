@@ -107,19 +107,11 @@ $_pb_modules = [
     'security.php',       // get_client_ip, check_rate_limit, check_ip_blacklist, ban_ip, record_failed_login, admin_audit_log
     'auth.php',           // jwt_encode, jwt_decode, get_auth_user_id, requireAdmin, handle_register, handle_login, ...
     'email.php',          // smtp_send, send_verification_email, send_reset_email
-    'catalog.php',        // [LEGACY — slug bazlı, deprecated] clean_text, format_gen_slug, get_categories, get_parts, search_oem, get_brands, get_generations, vin_decode
-    'autodata.php',       // [LEGACY — slug bazlı, deprecated] handle_vehicle_specs, handle_autodata_*, normalize_cyrillic
     'tecdoc.php',         // [V2 — TecDoc ID zinciri] tecdoc_brands/models/vehicles/vehicle_attributes/vehicle_categories/vehicle_parts/search/part_detail
     'garage.php',         // ensure_garage_columns, handle_garage_*, handle_maintenance_*
     'chat.php',           // handle_chat, send_whatsapp, handle_chat_messages, handle_chat_webhook
-    'products.php',       // handleProductList, handleProductDetail, handleProductSearch
-    'orders.php',         // handleOrderList, handleOrderDetail, handleOrderCreate
-    'addresses.php',      // handleAddressList, handleAddressAdd, handleAddressUpdate, handleAddressRemove
-    'favorites.php',      // handleFavoriteList, handleFavoriteAdd, handleFavoriteRemove
     'profile.php',        // handleProfileUpdate
     'password.php',       // handleChangePassword, handleDeleteAccount
-    'admin-products.php', // handleAdminProductAdd, handleAdminProductUpdate, handleAdminProductDelete, handleAdminSetDefaultThumbnails, handleAdminEnrichPart
-    'admin-orders.php',   // handleAdminOrderList, handleAdminOrderUpdateStatus
     'sellers.php',        // [PAZARYERI] handle_seller_register/me/update, handle_admin_seller_list/decide/document, handle_geo_cities/districts
     'listings.php',       // [PAZARYERI] handle_listing_create/mine/detail/search/set_status/confirm
     'requests.php',       // [PAZARYERI] handle_request_create/detail/mine/close, handle_seller_requests
@@ -148,13 +140,6 @@ if (!check_ip_blacklist($pdo)) { exit; }
 
 $action = isset($_GET['action']) ? $_GET['action'] : (isset($_POST['action']) ? $_POST['action'] : '');
 switch ($action) {
-    case 'categories':    get_categories($pdo); break;
-    case 'nodes':         get_nodes($pdo); break;
-    case 'parts':         get_parts($pdo); break;
-    case 'search_oem':    search_oem($pdo); break;
-    case 'vin_decode':    vin_decode($pdo); break;
-    case 'brands':        get_brands($pdo); break;
-    case 'generations':   get_generations($pdo); break;
     case 'chat':          handle_chat($pdo); break;
     case 'chat_messages': handle_chat_messages($pdo); break;
     case 'chat_webhook':  handle_chat_webhook($pdo); break;
@@ -166,22 +151,11 @@ switch ($action) {
     case 'maintenance_add':    handle_maintenance_add($pdo); break;
     case 'maintenance_update': handle_maintenance_update($pdo); break;
     case 'maintenance_remove': handle_maintenance_remove($pdo); break;
-    case 'vehicle_specs': handle_vehicle_specs($pdo); break;
-    case 'autodata_brands':     handle_autodata_brands($pdo); break;
-    case 'autodata_models':     handle_autodata_models($pdo); break;
-    case 'autodata_generations': handle_autodata_generations($pdo); break;
-    case 'autodata_resolve_slug': handle_autodata_resolve_slug($pdo); break;
     // ── TecDoc V2 — ID tabanlı temiz zincir ──
     case 'tecdoc_brands':              tecdoc_brands($pdo); break;
     case 'tecdoc_models':              tecdoc_models($pdo); break;
     case 'tecdoc_vehicles':            tecdoc_vehicles($pdo); break;
     case 'tecdoc_vehicle_attributes':  tecdoc_vehicle_attributes($pdo); break;
-    case 'tecdoc_vehicle_categories':  tecdoc_vehicle_categories($pdo); break;
-    case 'tecdoc_vehicle_parts':       tecdoc_vehicle_parts($pdo); break;
-    case 'tecdoc_search':              tecdoc_search($pdo); break;
-    case 'tecdoc_part_detail':         tecdoc_part_detail($pdo); break;
-    case 'tecdoc_image_stats':         tecdoc_image_stats($pdo); break;
-    case 'db_inventory':               db_inventory($pdo); break;
     case 'register':      handle_register($pdo); break;
     case 'login':         handle_login($pdo); break;
     case 'profile':       handle_profile($pdo); break;
@@ -190,51 +164,11 @@ switch ($action) {
     case 'forgot_password': handle_forgot_password($pdo); break;
     case 'reset_password':  handle_reset_password($pdo); break;
 
-    // ── E-Commerce: Products (no auth) ──
-    case 'product_list':    handleProductList($pdo); break;
-    case 'product_detail':  handleProductDetail($pdo); break;
-    case 'product_search':  handleProductSearch($pdo); break;
 
     // ── E-Commerce: Profile (auth) ──
     case 'profile_update':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
         handleProfileUpdate($pdo, $uid); break;
-
-    // ── E-Commerce: Addresses (auth) ──
-    case 'address_list':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleAddressList($pdo, $uid); break;
-    case 'address_add':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleAddressAdd($pdo, $uid); break;
-    case 'address_update':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleAddressUpdate($pdo, $uid); break;
-    case 'address_remove':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleAddressRemove($pdo, $uid); break;
-
-    // ── E-Commerce: Orders (auth) ──
-    case 'order_list':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleOrderList($pdo, $uid); break;
-    case 'order_detail':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleOrderDetail($pdo, $uid); break;
-    case 'order_create':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleOrderCreate($pdo, $uid); break;
-
-    // ── E-Commerce: Favorites (auth) ──
-    case 'favorite_list':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleFavoriteList($pdo, $uid); break;
-    case 'favorite_add':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleFavoriteAdd($pdo, $uid); break;
-    case 'favorite_remove':
-        $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        handleFavoriteRemove($pdo, $uid); break;
 
     // ── E-Commerce: Password & Account (auth) ──
     case 'change_password':
@@ -243,34 +177,6 @@ switch ($action) {
     case 'delete_account':
         $uid = get_auth_user_id(); if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
         handleDeleteAccount($pdo, $uid); break;
-
-    // ── Admin: Merkezi auth + admin kontrolü ──
-    case 'admin_product_add':
-    case 'admin_product_update':
-    case 'admin_product_delete':
-    case 'admin_set_default_thumbnails':
-    case 'admin_order_list':
-    case 'admin_order_update_status':
-    case 'admin_enrich_part':
-        $uid = get_auth_user_id();
-        if (!$uid) { http_response_code(401); echo json_encode(['error'=>'Oturum gecersiz']); break; }
-        requireAdmin($pdo, $uid);
-        $adminRateLimits = [
-            'admin_order_list' => ['admin_order_list', 60, 15],
-            'admin_order_update_status' => ['admin_order_update', 30, 15],
-        ];
-        $rl = $adminRateLimits[$action] ?? ['admin_product_write', 30, 15];
-        if (!check_rate_limit($rl[0], $rl[1], $rl[2])) break;
-        match ($action) {
-            'admin_product_add' => handleAdminProductAdd($pdo, $uid),
-            'admin_product_update' => handleAdminProductUpdate($pdo, $uid),
-            'admin_product_delete' => handleAdminProductDelete($pdo, $uid),
-            'admin_set_default_thumbnails' => handleAdminSetDefaultThumbnails($pdo, $uid),
-            'admin_order_list' => handleAdminOrderList($pdo, $uid),
-            'admin_order_update_status' => handleAdminOrderUpdateStatus($pdo, $uid),
-            'admin_enrich_part' => handleAdminEnrichPart($pdo, $uid),
-        };
-        break;
 
     // ── Pazaryeri: coğrafya (herkese açık) ──
     case 'geo_cities':    handle_geo_cities($pdo); break;

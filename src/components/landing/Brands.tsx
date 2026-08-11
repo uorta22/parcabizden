@@ -37,7 +37,7 @@ function LogoTile({ slug, name }: { slug: string; name: string }) {
   const [err, setErr] = useState(false)
   return (
     <Link
-      href="/parcalar"
+      href="/ilanlar"
       className="group flex h-20 items-center justify-center rounded-xl border border-gray-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-sm"
     >
       {err ? (
@@ -70,7 +70,7 @@ export default function Brands() {
             </h2>
           </div>
           <Link
-            href="/parcalar"
+            href="/ilanlar"
             className="text-sm font-semibold text-gray-600 underline-offset-4 hover:text-primary-600 hover:underline"
           >
             Tümünü gör →

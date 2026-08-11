@@ -38,7 +38,7 @@ export default function Hero() {
   const submitOem = useCallback(() => {
     const q = oem.trim()
     if (q.length < 3) { setErr('En az 3 karakter girin'); return }
-    setErr(''); router.push(`/parca/${encodeURIComponent(q)}`)
+    setErr(''); router.push(`/ilanlar?q=${encodeURIComponent(q)}`)
   }, [oem, router])
 
   return (

@@ -150,6 +150,18 @@ function listing_int_or_null(string $key): ?int {
     return $v === '' ? null : (int)$v;
 }
 
+/**
+ * Kategori slug'ı — taksonomi uygulamada (src/lib/part-categories.ts),
+ * PHP onu bilmiyor. Burada yapılan tek iş biçim doğrulaması: slug'ın
+ * sorguya ham string olarak girmesini engelliyor.
+ */
+function listing_category_slug(string $source = '_POST'): ?string {
+    $raw = $source === '_GET' ? ($_GET['category'] ?? '') : ($_POST['category_slug'] ?? '');
+    $v = strtolower(trim((string)$raw));
+    if ($v === '' || !preg_match('/^[a-z0-9-]{1,48}$/', $v)) return null;
+    return $v;
+}
+
 // ==================== İlan oluşturma ====================
 
 function handle_listing_create($pdo, int $userId): void {
@@ -189,7 +201,7 @@ function handle_listing_create($pdo, int $userId): void {
     $sql = 'INSERT INTO listings
         (seller_id, title, slug, description,
          vehicle_id, model_id, manufacturer_id, vehicle_label, year_from, year_to,
-         category_id, part_label, oem_number, fitment_source,
+         category_slug, part_label, oem_number, fitment_source,
          condition_type, quantity, price, price_min, price_max, shipping_payer,
          status, published_at, last_confirmed_at, expires_at)
         VALUES (?,?,?,?, ?,?,?,?,?,?, ?,?,?,?, ?,?,?,?,?,?, ?, NOW(), NOW(), ?)';
@@ -199,7 +211,7 @@ function handle_listing_create($pdo, int $userId): void {
         $vehicleId, listing_int_or_null('model_id'), listing_int_or_null('manufacturer_id'),
         (trim((string)($_POST['vehicle_label'] ?? '')) ?: null),
         listing_int_or_null('year_from'), listing_int_or_null('year_to'),
-        listing_int_or_null('category_id'), $partLabel,
+        listing_category_slug(), $partLabel,
         (trim((string)($_POST['oem_number'] ?? '')) ?: null), $fitmentSource,
         $condition, $quantity, $price, $priceMin, $priceMax, $shippingPayer,
         'pending_review', $expiresAt,
@@ -290,10 +302,13 @@ function handle_listing_search($pdo): void {
     $where  = ["l.status = 'active'", '(l.expires_at IS NULL OR l.expires_at > NOW())'];
     $params = [];
 
-    foreach (['manufacturer_id', 'model_id', 'vehicle_id', 'category_id'] as $col) {
+    foreach (['manufacturer_id', 'model_id', 'vehicle_id'] as $col) {
         $v = (int)($_GET[$col] ?? 0);
         if ($v > 0) { $where[] = "l.$col = ?"; $params[] = $v; }
     }
+
+    $categorySlug = listing_category_slug('_GET');
+    if ($categorySlug !== null) { $where[] = 'l.category_slug = ?'; $params[] = $categorySlug; }
 
     $cityId = (int)($_GET['city_id'] ?? 0);
     if ($cityId > 0) { $where[] = 's.city_id = ?'; $params[] = $cityId; }

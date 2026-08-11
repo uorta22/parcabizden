@@ -70,7 +70,7 @@ const TREE: Record<number, Node> = {
     title: 'Aracınızı hangi yöntem ile seçmek istiyorsunuz?',
     choices: [
       { id: 21, label: 'Şasi ile aracı seç',     href: '/?tab=vin' },
-      { id: 22, label: 'Katalogdan aracı seç',   href: '/parcalar' },
+      { id: 22, label: 'Katalogdan aracı seç',   href: '/ilanlar' },
       { id: 23, label: 'Garajımdan seç',         href: '/hesabim/garaj' },
       { id: 0,  label: 'Ana menüye dön',         goto: 0, back: true },
     ],

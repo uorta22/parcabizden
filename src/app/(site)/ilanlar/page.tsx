@@ -28,6 +28,7 @@ import {
   type ListingSortOption,
 } from '@/lib/listing-search'
 import { siteConfig } from '@/lib/config'
+import { PART_CATEGORY_GROUPS } from '@/lib/part-categories'
 
 const PER_PAGE = 24
 const TALEP_URL = siteConfig.surfaces.request
@@ -44,7 +45,7 @@ const SORT_OPTIONS: Array<{ value: ListingSortOption; label: string }> = [
   { value: 'price_desc', label: 'Fiyat: Yüksekten Düşüğe' },
 ]
 
-const FILTER_KEYS = ['q', 'manufacturer_id', 'model_id', 'city_id', 'condition_type', 'price_min', 'price_max']
+const FILTER_KEYS = ['q', 'category', 'manufacturer_id', 'model_id', 'city_id', 'condition_type', 'price_min', 'price_max']
 
 export default function IlanlarPage() {
   return (
@@ -80,6 +81,7 @@ function IlanlarInner() {
   const manufacturerId = sp.get('manufacturer_id') ? parseInt(sp.get('manufacturer_id')!, 10) : null
   const modelId         = sp.get('model_id') ? parseInt(sp.get('model_id')!, 10) : null
   const cityId          = sp.get('city_id') ? parseInt(sp.get('city_id')!, 10) : null
+  const category         = sp.get('category')
   const conditionType    = sp.get('condition_type') as ListingConditionType | null
   const sort             = (sp.get('sort') as ListingSortOption | null) ?? 'newest'
   const page              = sp.get('page') ? Math.max(1, parseInt(sp.get('page')!, 10)) : 1
@@ -152,6 +154,7 @@ function IlanlarInner() {
     setError(null)
     searchListings({
       q: sp.get('q') || undefined,
+      category: category ?? undefined,
       manufacturer_id: manufacturerId ?? undefined,
       model_id: modelId ?? undefined,
       city_id: cityId ?? undefined,
@@ -177,7 +180,7 @@ function IlanlarInner() {
 
   const filterProps: FilterPanelProps = {
     brands, models, modelsLoading, cities,
-    manufacturerId, modelId, cityId, conditionType,
+    manufacturerId, modelId, cityId, conditionType, category,
     searchDraft, priceMinDraft, priceMaxDraft,
     onSearchDraftChange: setSearchDraft,
     onPriceMinDraftChange: setPriceMinDraft,
@@ -188,6 +191,7 @@ function IlanlarInner() {
     onModelChange: id => updateFilters({ model_id: id || undefined }),
     onCityChange: id => updateFilters({ city_id: id || undefined }),
     onConditionChange: value => updateFilters({ condition_type: value || undefined }),
+    onCategoryChange: slug => updateFilters({ category: slug || undefined }),
     hasActiveFilters,
     onClear: clearFilters,
   }
@@ -322,6 +326,7 @@ interface FilterPanelProps {
   modelId: number | null
   cityId: number | null
   conditionType: ListingConditionType | null
+  category: string | null
   searchDraft: string
   priceMinDraft: string
   priceMaxDraft: string
@@ -334,17 +339,18 @@ interface FilterPanelProps {
   onModelChange: (id: string | undefined) => void
   onCityChange: (id: string | undefined) => void
   onConditionChange: (value: string | undefined) => void
+  onCategoryChange: (slug: string | undefined) => void
   hasActiveFilters: boolean
   onClear: () => void
 }
 
 function FilterPanel({
   brands, models, modelsLoading, cities,
-  manufacturerId, modelId, cityId, conditionType,
+  manufacturerId, modelId, cityId, conditionType, category,
   searchDraft, priceMinDraft, priceMaxDraft,
   onSearchDraftChange, onPriceMinDraftChange, onPriceMaxDraftChange,
   onSearchSubmit, onPriceApply,
-  onBrandChange, onModelChange, onCityChange, onConditionChange,
+  onBrandChange, onModelChange, onCityChange, onConditionChange, onCategoryChange,
   hasActiveFilters, onClear,
 }: FilterPanelProps) {
   return (
@@ -403,6 +409,23 @@ function FilterPanel({
         >
           <option value="">Tüm şehirler</option>
           {cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      {/* Kategori */}
+      <div>
+        <label className="mb-1.5 block text-xs font-bold uppercase tracking-wide text-gray-500">Kategori</label>
+        <select
+          value={category ?? ''}
+          onChange={e => onCategoryChange(e.target.value || undefined)}
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 focus:border-primary-400 focus:outline-none"
+        >
+          <option value="">Tüm kategoriler</option>
+          {PART_CATEGORY_GROUPS.map(g => (
+            <optgroup key={g.slug} label={g.title}>
+              {g.items.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+            </optgroup>
+          ))}
         </select>
       </div>
 

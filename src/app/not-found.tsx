@@ -26,7 +26,7 @@ export default function NotFound() {
               Ana Sayfa
             </Link>
             <Link
-              href="/parcalar"
+              href="/ilanlar"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white hover:bg-gray-100 text-gray-900 font-semibold rounded-lg transition-all border border-gray-200"
             >
               <Search className="w-5 h-5" />

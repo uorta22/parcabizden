@@ -21,7 +21,10 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Testler canlı PHP API'sine vuruyor ve orada rate limit var. Varsayılan
+  // worker sayısıyla (çekirdek/2) sözleşme testleri 429 alıp sahte hata
+  // veriyordu — API'yi değil, kendi hızımızı sınırlıyoruz.
+  workers: process.env.CI ? 1 : 2,
   reporter: 'html',
 
   use: {
