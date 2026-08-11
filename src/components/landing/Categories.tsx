@@ -66,13 +66,6 @@ const GROUPS: Group[] = [
   },
 ]
 
-function slugify(s: string) {
-  return s.toLowerCase()
-    .replace(/ç/g, 'c').replace(/ğ/g, 'g').replace(/ı/g, 'i')
-    .replace(/ö/g, 'o').replace(/ş/g, 's').replace(/ü/g, 'u')
-    .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-}
-
 export default function Categories() {
   return (
     <section className="bg-white py-12 md:py-16">
@@ -85,7 +78,7 @@ export default function Categories() {
             <p className="text-sm text-gray-500">Aradığınız parçayı kategoriye göre bulun</p>
           </div>
           <Link
-            href="/parcalar"
+            href="/ilanlar"
             className="text-sm font-semibold underline-offset-4 hover:underline"
             style={{ color: ACCENT }}
           >
@@ -110,7 +103,7 @@ export default function Categories() {
                   {items.map(it => (
                     <li key={it.label}>
                       <Link
-                        href={`/parcalar?q=${encodeURIComponent(slugify(it.label))}`}
+                        href={`/ilanlar?q=${encodeURIComponent(it.label)}`}
                         className="inline-block rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-700 transition-colors hover:border-[#ff7a1a]/50 hover:text-[#ff7a1a]"
                       >
                         {it.label}

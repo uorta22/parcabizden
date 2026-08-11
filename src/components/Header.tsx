@@ -5,10 +5,11 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   Menu, X, LogIn, User, LogOut, Warehouse, UserPlus, Store,
-  ChevronDown, Search, ShoppingBag, Heart, Package, MapPin, Settings,
+  ChevronDown, Search, ShoppingBag, Package, Settings, Tag,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import LogoLink from '@/components/Logo'
+import { siteConfig } from '@/lib/config'
 
 // BrandBar kaldırıldı (Faz 3.1) — landing'de Brands grid'i var, header'da gerek yok
 
@@ -81,7 +82,18 @@ export default function Header() {
 
             {/* Right Actions */}
             <div className="hidden lg:flex items-center gap-2">
-              {/* Parçalar link */}
+              {/* Pazaryeri — satıcıların yayınladığı ilanlar */}
+              <Link
+                href="/ilanlar"
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                  isActive('/ilanlar') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                <Tag className="w-4 h-4" />
+                İlanlar
+              </Link>
+
+              {/* Katalog — araç seçerek uyumlu parçaya inme */}
               <Link
                 href="/parcalar"
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
@@ -89,19 +101,18 @@ export default function Header() {
                 }`}
               >
                 <ShoppingBag className="w-4 h-4" />
-                Parçalar
+                Katalog
               </Link>
 
-              {/* Satıcı kazanımı — arz tarafı ürünün darboğazı, girişi görünür tut */}
-              <Link
-                href="/magaza-ac"
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                  isActive('/magaza-ac') ? 'text-primary-600 bg-primary-50' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+              {/* Satıcı kazanımı — arz tarafı ürünün darboğazı, girişi görünür tut.
+                  Ayrı origin: <Link> değil <a> olmalı. */}
+              <a
+                href={siteConfig.surfaces.seller}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all"
               >
                 <Store className="w-4 h-4" />
                 Mağaza Aç
-              </Link>
+              </a>
 
               {/* Cart */}
 
@@ -201,8 +212,8 @@ export default function Header() {
 
             <nav className="flex flex-col gap-1">
               {[
-                { href: '/parcalar', label: 'Parçalar', icon: Package },
-                { href: '/magaza-ac', label: 'Mağaza Aç', icon: Store },
+                { href: '/ilanlar', label: 'İlanlar', icon: Tag },
+                { href: '/parcalar', label: 'Katalog', icon: Package },
                 { href: '/hakkimizda', label: 'Hakkımızda' },
                 { href: '/iletisim', label: 'İletişim' },
               ].map(link => (
@@ -218,6 +229,15 @@ export default function Header() {
                   {link.label}
                 </Link>
               ))}
+
+              <a
+                href={siteConfig.surfaces.seller}
+                className="px-4 py-3 rounded-lg transition-all text-sm font-medium flex items-center gap-2 text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <Store className="w-4 h-4" />
+                Mağaza Aç
+              </a>
 
               {user ? (
                 <>

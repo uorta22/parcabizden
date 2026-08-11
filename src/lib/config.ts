@@ -5,6 +5,15 @@ export const siteConfig = {
   tagline: 'Yedek & Çıkma Parça Platformu',
   url: 'https://parcabizden.com.tr',
   email: 'info@parcabizden.com',
+
+  // Ayrı origin'lerde çalışan iki yüzey. Tek kod tabanı, ayrı alan adı:
+  // oturumlar (localStorage) origin başına izole kalsın diye tam URL gerekiyor,
+  // Link ile iç yönlendirme yapılamaz.
+  surfaces: {
+    seller: 'https://pazaryeri.parcabizden.com.tr',
+    request: 'https://talep.parcabizden.com.tr',
+  },
+
   description: 'Araç yedek parçası ve çıkma parça ihtiyaçlarınız için doğru adres. Şase numarası ile arama yapın, tüm markalara uygun parçaları bulun.',
 
   // İletişim

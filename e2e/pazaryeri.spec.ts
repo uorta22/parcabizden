@@ -3,9 +3,12 @@ import { test, expect } from '@playwright/test'
 /**
  * Üç yüzeyin ayrımı ve herkese açık API sözleşmeleri.
  *
- *   localhost:3000            → alıcı sitesi
- *   pazaryeri.localhost:3000  → satıcı paneli
- *   talep.localhost:3000      → talep yüzeyi
+ *   localhost:PORT            → alıcı sitesi
+ *   pazaryeri.localhost:PORT  → satıcı paneli
+ *   talep.localhost:PORT      → talep yüzeyi
+ *
+ * PORT playwright.config.ts'ten gelir (3000 DEĞİL — o portu başka projelerin
+ * dev server'ı tutabiliyor ve testler yanlış siteye bağlanırdı).
  *
  * Alt alan adları yerelde middleware üzerinden çözülüyor; üretimdeki
  * pazaryeri./talep. ile aynı kod yolunu kullanır.
@@ -15,9 +18,11 @@ import { test, expect } from '@playwright/test'
  * teklif) elle test edilmeli; sahte güvence vermesin diye kapsanmıyor.
  */
 
-const BUYER = 'http://localhost:3000'
-const SELLER = 'http://pazaryeri.localhost:3000'
-const REQUEST = 'http://talep.localhost:3000'
+import { E2E_PORT } from '../playwright.config'
+
+const BUYER = `http://localhost:${E2E_PORT}`
+const SELLER = `http://pazaryeri.localhost:${E2E_PORT}`
+const REQUEST = `http://talep.localhost:${E2E_PORT}`
 const API = 'https://api.parcabizden.com.tr'
 
 // ── Yüzey izolasyonu ──────────────────────────────────────────
@@ -33,7 +38,7 @@ for (const path of ['/pazaryeri', '/pazaryeri/ilanlarim', '/talep', '/talep/olus
 
 test('alıcı sitesi kendi kökünde çalışıyor', async ({ page }) => {
   await page.goto(BUYER)
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Aracınıza özel yedek parçayı')
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Aradığınız parçayı tarif edin')
 })
 
 // ── Alıcı tarafında pazaryeri ────────────────────────────────

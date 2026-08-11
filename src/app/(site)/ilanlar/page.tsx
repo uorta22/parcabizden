@@ -27,9 +27,10 @@ import {
   type ListingConditionType,
   type ListingSortOption,
 } from '@/lib/listing-search'
+import { siteConfig } from '@/lib/config'
 
 const PER_PAGE = 24
-const TALEP_URL = 'https://talep.parcabizden.com.tr'
+const TALEP_URL = siteConfig.surfaces.request
 
 const CONDITION_OPTIONS: Array<{ value: ListingConditionType; label: string }> = [
   { value: 'cikma', label: 'Çıkma' },

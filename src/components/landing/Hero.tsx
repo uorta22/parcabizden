@@ -11,9 +11,11 @@
  */
 
 import { useState, useCallback } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, ArrowRight, Car, Hash, FileSearch } from 'lucide-react'
+import { Search, ArrowRight, Car, Hash, FileSearch, MessageSquarePlus, Tag } from 'lucide-react'
 import VehiclePickerModal from './VehiclePickerModal'
+import { siteConfig } from '@/lib/config'
 
 type Tab = 'vehicle' | 'vin' | 'oem'
 
@@ -48,17 +50,41 @@ export default function Hero() {
             Türkiye&apos;nin Akıllı Yedek Parça Platformu
           </p>
           <h1 className="mx-auto max-w-2xl text-2xl font-extrabold leading-tight text-gray-900 md:text-4xl">
-            Aracınıza özel yedek parçayı
+            Aradığınız parçayı tarif edin,
             <br className="hidden sm:block" />
-            <span style={{ color: ACCENT }}> saniyeler</span> içinde bulun
+            <span style={{ color: ACCENT }}> satıcılar</span> teklif göndersin
           </h1>
           <p className="mx-auto mt-3 max-w-lg text-sm text-gray-500 md:text-base">
-            Marka, model ve varyantınızı seçin aracınıza birebir uyumlu parçaları listeleyelin.
+            Doğrulanmış satıcılardan çıkma ve yedek parça. Talep açmak ücretsiz, üyelik gerekmez.
           </p>
+
+          {/* Birincil eylem: sıfır envanterle de çalışan tek yol talep.
+              İlan araması yanında ikincil dursun. */}
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={siteConfig.surfaces.request}
+              className="inline-flex items-center gap-2 rounded-xl px-6 py-3 text-sm font-bold text-white transition-opacity hover:opacity-90"
+              style={{ background: ACCENT }}
+            >
+              <MessageSquarePlus className="h-4 w-4" />
+              Parça Talebi Aç
+            </a>
+            <Link
+              href="/ilanlar"
+              className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-6 py-3 text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              <Tag className="h-4 w-4" />
+              İlanlara Göz At
+            </Link>
+          </div>
         </div>
 
-        {/* Search panel */}
+        {/* Araç ile daraltma — kimlik kapısı değil, isteğe bağlı filtre.
+            Aracını bilen buradan girsin; bilmeyen yukarıdan talep açsın. */}
         <div className="mx-auto max-w-3xl">
+          <p className="mb-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-400">
+            Ya da aracınızı seçerek arayın
+          </p>
           {/* Sekmeler */}
           <div className="flex gap-1 border-b border-gray-200">
             {([

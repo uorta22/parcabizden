@@ -5,7 +5,13 @@ import { defineConfig, devices } from '@playwright/test'
  *
  * Sayfalar canlı bir dış API'ye (api.parcabizden.com.tr) bağlı olduğu için
  * cömert timeout değerleri kullanılıyor.
+ *
+ * PORT: bilerek 3000 DEĞİL. O port başka projelerin dev server'ı tarafından
+ * kullanılabiliyor ve reuseExistingServer ile testler yanlış siteye bağlanır.
+ * Alt alan adı yüzeyleri de bu portu kullanır (pazaryeri.localhost:PORT).
  */
+export const E2E_PORT = 3210
+const BASE = `http://localhost:${E2E_PORT}`
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
@@ -19,7 +25,7 @@ export default defineConfig({
   reporter: 'html',
 
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: BASE,
     trace: 'on-first-retry',
     actionTimeout: 30_000,
     navigationTimeout: 30_000,
@@ -33,8 +39,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
+    command: `npm run dev -- -p ${E2E_PORT}`,
+    url: BASE,
     reuseExistingServer: true,
     timeout: 120_000,
   },

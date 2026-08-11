@@ -3,14 +3,14 @@
  * Hero ile aynı beyaz tema, accent renk #ff7a1a.
  */
 
-import { Search, ListChecks, MessageCircle } from 'lucide-react'
+import { Search, Store, CheckCircle2 } from 'lucide-react'
 
 const ACCENT = '#ff7a1a'
 
 const STEPS = [
-  { n: '01', icon: Search,      title: 'Aracınızı tanımlayın',  body: 'Şase, marka/model veya OEM kodu ile aracınızı seçin.' },
-  { n: '02', icon: ListChecks,  title: 'Uyumlu parçayı seçin',  body: 'Birebir uyumlu yedek parçalar arasından tercih edin.' },
-  { n: '03', icon: MessageCircle, title: 'Talep gönderin',       body: 'WhatsApp ile fiyat ve stok bilgisini hemen alın.' },
+  { n: '01', icon: Search,       title: 'Talebini oluştur',              body: 'Aracını ve ihtiyacın olan parçayı birkaç adımda tanımla, üyelik gerekmez.' },
+  { n: '02', icon: Store,        title: 'Doğrulanmış satıcılar teklif gönderir', body: 'Uygun satıcılar talebini görür, sana fiyat ve stok bilgisiyle teklif iletir.' },
+  { n: '03', icon: CheckCircle2, title: 'Teklifleri karşılaştır',        body: 'Gelen teklifleri fiyat ve satıcıya göre karşılaştırıp sana en uygun olanı seç.' },
 ]
 
 export default function HowItWorks() {
