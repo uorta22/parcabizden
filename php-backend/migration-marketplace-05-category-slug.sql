@@ -27,8 +27,7 @@ ALTER TABLE request_items
     ADD INDEX idx_request_items_match (category_slug, status);
 
 -- Doğrulama: iki tabloda da category_slug görünmeli, category_id görünmemeli.
-SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE
-FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = DATABASE()
-  AND TABLE_NAME IN ('listings', 'request_items')
-  AND COLUMN_NAME LIKE 'category%';
+-- information_schema KULLANMA — cPanel'in kısıtlı MySQL kullanıcısı o şemayı
+-- okuyamıyor ve sorgu #1044 Access denied ile düşüyor.
+SHOW COLUMNS FROM listings LIKE 'category%';
+SHOW COLUMNS FROM request_items LIKE 'category%';

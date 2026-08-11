@@ -60,15 +60,11 @@ DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS categories;
 
 -- ── Doğrulama ────────────────────────────────────────────────────────
--- Beklenen: toplam ~250 MiB, ve KALAN listesindeki araç tabloları yerinde.
-SELECT
-    TABLE_NAME AS tablo,
-    TABLE_ROWS AS satir,
-    ROUND((DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024, 1) AS mb
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE()
-ORDER BY (DATA_LENGTH + INDEX_LENGTH) DESC;
-
-SELECT ROUND(SUM(DATA_LENGTH + INDEX_LENGTH) / 1024 / 1024 / 1024, 2) AS toplam_gb
-FROM information_schema.TABLES
-WHERE TABLE_SCHEMA = DATABASE();
+-- information_schema KULLANMA — cPanel'in kısıtlı MySQL kullanıcısı o şemayı
+-- okuyamıyor, sorgu #1044 Access denied ile düşer ve DROP'lar çalışmış olsa
+-- bile ekranda hata görürsün. SHOW aynı bilgiyi yetki istemeden veriyor.
+--
+-- Beklenen: liste ~25 tablo, en büyükleri catalog_vehicle_attributes (~193M)
+-- ve catalog_models (~2,6M). parts / catalog_parts / catalog_part_vehicles /
+-- orders / products görünmemeli.
+SHOW TABLE STATUS;
